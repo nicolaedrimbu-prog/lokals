@@ -63,6 +63,32 @@
   .how-step h3{color:#fff; font-size:15px; margin:0 0 8px;}
   .how-step p{color:#C8CFC2; font-size:13px; line-height:1.5; margin:0;}
 
+  .faq-section{margin:0 0 56px;}
+  .faq-section h2{font-family:'Fraunces', Georgia, serif; font-size:28px; margin:0 0 8px; color:var(--teal-deep);}
+  .faq-section > p.faq-lead{color:var(--ink-soft); font-size:15px; margin:0 0 28px;}
+  .faq-group h3{font-size:13px; text-transform:uppercase; letter-spacing:.05em; color:var(--gold); margin:28px 0 10px;}
+  .faq-group:first-of-type h3{margin-top:0;}
+  details.faq-item{background:#fff; border:1px solid var(--line); border-radius:12px; margin-bottom:10px; overflow:hidden;}
+  details.faq-item summary{padding:16px 20px; cursor:pointer; font-weight:600; font-size:15px; list-style:none; position:relative;}
+  details.faq-item summary::-webkit-details-marker{display:none;}
+  details.faq-item summary::after{content:'+'; position:absolute; right:20px; top:14px; font-size:20px; color:var(--gold); font-weight:400;}
+  details.faq-item[open] summary::after{content:'–';}
+  details.faq-item p{margin:0; padding:0 20px 18px; color:var(--ink-soft); font-size:14px; line-height:1.6;}
+
+  .contact-section{margin:0 0 20px;}
+  .contact-section h2{font-family:'Fraunces', Georgia, serif; font-size:28px; margin:0 0 8px; color:var(--teal-deep);}
+  .contact-section > p.contact-lead{color:var(--ink-soft); font-size:15px; margin:0 0 24px;}
+  .contact-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  @media (max-width:560px){ .contact-grid{grid-template-columns:1fr;} }
+  .contact-card{background:var(--teal-deep); color:#fff; border-radius:16px; padding:22px 24px;
+    display:flex; align-items:center; gap:16px; text-decoration:none; transition:transform .15s ease;}
+  .contact-card:hover{transform:translateY(-2px);}
+  .contact-card .icon{width:44px; height:44px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    background:rgba(255,255,255,0.1); border-radius:50%;}
+  .contact-card .icon svg{width:22px; height:22px;}
+  .contact-card .label{font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--gold-soft); margin-bottom:2px;}
+  .contact-card .value{font-weight:600; font-size:15px; color:#fff;}
+
   footer{max-width:1000px; margin:0 auto; padding:24px 20px 40px; text-align:center;
     color:var(--ink-soft); font-size:12.5px; border-top:1px solid var(--line); margin-top:20px; padding-top:24px;}
 </style>
@@ -93,7 +119,7 @@
       <div class="path-icon">🛍️</div>
       <h2>Am o afacere locală</h2>
       <p>Restaurant, atelier, activitate, produs de la producător local? Fiți recomandați direct oaspeților cazați în zonă — cu poză, descriere și beneficiu opțional.</p>
-      <a class="path-btn" href="/inregistrare-partener.html" target="_blank">Înscrie-te gratuit →</a>
+      <a class="path-btn" href="/inregistrare-partener.html" target="_blank">Înscrie-te gratiu →</a>
     </div>
   </div>
 
@@ -120,11 +146,7 @@
 
   <div class="how-section">
     <h2>Cum funcționează</h2>
-    <div class="how-grid">      </div>
-    </div>
-  </div>
-
-</main>
+    <div class="how-grid">
       <div class="how-step">
         <div class="how-num">1</div>
         <h3>Vă înscrieți gratuit</h3>
@@ -140,6 +162,99 @@
         <h3>Oaspeții vă găsesc</h3>
         <p>Vizibili direct în ghidul folosit deja de oaspeți reali, cazați în zonă.</p>
       </div>
+    </div>
+  </div>
+
+  <div class="faq-section">
+    <h2 class="serif">Întrebări frecvente</h2>
+    <p class="faq-lead">Cele mai comune nelămuriri — pentru hotelieri/proprietari și pentru afaceri partenere.</p>
+
+    <div class="faq-group">
+      <h3>Pentru hotelieri &amp; proprietari de apartamente</h3>
+
+      <details class="faq-item">
+        <summary>Ce este Lokals și cât costă?</summary>
+        <p>Un ghid digital de recomandări locale — activități, restaurante, cultură, wellness — accesat de oaspeți direct din cameră, printr-un cod QR. Participarea e complet gratuită, fără abonament, cost ascuns sau obligație de continuare.</p>
+      </details>
+
+      <details class="faq-item">
+        <summary>Cât durează înscrierea?</summary>
+        <p>2 minute, direct din formularul online. Aveți nevoie doar de numele unității, o persoană de contact, adresa de livrare și numărul de camere sau apartamente operate.</p>
+      </details>
+
+      <details class="faq-item">
+        <summary>Care e diferența dintre „Hotel/Pensiune" și „Apartamente individuale"?</summary>
+        <p>Pentru un hotel sau o pensiune, toate camerele afișează același ghid, cu un singur cod QR — printat de câte ori aveți nevoie. Pentru apartamente cu identități diferite, fiecare primește propriul cod QR și propriul ghid personalizat.</p>
+      </details>
+
+      <details class="faq-item">
+        <summary>Ce primesc imediat după înscriere?</summary>
+        <p>Codul (sau codurile) QR, generate pe loc, plus o pagină deja formatată pentru printare A4 — gata de pus în cameră din prima secundă. În paralel, pregătim gratuit un suport fizic profesional, expediat prin poștă la adresa completată.</p>
+      </details>
+
+      <details class="faq-item">
+        <summary>Ce vede, de fapt, oaspetele?</summary>
+        <p>Oaspetele scanează codul din cameră și ajunge direct la ghidul digital, fără nicio aplicație de instalat — o listă curatoriată de afaceri locale pe categorii, disponibilă în română și engleză.</p>
+      </details>
+    </div>
+
+    <div class="faq-group">
+      <h3>Pentru afaceri partenere</h3>
+
+      <details class="faq-item">
+        <summary>Cum funcționează beneficiul oferit oaspeților?</summary>
+        <p>Oaspetele generează, din ghid, un cod personal (o dată, valabil 7 zile) — un cod QR pe care îl arată la orice afacere parteneră unde vrea să-l folosească.</p>
+      </details>
+
+      <details class="faq-item">
+        <summary>Cum confirm beneficiul, la casă?</summary>
+        <p>Deschideți pagina proprie de confirmare (cea de pe cardul Lokals lipit la casă) și scanați codul cu camera telefonului sau tabletei. Pagina arată automat apartamentul oaspetelui — apăsați „Confirmă" și beneficiul e înregistrat.</p>
+      </details>
+
+      <details class="faq-item">
+        <summary>Ce fac dacă oaspetele comandă online, fără să fie fizic la casă?</summary>
+        <p>Rugați-l să scrie codul în comandă (ex. la observații). Pe aceeași pagină de confirmare găsiți un câmp „Comandă online?" — introduceți codul manual acolo și apăsați „Verifică". Restul procesului e identic.</p>
+      </details>
+
+      <details class="faq-item">
+        <summary>Ce trebuie să configurez inițial?</summary>
+        <p>Doar lipiți vizibil cardul cu codul QR propriu la casă (sau lângă zona de comenzi online). Nu instalați nimic — pagina de confirmare se deschide direct în orice browser.</p>
+      </details>
+
+      <details class="faq-item">
+        <summary>Pot schimba beneficiul oferit mai târziu?</summary>
+        <p>Oricând — anunțați-ne procentul diferit, condițiile noi sau renunțarea temporară, și actualizăm imediat, fără costuri sau proceduri.</p>
+      </details>
+    </div>
+  </div>
+
+  <div class="contact-section">
+    <h2 class="serif">Contact</h2>
+    <p class="contact-lead">Întrebări sau nelămuriri? Scrieți-ne oricând — suntem un mesaj distanță, fără birocrație.</p>
+    <div class="contact-grid">
+      <a class="contact-card" href="mailto:contact@lokals.ro">
+        <div class="icon">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" stroke="#F7F2E8" stroke-width="1.6"/>
+            <path d="m3 6 9 7 9-7" stroke="#F7F2E8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="label">Email</div>
+          <div class="value">contact@lokals.ro</div>
+        </div>
+      </a>
+      <a class="contact-card" href="https://wa.me/40751090407" target="_blank" rel="noopener">
+        <div class="icon">
+          <svg viewBox="0 0 24 24" fill="#F7F2E8" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12.04 2c-5.52 0-10 4.48-10 10 0 1.77.46 3.44 1.27 4.89L2 22l5.25-1.28A9.96 9.96 0 0 0 12.04 22c5.52 0 10-4.48 10-10s-4.48-10-10-10Zm0 18.2c-1.62 0-3.14-.44-4.44-1.2l-.32-.19-3.11.76.78-3.03-.21-.32A8.18 8.18 0 0 1 3.83 12c0-4.53 3.69-8.2 8.21-8.2 4.53 0 8.2 3.67 8.2 8.2 0 4.53-3.67 8.2-8.2 8.2Zm4.5-6.13c-.25-.12-1.46-.72-1.68-.8-.23-.08-.39-.12-.56.12-.16.25-.64.8-.78.96-.15.16-.29.18-.54.06-.25-.12-1.04-.38-1.98-1.22-.73-.65-1.23-1.46-1.37-1.71-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.14.16-.25.25-.41.08-.16.04-.31-.02-.43-.06-.12-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.16 0-.43.06-.65.31-.23.25-.85.83-.85 2.02s.87 2.35.99 2.51c.12.16 1.71 2.61 4.14 3.66.58.25 1.03.4 1.38.51.58.18 1.11.16 1.53.1.47-.07 1.46-.6 1.66-1.17.21-.58.21-1.08.15-1.18-.06-.1-.23-.16-.48-.28Z"/>
+          </svg>
+        </div>
+        <div>
+          <div class="label">WhatsApp</div>
+          <div class="value">0751 090 407</div>
+        </div>
+      </a>
     </div>
   </div>
 
