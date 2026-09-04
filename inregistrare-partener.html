@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lokals — Înscrie-ți afacerea</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --teal-deep:#10302B; --teal:#1A4A42; --gold:#C98A2C; --gold-soft:#E8CE9E;
+    --cream:#F7F2E8; --ink:#181E1B; --ink-soft:#5B6459; --line:#DCD5C6;
+    --brick:#9C4536; --brick-soft:#F5E4E0; --green:#2E6B4F; --green-soft:#E4F0E9;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--cream); color:var(--ink); font-family:'Inter', system-ui, sans-serif; min-height:100vh;}
+
+  header{background:var(--teal-deep); padding:20px; text-align:center;}
+  .ring{width:26px; height:26px; border-radius:50%; background:var(--gold); position:relative; display:inline-block; vertical-align:middle;}
+  .ring::after{content:''; position:absolute; inset:7px; border-radius:50%; background:var(--teal-deep);}
+  .wordmark{font-family:'Poppins', sans-serif; font-weight:700; color:#fff; font-size:22px; vertical-align:middle; margin-left:8px;}
+
+  main{max-width:560px; margin:0 auto; padding:32px 20px 60px;}
+  .hero-title{font-size:27px; font-weight:700; color:var(--teal-deep); line-height:1.25; margin:0 0 8px;}
+  .hero-sub{font-size:15px; color:var(--ink-soft); margin:0 0 28px; line-height:1.5;}
+
+  .stat-row{display:flex; gap:10px; margin-bottom:30px;}
+  .stat{flex:1; background:var(--teal-deep); border-radius:14px; padding:16px 10px; text-align:center;}
+  .stat .num{font-size:20px; font-weight:700; color:var(--gold);}
+  .stat .lbl{font-size:11px; color:#C8CFC2; margin-top:2px;}
+
+  form{background:#fff; border-radius:20px; padding:26px 22px; box-shadow:0 8px 24px rgba(16,48,43,0.08);}
+  label{display:block; font-size:13px; font-weight:600; color:var(--teal-deep); margin:16px 0 6px;}
+  label:first-of-type{margin-top:0;}
+  input, select, textarea{width:100%; border:1.5px solid var(--line); border-radius:12px; padding:12px 14px;
+    font-family:'Inter', sans-serif; font-size:15px; color:var(--ink); background:#fff;}
+  textarea{resize:vertical; min-height:80px;}
+  input:focus, select:focus, textarea:focus{outline:none; border-color:var(--teal);}
+  .hint{font-size:12px; color:var(--ink-soft); margin-top:4px;}
+  .error-msg{font-size:12px; color:var(--brick); margin-top:6px; min-height:16px;}
+
+  .theme-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:6px;}
+  .theme-chip{border:1.5px solid var(--line); border-radius:10px; padding:9px 10px; font-size:12.5px;
+    cursor:pointer; text-align:center; transition:border-color .15s, background .15s;}
+  .theme-chip.active{border-color:var(--teal-deep); background:var(--cream); font-weight:600;}
+  .theme-chip input{display:none;}
+
+  .benefit-toggle{display:flex; gap:8px; margin-top:4px;}
+  .benefit-option{flex:1; border:1.5px solid var(--line); border-radius:12px; padding:12px; text-align:center; cursor:pointer;}
+  .benefit-option.active{border-color:var(--teal-deep); background:var(--cream);}
+  .benefit-option input{display:none;}
+  #benefit-detail{display:none; margin-top:10px;}
+  #benefit-detail.visible{display:block;}
+
+  .btn-submit{width:100%; margin-top:22px; padding:16px; border:none; border-radius:14px;
+    background:var(--teal-deep); color:#fff; font-size:16px; font-weight:700; cursor:pointer;}
+  .btn-submit:active{transform:scale(0.98);}
+  .btn-submit:disabled{opacity:0.5;}
+  .fine-print{text-align:center; font-size:12px; color:var(--ink-soft); margin-top:14px;}
+
+  #form-stage{transition:opacity .25s ease, max-height .25s ease; overflow:hidden;}
+  #form-stage.hidden{opacity:0; max-height:0; pointer-events:none;}
+
+  #success-stage{opacity:0; max-height:0; overflow:hidden; transition:opacity .3s ease .1s, max-height .3s ease;}
+  #success-stage.visible{opacity:1; max-height:900px;}
+  .success-card{background:var(--green-soft); border-radius:20px; padding:30px 24px; text-align:center;}
+  .success-icon{width:56px; height:56px; border-radius:50%; background:var(--green); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-size:28px; margin:0 auto 14px;}
+  .success-title{font-size:20px; font-weight:700; color:var(--green); margin:0 0 8px;}
+  .success-sub{font-size:14px; color:var(--ink-soft); line-height:1.6;}
+
+  .next-steps{background:#fff; border-radius:14px; padding:18px; text-align:left; font-size:13px;
+    color:var(--ink-soft); line-height:1.6; margin-top:20px;}
+  .next-steps b{color:var(--ink);}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="ring"></span><span class="wordmark">lokals</span>
+</header>
+
+<main>
+  <div id="form-stage">
+    <h1 class="hero-title">Fiți recomandați oaspeților din zonă.</h1>
+    <p class="hero-sub">Sunteți deja pe lista noastră de căutare — completați profilul singuri, gratuit, în câteva minute.</p>
+
+    <div class="stat-row">
+      <div class="stat"><div class="num">Gratuit</div><div class="lbl">fără cost, fără abonament</div></div>
+      <div class="stat"><div class="num">3 min</div><div class="lbl">durata înscrierii</div></div>
+      <div class="stat"><div class="num">✓</div><div class="lbl">verificat înainte de publicare</div></div>
+    </div>
+
+    <form id="signup-form">
+      <label for="nume_afacere">Numele afacerii</label>
+      <input type="text" id="nume_afacere" required placeholder="ex. Restaurant Cetate">
+
+      <label for="persoana_contact">Persoana de contact</label>
+      <input type="text" id="persoana_contact" required placeholder="ex. Maria Ionescu">
+
+      <label for="telefon">Telefon (WhatsApp)</label>
+      <input type="tel" id="telefon" required placeholder="ex. 0722 123 456">
+
+      <label for="email">Email (opțional)</label>
+      <input type="email" id="email" placeholder="ex. contact@afacerea-mea.ro">
+
+      <label for="categorie">Categoria</label>
+      <select id="categorie" required>
+        <option value="">Alege categoria…</option>
+        <option value="aventura">Aventură</option>
+        <option value="cultura">Cultură</option>
+        <option value="wellness">Wellness</option>
+        <option value="gastro">Gastronomie</option>
+        <option value="livrare">Livrare</option>
+        <option value="producatori">Producători Locali</option>
+        <option value="facilitare">Facilitare</option>
+      </select>
+
+      <label for="zona">Zona</label>
+      <select id="zona" required>
+        <option value="rasnov">Râșnov</option>
+        <option value="sacele-brasov">Săcele-Brașov</option>
+        <option value="predeal-azuga">Predeal-Azuga</option>
+        <option value="sinaia-busteni-poiana-tapului">Sinaia-Bușteni</option>
+        <option value="bran-moieciu-fundata">Bran-Moieciu</option>
+        <option value="zarnesti-poiana-marului">Zărnești</option>
+        <option value="fagaras-sambata-de-sus">Făgăraș</option>
+        <option value="bunesti-viscri-saschiz-meschendorf">Viscri-Saschiz</option>
+        <option value="covasna-targu-secuiesc-sfantu-gheorghe">Covasna</option>
+        <option value="vama-buzaului-intorsura-buzaului">Vama Buzăului</option>
+      </select>
+
+      <label for="descriere">Descriere scurtă (apare exact așa în ghid)</label>
+      <textarea id="descriere" required placeholder="ex. Bucătărie tradițională, terasă cu vedere spre cetate, porții generoase."></textarea>
+      <div class="hint">O propoziție-două, clar și concret — oaspeții citesc rapid, de pe telefon.</div>
+
+      <label for="poza">Poză (opțional, dar recomandat)</label>
+      <input type="file" id="poza" accept="image/*">
+      <div class="hint">O poză reprezentativă — crește vizibil șansa ca oaspeții să vă aleagă.</div>
+
+      <label>Teme de interes (alegeți tot ce se potrivește)</label>
+      <div class="theme-grid" id="theme-grid">
+        <label class="theme-chip"><input type="checkbox" value="Aventură"><span>Aventură</span></label>
+        <label class="theme-chip"><input type="checkbox" value="Family Relax"><span>Family Relax</span></label>
+        <label class="theme-chip"><input type="checkbox" value="Romantic"><span>Romantic</span></label>
+        <label class="theme-chip"><input type="checkbox" value="Cultură & Istorie"><span>Cultură & Istorie</span></label>
+        <label class="theme-chip"><input type="checkbox" value="Outdoor Relax"><span>Outdoor Relax</span></label>
+        <label class="theme-chip"><input type="checkbox" value="Petreceri & Festivaluri"><span>Petreceri & Festivaluri</span></label>
+      </div>
+
+      <label for="website">Website (opțional)</label>
+      <input type="url" id="website" placeholder="ex. https://afacerea-mea.ro">
+      <label for="facebook">Facebook (opțional)</label>
+      <input type="url" id="facebook" placeholder="ex. https://facebook.com/afacerea-mea">
+      <label for="instagram">Instagram (opțional)</label>
+      <input type="url" id="instagram" placeholder="ex. https://instagram.com/afacerea-mea">
+
+      <label>Oferiți un beneficiu oaspeților din rețea?</label>
+      <div class="benefit-toggle">
+        <label class="benefit-option active" id="opt-nu">
+          <input type="radio" name="beneficiu_da_nu" value="nu" checked><span>Nu, deocamdată</span>
+        </label>
+        <label class="benefit-option" id="opt-da">
+          <input type="radio" name="beneficiu_da_nu" value="da"><span>Da</span>
+        </label>
+      </div>
+      <div id="benefit-detail">
+        <textarea id="beneficiu_propus" placeholder="ex. 10% reducere la bonuri peste 60 lei"></textarea>
+        <div class="hint">Confirmăm telefonic detaliile înainte să apară live în ghid.</div>
+      </div>
+
+      <button type="submit" class="btn-submit" id="submit-btn">Trimite spre verificare</button>
+      <div class="error-msg" id="form-error"></div>
+      <p class="fine-print">Gratuit, fără obligații — verificăm rapid și vă anunțăm.</p>
+    </form>
+  </div>
+
+  <div id="success-stage">
+    <div class="success-card">
+      <div class="success-icon">✓</div>
+      <p class="success-title">Mulțumim!</p>
+      <p class="success-sub" id="success-sub">—</p>
+    </div>
+    <div class="next-steps">
+      <b>Ce urmează:</b> verificăm profilul (de obicei în 1-2 zile) și vă contactăm pe WhatsApp pentru confirmare. Odată aprobat, apăreți live în ghid, vizibil tuturor oaspeților din zonă.
+    </div>
+  </div>
+</main>
+
+<script>
+const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
+
+async function sbFetch(path, options = {}) {
+  return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...options,
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': options.prefer || 'return=representation',
+      ...(options.headers || {}),
+    },
+  });
+}
+
+function slugify(text) {
+  const map = { 'ă':'a','â':'a','î':'i','ș':'s','ş':'s','ț':'t','ţ':'t',
+    'Ă':'a','Â':'a','Î':'i','Ș':'s','Ş':'s','Ț':'t','Ţ':'t' };
+  return text.split('').map(ch => map[ch] || ch).join('')
+    .toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+}
+
+async function uploadPhoto(file, numeAfacere) {
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  const path = `${slugify(numeAfacere)}-${Date.now()}.${ext}`;
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/afaceri-poze/${path}`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Content-Type': file.type || 'image/jpeg',
+    },
+    body: file,
+  });
+  if (!res.ok) return null;
+  return `${SUPABASE_URL}/storage/v1/object/public/afaceri-poze/${path}`;
+}
+
+// ---------- teme de interes (chips) ----------
+document.querySelectorAll('#theme-grid .theme-chip input').forEach(cb => {
+  cb.addEventListener('change', () => {
+    cb.closest('.theme-chip').classList.toggle('active', cb.checked);
+  });
+});
+
+// ---------- toggle beneficiu ----------
+document.querySelectorAll('input[name="beneficiu_da_nu"]').forEach(radio => {
+  radio.addEventListener('change', () => {
+    const isDa = document.querySelector('input[name="beneficiu_da_nu"]:checked').value === 'da';
+    document.getElementById('opt-da').classList.toggle('active', isDa);
+    document.getElementById('opt-nu').classList.toggle('active', !isDa);
+    document.getElementById('benefit-detail').classList.toggle('visible', isDa);
+  });
+});
+
+document.getElementById('signup-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errorEl = document.getElementById('form-error');
+  errorEl.textContent = '';
+
+  const nume_afacere = document.getElementById('nume_afacere').value.trim();
+  const persoana_contact = document.getElementById('persoana_contact').value.trim();
+  const telefon = document.getElementById('telefon').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const categorie = document.getElementById('categorie').value;
+  const zona = document.getElementById('zona').value;
+  const descriere = document.getElementById('descriere').value.trim();
+  const website = document.getElementById('website').value.trim();
+  const facebook = document.getElementById('facebook').value.trim();
+  const instagram = document.getElementById('instagram').value.trim();
+
+  if (!nume_afacere || !persoana_contact || !telefon || !categorie || !descriere) {
+    errorEl.textContent = 'Completează toate câmpurile obligatorii.';
+    return;
+  }
+
+  const teme_interes = Array.from(document.querySelectorAll('#theme-grid input:checked')).map(cb => cb.value).join(', ');
+  const interesat_beneficiu = document.querySelector('input[name="beneficiu_da_nu"]:checked').value === 'da';
+  const beneficiu_propus = interesat_beneficiu ? document.getElementById('beneficiu_propus').value.trim() : null;
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Se trimite…';
+
+  let poza_url = null;
+  const pozaInput = document.getElementById('poza');
+  if (pozaInput.files && pozaInput.files[0]) {
+    btn.textContent = 'Se încarcă poza…';
+    poza_url = await uploadPhoto(pozaInput.files[0], nume_afacere);
+    btn.textContent = 'Se trimite…';
+  }
+
+  const res = await sbFetch('candidati_parteneri', {
+    method: 'POST',
+    body: JSON.stringify({
+      nume_afacere, persoana_contact, telefon, email: email || null,
+      categorie, zona, descriere, poza_url,
+      website: website || null, facebook: facebook || null, instagram: instagram || null,
+      teme_interes: teme_interes || null,
+      interesat_beneficiu, beneficiu_propus,
+    }),
+  });
+
+  if (res.status === 201) {
+    document.getElementById('success-sub').textContent = `„${nume_afacere}” a fost trimis spre verificare.`;
+    document.getElementById('form-stage').classList.add('hidden');
+    document.getElementById('success-stage').classList.add('visible');
+  } else {
+    errorEl.textContent = 'Nu am putut trimite chiar acum. Încearcă din nou în câteva secunde.';
+    btn.disabled = false;
+    btn.textContent = 'Trimite spre verificare';
+  }
+});
+</script>
+</body>
+</html>
