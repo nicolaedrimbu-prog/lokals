@@ -10,17 +10,21 @@
     --spruce:#3C5B44; --spruce-deep:#26382C; --amber:#B9812F; --line:rgba(32,41,31,0.14); }
   *{box-sizing:border-box;}
   body{margin:0; background:var(--bg); color:var(--ink); font-family:'Inter', system-ui, sans-serif; padding:32px 20px;}
-  .wrap{max-width:520px; margin:0 auto;}
+  .wrap{max-width:560px; margin:0 auto;}
   h1{font-family:'Fraunces', Georgia, serif; font-size:24px; margin:0 0 4px;}
   p.lead{color:var(--ink-soft); font-size:14px; margin:0 0 24px;}
+  h2.section{font-family:'Fraunces', Georgia, serif; font-size:16px; font-weight:600; margin:28px 0 10px; color:var(--spruce-deep);}
+  h2.section:first-of-type{margin-top:0;}
+  p.zone-label{font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); margin:16px 0 8px;}
   .card{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:18px 20px; margin-bottom:12px;
-    display:flex; align-items:center; justify-content:space-between;}
+    display:flex; align-items:center; justify-content:space-between; gap:12px;}
   .card .name{font-weight:600; font-size:15px;}
   .card .sub{font-size:12px; color:var(--ink-soft); margin-top:2px;}
-  .count{font-family:'JetBrains Mono', monospace; font-size:28px; font-weight:600; color:var(--spruce-deep);}
+  .count{font-family:'JetBrains Mono', monospace; font-size:28px; font-weight:600; color:var(--spruce-deep); flex-shrink:0;}
   .total{background:var(--spruce-deep); color:#fff; border-radius:16px; padding:18px 20px; margin-top:20px;
     display:flex; align-items:center; justify-content:space-between;}
   .total .count{color:#fff;}
+  .empty{font-size:13px; color:var(--ink-soft); font-style:italic; padding:4px 2px 12px;}
   .note{font-size:12px; color:var(--ink-soft); margin-top:20px; line-height:1.5;}
   .refresh{margin-top:16px; font-size:13px; background:var(--spruce); color:#fff; border:none;
     padding:9px 16px; border-radius:999px; cursor:pointer;}
@@ -28,61 +32,103 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>Accesări ghid — pe apartament</h1>
+  <h1>Accesări ghid — pe unitate</h1>
   <p class="lead">Numărătoare simplă, actualizată live la fiecare scanare a codului QR.</p>
 
-  <div class="card">
-    <div>
-      <div class="name">Apartamentul 5</div>
-      <div class="sub">Beautifull views near the Fortress</div>
-    </div>
-    <div class="count" id="c-ap5">—</div>
-  </div>
+  <h2 class="section">Apartamente (Râșnov + Săcele)</h2>
+  <div id="apartamente-list"></div>
 
-  <div class="card">
-    <div>
-      <div class="name">Apartamentul 12</div>
-      <div class="sub">Pacefull and inviting</div>
-    </div>
-    <div class="count" id="c-ap12">—</div>
-  </div>
+  <h2 class="section">Hotelieri înscriși pe lokals.ro</h2>
+  <div id="hotelieri-list"></div>
 
   <div class="total">
     <div>Total accesări</div>
     <div class="count" id="c-total">—</div>
   </div>
 
-  <button class="refresh" onclick="loadCounts()">Actualizează</button>
+  <button class="refresh" onclick="loadAll()">Actualizează</button>
 
   <p class="note">
-    Contorul folosește un serviciu gratuit, fără cont (countapi). E suficient pentru a vedea tendința generală,
-    dar nu oferă detalii precum ora accesării sau tipul de dispozitiv. Pentru statistici mai avansate
+    Contorul folosește un serviciu gratuit, fără cont (countapi). Apartamentele vechi (Ap.5, Ap.12, Săcele) sunt
+    numărate sub prefixul istoric <code>ghid-rasnov-*</code>, folosit de posterele deja tipărite pe domeniul vechi.
+    Hotelierii înscriși prin lokals.ro sunt numărați separat, sub prefixul <code>lokals-*</code>, ca să nu se
+    amestece cele două surse de trafic. Lista de hotelieri se încarcă live din Supabase (tabela operatori) — un
+    hotelier nou apărut acolo apare automat aici, fără nicio modificare de cod. Pentru statistici mai avansate
     (grafic în timp, provenență, ce recomandare a fost accesată), varianta următoare ar trebui să adauge
     Google Analytics sau Plausible pe pagina ghidului.
   </p>
 </div>
 
 <script>
-async function getCount(key){
+const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
+const SUPABASE_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
+
+// Apartamentele vechi — trafic contorizat sub prefixul istoric ghid-rasnov-*
+const APARTAMENTE = [
+  { slug: 'ap5',    name: 'Apartamentul 5',    sub: 'Beautiful views near the Fortress', zona: 'Râșnov' },
+  { slug: 'ap12',   name: 'Apartamentul 12',   sub: 'Peaceful and inviting',              zona: 'Râșnov' },
+  { slug: 'sacele', name: 'Family House',      sub: 'Mountain views — Săcele',            zona: 'Săcele-Brașov' },
+];
+
+async function getCount(prefix, key){
   try{
-    const res = await fetch(`https://countapi.mileshilliard.com/api/v1/get/ghid-rasnov-${key}`);
+    const res = await fetch(`https://countapi.mileshilliard.com/api/v1/get/${prefix}-${key}`);
     const data = await res.json();
     return data.value ?? 0;
   }catch(e){ return null; }
 }
 
-async function loadCounts(){
-  document.getElementById('c-ap5').textContent = '…';
-  document.getElementById('c-ap12').textContent = '…';
-  document.getElementById('c-total').textContent = '…';
-
-  const [ap5, ap12] = await Promise.all([getCount('ap5'), getCount('ap12')]);
-  document.getElementById('c-ap5').textContent = ap5 ?? 'N/A';
-  document.getElementById('c-ap12').textContent = ap12 ?? 'N/A';
-  document.getElementById('c-total').textContent = (ap5 !== null && ap12 !== null) ? (ap5 + ap12) : 'N/A';
+async function getOperatori(){
+  try{
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/operatori?select=slug,nume_afisat,nume_afacere,zona`, {
+      headers: { apikey: SUPABASE_KEY }
+    });
+    if (!res.ok) return [];
+    return await res.json();
+  }catch(e){ return []; }
 }
 
-loadCounts();
+function renderCard(name, sub, count, elId){
+  return `<div class="card">
+    <div>
+      <div class="name">${name}</div>
+      ${sub ? `<div class="sub">${sub}</div>` : ''}
+    </div>
+    <div class="count" id="${elId}">${count === null ? 'N/A' : count}</div>
+  </div>`;
+}
+
+async function loadAll(){
+  const apList = document.getElementById('apartamente-list');
+  const hotList = document.getElementById('hotelieri-list');
+  document.getElementById('c-total').textContent = '…';
+  apList.innerHTML = '<p class="empty">Se încarcă…</p>';
+  hotList.innerHTML = '<p class="empty">Se încarcă…</p>';
+
+  // Apartamente vechi
+  const apCounts = await Promise.all(APARTAMENTE.map(a => getCount('ghid-rasnov', a.slug)));
+  apList.innerHTML = APARTAMENTE.map((a, i) =>
+    renderCard(a.name, `${a.sub} · ${a.zona}`, apCounts[i], `c-ap-${a.slug}`)
+  ).join('');
+
+  // Hotelieri lokals.ro
+  const operatori = await getOperatori();
+  let hotCounts = [];
+  if (operatori.length === 0){
+    hotList.innerHTML = '<p class="empty">Niciun hotelier înscris încă.</p>';
+  } else {
+    hotCounts = await Promise.all(operatori.map(op => getCount('lokals', op.slug)));
+    hotList.innerHTML = operatori.map((op, i) =>
+      renderCard(op.nume_afisat || op.nume_afacere, op.zona || '', hotCounts[i], `c-hot-${op.slug}`)
+    ).join('');
+  }
+
+  const allCounts = [...apCounts, ...hotCounts];
+  const valid = allCounts.filter(c => c !== null);
+  document.getElementById('c-total').textContent = valid.length ? valid.reduce((a,b) => a+b, 0) : 'N/A';
+}
+
+loadAll();
 </script>
 </body>
 </html>
