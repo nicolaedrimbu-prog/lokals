@@ -442,9 +442,15 @@ function renderFilters(){
     nav.appendChild(btn);
   });
 }
-
+async function registerVisit(slug){
+  if (!slug || slug === 'general') return;
+  try {
+    await fetch(`https://countapi.mileshilliard.com/api/v1/hit/lokals-${encodeURIComponent(slug)}`);
+  } catch (e) { }
+}
 async function init() {
   await resolveOperator();
+  registerVisit(apt);
   setLang('ro');
   loadPlaces();
 }
