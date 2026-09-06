@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cont confirmat — Lokals</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --teal-deep:#10302B; --teal:#1A4A42; --gold:#C98A2C; --gold-soft:#E8CE9E; --cream:#F7F2E8; --ink:#181E1B; --ink-soft:#5B6459; }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--cream); color:var(--ink); font-family:'Inter', system-ui, sans-serif; min-height:100vh;
+    display:flex; align-items:center; justify-content:center; padding:24px;}
+  .card{background:#fff; border-radius:20px; max-width:440px; width:100%; padding:40px 32px; box-shadow:0 12px 40px rgba(16,48,43,0.12); text-align:center;}
+  .brand{font-family:'Fraunces', Georgia, serif; font-weight:700; color:var(--teal-deep); margin-bottom:22px; font-size:15px; letter-spacing:.02em;}
+  .icon{font-size:40px; margin-bottom:14px;}
+  h1{font-family:'Fraunces', Georgia, serif; font-size:24px; margin:0 0 10px; color:var(--teal-deep);}
+  p.lead{color:var(--ink-soft); font-size:14.5px; line-height:1.6; margin:0 0 8px;}
+  .state{display:none;}
+  .state.active{display:block;}
+  a.btn{display:inline-block; margin-top:18px; background:var(--teal-deep); color:#fff; text-decoration:none;
+    padding:12px 22px; border-radius:10px; font-weight:600; font-size:14px;}
+  a.btn:hover{background:var(--teal);}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand">lokals</div>
+
+  <div class="state active" id="state-loading">
+    <div class="icon">⏳</div>
+    <h1>Confirmăm contul...</h1>
+    <p class="lead">Un moment, verificăm linkul.</p>
+  </div>
+
+  <div class="state" id="state-ok">
+    <div class="icon">✅</div>
+    <h1>Cont confirmat</h1>
+    <p class="lead" id="ok-email"></p>
+    <p class="lead">Poți închide pagina — nu mai e nevoie de nimic altceva. Te vom anunța pe această adresă când apar noutăți pentru contul tău.</p>
+    <a class="btn" href="https://lokals.ro/">Înapoi la Lokals</a>
+  </div>
+
+  <div class="state" id="state-err">
+    <div class="icon">⚠️</div>
+    <h1>Linkul nu mai e valabil</h1>
+    <p class="lead">Linkurile de confirmare expiră după câteva ore și pot fi folosite o singură dată. Cere unul nou din pagina de cont.</p>
+    <a class="btn" href="https://lokals.ro/cont.html">Cere alt link</a>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
+const SUPABASE_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+function showState(id) {
+  document.querySelectorAll('.state').forEach(el => el.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+async function confirmAccount(email) {
+  const now = new Date().toISOString();
+  // Încearcă să lege confirmarea de rândul din operatori (hotelieri) și/sau candidati_parteneri (afaceri) —
+  // una dintre cele două (sau niciuna, dacă emailul nu a fost folosit la înscriere) va potrivi rânduri.
+  await Promise.allSettled([
+    supabase.from('operatori').update({ cont_confirmat: true, data_cont_confirmat: now }).eq('email', email),
+    supabase.from('candidati_parteneri').update({ cont_confirmat: true, data_cont_confirmat: now }).eq('email', email),
+  ]);
+
+  document.getElementById('ok-email').textContent = `Adresa ${email} este acum confirmată.`;
+  showState('state-ok');
+}
+
+async function init() {
+  // supabase-js citește automat tokenul din URL (#access_token=...) la crearea clientului.
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (session && session.user && session.user.email) {
+    await confirmAccount(session.user.email);
+    return;
+  }
+
+  // Uneori sesiunea apare cu o mică întârziere după parsarea URL-ului — mai așteptăm un pic.
+  const { data: sub } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+    if (newSession && newSession.user && newSession.user.email) {
+      sub.subscription.unsubscribe();
+      await confirmAccount(newSession.user.email);
+    }
+  });
+
+  setTimeout(async () => {
+    const { data: { session: retrySession } } = await supabase.auth.getSession();
+    if (!retrySession) {
+      sub.subscription.unsubscribe();
+      showState('state-err');
+    }
+  }, 4000);
+}
+
+init();
+</script>
+</body>
+</html>

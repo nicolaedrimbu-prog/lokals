@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contul tău — Lokals</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --teal-deep:#10302B; --teal:#1A4A42; --gold:#C98A2C; --gold-soft:#E8CE9E; --cream:#F7F2E8; --ink:#181E1B; --ink-soft:#5B6459; }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--cream); color:var(--ink); font-family:'Inter', system-ui, sans-serif; min-height:100vh;
+    display:flex; align-items:center; justify-content:center; padding:24px;}
+  .card{background:#fff; border-radius:20px; max-width:440px; width:100%; padding:36px 32px; box-shadow:0 12px 40px rgba(16,48,43,0.12);}
+  .eyebrow{font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--gold); font-weight:600; margin:0 0 8px;}
+  h1{font-family:'Fraunces', Georgia, serif; font-size:26px; margin:0 0 10px; color:var(--teal-deep);}
+  p.lead{color:var(--ink-soft); font-size:14.5px; line-height:1.55; margin:0 0 26px;}
+  label{font-size:13px; font-weight:600; color:var(--teal-deep); display:block; margin-bottom:6px;}
+  input[type="email"]{width:100%; padding:13px 14px; border:1.5px solid #DDD6C4; border-radius:10px; font-size:15px;
+    font-family:inherit; margin-bottom:18px;}
+  input[type="email"]:focus{outline:none; border-color:var(--teal);}
+  button{width:100%; background:var(--teal-deep); color:#fff; border:none; padding:14px; border-radius:10px;
+    font-size:15px; font-weight:600; cursor:pointer; font-family:inherit;}
+  button:disabled{opacity:.6; cursor:default;}
+  button:hover:not(:disabled){background:var(--teal);}
+  .msg{margin-top:18px; padding:14px 16px; border-radius:10px; font-size:14px; line-height:1.5; display:none;}
+  .msg.ok{background:#E8F3E5; color:#2C4A2E; display:block;}
+  .msg.err{background:#FBE6E0; color:#7A2E1E; display:block;}
+  .note{margin-top:22px; font-size:12.5px; color:var(--ink-soft); line-height:1.5;}
+  .brand{font-family:'Fraunces', Georgia, serif; font-weight:700; color:var(--teal-deep); text-align:center;
+    margin-bottom:22px; font-size:15px; letter-spacing:.02em;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand">lokals</div>
+  <p class="eyebrow">Cont hotelier / partener</p>
+  <h1>Accesează contul tău</h1>
+  <p class="lead">Introdu adresa de email cu care te-ai înscris pe Lokals (ca hotelier sau ca afacere parteneră) și îți trimitem un link de confirmare — fără parolă.</p>
+
+  <form id="form-cont">
+    <label for="email">Adresa de email</label>
+    <input type="email" id="email" name="email" placeholder="nume@exemplu.ro" required>
+    <button type="submit" id="btn-submit">Trimite link de confirmare</button>
+  </form>
+
+  <div class="msg" id="msg"></div>
+
+  <p class="note">Linkul e valabil o singură dată și expiră după câteva ore, din motive de siguranță. Dacă nu găsești emailul, verifică și folderul Spam/Promoții.</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
+const SUPABASE_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const form = document.getElementById('form-cont');
+const btn = document.getElementById('btn-submit');
+const msgEl = document.getElementById('msg');
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('email').value.trim();
+  if (!email) return;
+
+  btn.disabled = true;
+  btn.textContent = 'Se trimite...';
+  msgEl.className = 'msg';
+  msgEl.textContent = '';
+
+  try {
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: 'https://lokals.ro/cont-confirmat.html'
+      }
+    });
+
+    if (error) throw error;
+
+    msgEl.className = 'msg ok';
+    msgEl.textContent = `Ți-am trimis un link de confirmare la ${email}. Deschide-l pe același telefon/calculator ca să-ți activezi contul.`;
+    form.reset();
+  } catch (err) {
+    msgEl.className = 'msg err';
+    msgEl.textContent = 'Nu am putut trimite linkul chiar acum. Încearcă din nou în câteva secunde sau scrie-ne pe WhatsApp la 0751 090 407.';
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Trimite link de confirmare';
+  }
+});
+</script>
+</body>
+</html>
