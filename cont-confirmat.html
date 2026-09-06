@@ -63,6 +63,25 @@ function displayName(user) {
 }
 
 async function confirmAccount(user) {
+  // Dacă venim dintr-un formular de login care a cerut prenume/nume, îl salvăm acum pe cont —
+  // signInWithOtp setează metadata doar la crearea contului, nu și la logări ulterioare ale
+  // unui cont deja existent, așa că actualizăm explicit aici, cât timp sesiunea e activă.
+  const pendingNameRaw = localStorage.getItem('lokals_pending_name');
+  if (pendingNameRaw) {
+    localStorage.removeItem('lokals_pending_name');
+    try {
+      const pendingName = JSON.parse(pendingNameRaw);
+      if (pendingName.prenume && pendingName.nume) {
+        const { data: updated, error: updErr } = await supabaseClient.auth.updateUser({
+          data: { prenume: pendingName.prenume, nume: pendingName.nume }
+        });
+        if (!updErr && updated && updated.user) {
+          user = updated.user;
+        }
+      }
+    } catch (e) { console.error(e); }
+  }
+
   const email = user.email;
   const now = new Date().toISOString();
   // Încearcă să lege confirmarea de rândul din operatori (hotelieri) și/sau candidati_parteneri (afaceri) —

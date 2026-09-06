@@ -298,7 +298,14 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
     document.getElementById('success-sub').textContent = `„${nume_afacere}” a fost trimis spre verificare.`;
     document.getElementById('form-stage').classList.add('hidden');
     document.getElementById('success-stage').classList.add('visible');
-    document.getElementById('account-link').href = 'cont.html?email=' + encodeURIComponent(email);
+    const accountLink = document.getElementById('account-link');
+    const { data: { session: sessionAfter } } = await supabaseClient.auth.getSession();
+    if (sessionAfter && sessionAfter.user) {
+      // Ești deja autentificat — nu mai are rost să-ți ceară să-ți faci cont din nou.
+      accountLink.style.display = 'none';
+    } else {
+      accountLink.href = 'cont.html?email=' + encodeURIComponent(email);
+    }
   } else {
     errorEl.textContent = 'Nu am putut trimite chiar acum. Încearcă din nou în câteva secunde.';
     btn.disabled = false;

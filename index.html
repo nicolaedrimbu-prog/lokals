@@ -452,6 +452,7 @@ loginForm.addEventListener('submit', async function (e) {
   loginMsg.textContent = '';
 
   try {
+    localStorage.setItem('lokals_pending_name', JSON.stringify({ prenume, nume }));
     const { error } = await supabaseClient.auth.signInWithOtp({
       email,
       options: {
