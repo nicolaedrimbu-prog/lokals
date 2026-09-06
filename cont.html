@@ -52,7 +52,7 @@
 <script>
 const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
 const SUPABASE_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const form = document.getElementById('form-cont');
 const btn = document.getElementById('btn-submit');
@@ -77,7 +77,7 @@ form.addEventListener('submit', async (e) => {
   msgEl.textContent = '';
 
   try {
-    const { error } = await supabase.auth.signInWithOtp({
+    const { error } = await supabaseClient.auth.signInWithOtp({
       email,
       options: {
         emailRedirectTo: 'https://lokals.ro/cont-confirmat.html'
