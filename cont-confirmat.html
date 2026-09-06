@@ -53,7 +53,17 @@ function showState(id) {
   document.querySelectorAll('.state').forEach(el => el.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
-async function confirmAccount(email) {
+function displayName(user) {
+  const meta = user.user_metadata || {};
+  if (meta.prenume) {
+    const initial = meta.nume ? meta.nume.trim().charAt(0).toUpperCase() + '.' : '';
+    return `${meta.prenume} ${initial}`.trim();
+  }
+  return user.email;
+}
+
+async function confirmAccount(user) {
+  const email = user.email;
   const now = new Date().toISOString();
   // Încearcă să lege confirmarea de rândul din operatori (hotelieri) și/sau candidati_parteneri (afaceri) —
   // una dintre cele două (sau niciuna, dacă emailul nu a fost folosit la înscriere) va potrivi rânduri.
@@ -61,21 +71,34 @@ async function confirmAccount(email) {
     supabaseClient.from('operatori').update({ cont_confirmat: true, data_cont_confirmat: now }).eq('email', email),
     supabaseClient.from('candidati_parteneri').update({ cont_confirmat: true, data_cont_confirmat: now }).eq('email', email),
   ]);
-  document.getElementById('ok-email').textContent = `Adresa ${email} este acum confirmată.`;
+
+  // Dacă utilizatorul a pornit din butonul "Înscrie-te gratuit" și a ales "Am deja cont",
+  // continuăm direct la pasul de înregistrare propriu-zisă, în loc să ne oprim aici.
+  const name = displayName(user);
+  const pendingIntent = localStorage.getItem('lokals_signup_intent');
+  if (pendingIntent) {
+    localStorage.removeItem('lokals_signup_intent');
+    document.getElementById('ok-email').textContent = `Bine ai venit, ${name}! Contul e confirmat — te ducem la formularul de înscriere...`;
+    showState('state-ok');
+    setTimeout(() => { window.location.href = pendingIntent; }, 1200);
+    return;
+  }
+
+  document.getElementById('ok-email').textContent = `Bine ai venit, ${name}! Adresa ${email} este acum confirmată.`;
   showState('state-ok');
 }
 async function init() {
   // supabase-js citește automat tokenul din URL (#access_token=...) la crearea clientului.
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (session && session.user && session.user.email) {
-    await confirmAccount(session.user.email);
+    await confirmAccount(session.user);
     return;
   }
   // Uneori sesiunea apare cu o mică întârziere după parsarea URL-ului — mai așteptăm un pic.
   const { data: sub } = supabaseClient.auth.onAuthStateChange(async (event, newSession) => {
     if (newSession && newSession.user && newSession.user.email) {
       sub.subscription.unsubscribe();
-      await confirmAccount(newSession.user.email);
+      await confirmAccount(newSession.user);
     }
   });
   setTimeout(async () => {

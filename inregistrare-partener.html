@@ -65,6 +65,11 @@
     color:var(--teal-deep); text-align:center; font-weight:700; font-size:14.5px; text-decoration:none;
     margin-top:16px; box-sizing:border-box;}
   .account-cta:hover{background:var(--cream);}
+
+  .auth-banner{background:var(--cream); border:1px solid var(--line); border-radius:12px; padding:11px 14px;
+    font-size:12.5px; color:var(--ink-soft); margin:0 0 18px; line-height:1.5;}
+  .auth-banner b{color:var(--ink);}
+  .auth-banner a{color:var(--teal-deep); font-weight:600; text-decoration:underline; cursor:pointer;}
 </style>
 </head>
 <body>
@@ -164,9 +169,43 @@
     <a class="account-cta" id="account-link" href="cont.html">🔑 Creează cont — acces rapid la profilul tău</a>
   </div>
 </main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
 const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function displayName(user) {
+  const meta = user.user_metadata || {};
+  if (meta.prenume) {
+    const initial = meta.nume ? meta.nume.trim().charAt(0).toUpperCase() + '.' : '';
+    return `${meta.prenume} ${initial}`.trim();
+  }
+  return user.email;
+}
+
+// Dacă utilizatorul e deja autentificat (a trecut prin popup-ul de login de pe landing page
+// sau prin cont.html), recunoaștem cine e — completăm și blocăm emailul, fără să-l mai întrebăm.
+async function initAuthState() {
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session || !session.user || !session.user.email) return;
+    const emailInput = document.getElementById('email');
+    emailInput.value = session.user.email;
+    emailInput.readOnly = true;
+    emailInput.style.background = '#F0EDE3';
+    const banner = document.createElement('div');
+    banner.className = 'auth-banner';
+    banner.innerHTML = `🔒 Autentificat ca <b>${displayName(session.user)}</b> · <a id="auth-logout-link">Nu ești tu?</a>`;
+    document.getElementById('signup-form').prepend(banner);
+    document.getElementById('auth-logout-link').addEventListener('click', async () => {
+      await supabaseClient.auth.signOut();
+      location.reload();
+    });
+  } catch (e) { console.error(e); }
+}
+initAuthState();
+
 async function sbFetch(path, options = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     ...options,

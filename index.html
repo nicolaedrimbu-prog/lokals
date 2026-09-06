@@ -21,6 +21,13 @@
   .header-auth-btn{background:none; border:1.5px solid var(--teal-deep); color:var(--teal-deep); font-family:inherit;
     font-size:13.5px; font-weight:700; padding:9px 18px; border-radius:999px; cursor:pointer;}
   .header-auth-btn:hover{background:var(--teal-deep); color:#fff;}
+  .header-auth-user{display:none; align-items:center; gap:10px;}
+  .header-auth-user.visible{display:flex;}
+  .header-auth-email{font-size:13px; font-weight:600; color:var(--teal-deep); max-width:180px; overflow:hidden;
+    text-overflow:ellipsis; white-space:nowrap;}
+  .header-logout-btn{background:none; border:1px solid var(--line); color:var(--ink-soft); font-family:inherit;
+    font-size:12px; font-weight:600; padding:7px 14px; border-radius:999px; cursor:pointer;}
+  .header-logout-btn:hover{border-color:var(--teal-deep); color:var(--teal-deep);}
   .hero{max-width:1000px; margin:0 auto; padding:40px 20px 20px; text-align:center;}
   .eyebrow{color:var(--gold); font-size:13px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:14px;}
   .hero h1{font-size:40px; line-height:1.2; margin:0 0 16px; color:var(--teal-deep);}
@@ -107,9 +114,9 @@
   .modal-btn.secondary{background:#fff; color:var(--teal-deep); border:1.5px solid var(--teal-deep);}
   .modal-btn.secondary:hover{background:var(--cream);}
   #modal-login-form label{font-size:13px; font-weight:600; color:var(--teal-deep); display:block; margin-bottom:6px; text-align:left;}
-  #modal-login-form input[type="email"]{width:100%; padding:12px 14px; border:1.5px solid var(--line); border-radius:10px;
-    font-size:15px; font-family:inherit; margin-bottom:14px;}
-  #modal-login-form input[type="email"]:focus{outline:none; border-color:var(--teal);}
+  #modal-login-form input[type="email"], #modal-login-form input[type="text"]{width:100%; padding:12px 14px;
+    border:1.5px solid var(--line); border-radius:10px; font-size:15px; font-family:inherit; margin-bottom:14px; box-sizing:border-box;}
+  #modal-login-form input[type="email"]:focus, #modal-login-form input[type="text"]:focus{outline:none; border-color:var(--teal);}
   #modal-login-form button{width:100%; background:var(--teal-deep); color:#fff; border:none; padding:13px; border-radius:10px;
     font-size:14.5px; font-weight:700; cursor:pointer; font-family:inherit;}
   #modal-login-form button:disabled{opacity:.6; cursor:default;}
@@ -129,6 +136,10 @@
     <div class="wordmark">lokals</div>
   </div>
   <button class="header-auth-btn" id="header-login-btn" type="button">Autentificare</button>
+  <div class="header-auth-user" id="header-auth-user">
+    <span class="header-auth-email" id="header-auth-email"></span>
+    <button class="header-logout-btn" id="header-logout-btn" type="button">Ieși din cont</button>
+  </div>
 </header>
 <div class="hero">
   <div class="eyebrow">🔥 Ghid turistic local</div>
@@ -289,8 +300,12 @@
     <div class="modal-view" id="view-login">
       <div class="modal-brand">lokals</div>
       <h2>Accesează contul tău</h2>
-      <p class="modal-lead">Introdu adresa de email cu care te-ai înscris ca hotelier sau ca afacere parteneră și îți trimitem un link de confirmare — fără parolă.</p>
+      <p class="modal-lead">Introdu numele tău și adresa de email cu care te-ai înscris ca hotelier sau ca afacere parteneră și îți trimitem un link de confirmare — fără parolă.</p>
       <form id="modal-login-form">
+        <label for="modal-login-prenume">Prenume</label>
+        <input type="text" id="modal-login-prenume" name="prenume" placeholder="ex. Andrei" required>
+        <label for="modal-login-nume">Nume</label>
+        <input type="text" id="modal-login-nume" name="nume" placeholder="ex. Popescu" required>
         <label for="modal-login-email">Adresa de email</label>
         <input type="email" id="modal-login-email" name="email" placeholder="nume@exemplu.ro" required>
         <button type="submit" id="modal-login-submit">Trimite link de confirmare</button>
@@ -313,9 +328,20 @@ const viewChoice = document.getElementById('view-choice');
 const viewLogin = document.getElementById('view-login');
 const btnChoiceSignup = document.getElementById('btn-choice-signup');
 const loginForm = document.getElementById('modal-login-form');
+const loginPrenume = document.getElementById('modal-login-prenume');
+const loginNume = document.getElementById('modal-login-nume');
 const loginEmail = document.getElementById('modal-login-email');
 const loginBtn = document.getElementById('modal-login-submit');
 const loginMsg = document.getElementById('modal-login-msg');
+
+function displayName(user) {
+  const meta = user.user_metadata || {};
+  if (meta.prenume) {
+    const initial = meta.nume ? meta.nume.trim().charAt(0).toUpperCase() + '.' : '';
+    return `${meta.prenume} ${initial}`.trim();
+  }
+  return user.email;
+}
 
 function showView(view) {
   document.querySelectorAll('.modal-view').forEach(v => v.classList.remove('active'));
@@ -339,20 +365,62 @@ function closeModal() {
   document.body.style.overflow = '';
 }
 
-// Butoanele "Înscrie-te gratuit" din cele două secțiuni deschid popup-ul de alegere
+// ---------- stare autentificare (header) ----------
+const headerLoginBtn = document.getElementById('header-login-btn');
+const headerAuthUser = document.getElementById('header-auth-user');
+const headerAuthEmail = document.getElementById('header-auth-email');
+
+async function getCurrentEmail() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  return (session && session.user && session.user.email) ? session.user.email : null;
+}
+
+async function refreshAuthUI() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  const email = (session && session.user && session.user.email) ? session.user.email : null;
+  if (email) {
+    headerLoginBtn.style.display = 'none';
+    headerAuthUser.classList.add('visible');
+    headerAuthEmail.textContent = displayName(session.user);
+  } else {
+    headerLoginBtn.style.display = 'inline-block';
+    headerAuthUser.classList.remove('visible');
+    headerAuthEmail.textContent = '';
+  }
+  return email;
+}
+refreshAuthUI();
+
+document.getElementById('header-logout-btn').addEventListener('click', async function () {
+  await supabaseClient.auth.signOut();
+  refreshAuthUI();
+});
+
+// Butoanele "Înscrie-te gratuit" din cele două secțiuni: dacă ești deja autentificat,
+// mergi direct la formular (platforma te recunoaște); altfel, deschide popup-ul de alegere
 document.querySelectorAll('.path-btn').forEach(btn => {
-  btn.addEventListener('click', function () {
-    openModal(viewChoice, this.getAttribute('data-signup-href'));
+  btn.addEventListener('click', async function () {
+    const href = this.getAttribute('data-signup-href');
+    const email = await getCurrentEmail();
+    if (email) {
+      window.location.href = href;
+      return;
+    }
+    openModal(viewChoice, href);
   });
 });
 
 // Butonul de "Autentificare" din header deschide direct formularul de login
-document.getElementById('header-login-btn').addEventListener('click', function () {
+headerLoginBtn.addEventListener('click', function () {
+  localStorage.removeItem('lokals_signup_intent');
   openModal(viewLogin, null);
 });
 
-// În popup, "Am deja cont" trece la formularul de login
+// În popup, "Am deja cont" trece la formularul de login — reținem și de unde a pornit
+// (hotelier/partener), ca după confirmare să continue direct la pasul de înscriere
 document.getElementById('btn-choice-login').addEventListener('click', function () {
+  const intent = btnChoiceSignup.getAttribute('href');
+  if (intent) localStorage.setItem('lokals_signup_intent', intent);
   showView(viewLogin);
 });
 
@@ -373,8 +441,10 @@ document.addEventListener('keydown', function (e) {
 // Trimiterea formularului de login (magic link, fără parolă)
 loginForm.addEventListener('submit', async function (e) {
   e.preventDefault();
+  const prenume = loginPrenume.value.trim();
+  const nume = loginNume.value.trim();
   const email = loginEmail.value.trim();
-  if (!email) return;
+  if (!prenume || !nume || !email) return;
 
   loginBtn.disabled = true;
   loginBtn.textContent = 'Se trimite...';
@@ -385,7 +455,8 @@ loginForm.addEventListener('submit', async function (e) {
     const { error } = await supabaseClient.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: 'https://lokals.ro/cont-confirmat.html'
+        emailRedirectTo: 'https://lokals.ro/cont-confirmat.html',
+        data: { prenume, nume }
       }
     });
 

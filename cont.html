@@ -15,9 +15,9 @@
   h1{font-family:'Fraunces', Georgia, serif; font-size:26px; margin:0 0 10px; color:var(--teal-deep);}
   p.lead{color:var(--ink-soft); font-size:14.5px; line-height:1.55; margin:0 0 26px;}
   label{font-size:13px; font-weight:600; color:var(--teal-deep); display:block; margin-bottom:6px;}
-  input[type="email"]{width:100%; padding:13px 14px; border:1.5px solid #DDD6C4; border-radius:10px; font-size:15px;
-    font-family:inherit; margin-bottom:18px;}
-  input[type="email"]:focus{outline:none; border-color:var(--teal);}
+  input[type="email"], input[type="text"]{width:100%; padding:13px 14px; border:1.5px solid #DDD6C4; border-radius:10px; font-size:15px;
+    font-family:inherit; margin-bottom:18px; box-sizing:border-box;}
+  input[type="email"]:focus, input[type="text"]:focus{outline:none; border-color:var(--teal);}
   button{width:100%; background:var(--teal-deep); color:#fff; border:none; padding:14px; border-radius:10px;
     font-size:15px; font-weight:600; cursor:pointer; font-family:inherit;}
   button:disabled{opacity:.6; cursor:default;}
@@ -38,6 +38,10 @@
   <p class="lead">Introdu adresa de email cu care te-ai înscris pe Lokals (ca hotelier sau ca afacere parteneră) și îți trimitem un link de confirmare — fără parolă.</p>
 
   <form id="form-cont">
+    <label for="prenume">Prenume</label>
+    <input type="text" id="prenume" name="prenume" placeholder="ex. Andrei" required>
+    <label for="nume">Nume</label>
+    <input type="text" id="nume" name="nume" placeholder="ex. Popescu" required>
     <label for="email">Adresa de email</label>
     <input type="email" id="email" name="email" placeholder="nume@exemplu.ro" required>
     <button type="submit" id="btn-submit">Trimite link de confirmare</button>
@@ -58,6 +62,8 @@ const form = document.getElementById('form-cont');
 const btn = document.getElementById('btn-submit');
 const msgEl = document.getElementById('msg');
 const emailInput = document.getElementById('email');
+const prenumeInput = document.getElementById('prenume');
+const numeInput = document.getElementById('nume');
 
 // Pre-completează emailul dacă a fost trimis ca parametru în link
 // (ex. venind din ecranul de succes al inregistrare-hotelier.html / inregistrare-partener.html)
@@ -68,8 +74,10 @@ if (prefillEmail) {
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
+  const prenume = prenumeInput.value.trim();
+  const nume = numeInput.value.trim();
   const email = emailInput.value.trim();
-  if (!email) return;
+  if (!prenume || !nume || !email) return;
 
   btn.disabled = true;
   btn.textContent = 'Se trimite...';
@@ -80,7 +88,8 @@ form.addEventListener('submit', async (e) => {
     const { error } = await supabaseClient.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: 'https://lokals.ro/cont-confirmat.html'
+        emailRedirectTo: 'https://lokals.ro/cont-confirmat.html',
+        data: { prenume, nume }
       }
     });
 
