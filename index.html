@@ -13,19 +13,19 @@
   *{box-sizing:border-box;}
   body{margin:0; background:var(--cream); color:var(--ink); font-family:'Inter', system-ui, sans-serif;}
   .serif{font-family:'Fraunces', Georgia, serif;}
-
-  header{max-width:1000px; margin:0 auto; padding:24px 20px; display:flex; align-items:center; gap:10px;}
+  header{max-width:1000px; margin:0 auto; padding:24px 20px; display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .brand-mark{display:flex; align-items:center; gap:10px;}
   .ring{width:26px; height:26px; border-radius:50%; background:var(--gold); position:relative;}
   .ring::after{content:''; position:absolute; inset:7px; border-radius:50%; background:var(--cream);}
   .wordmark{font-family:'Poppins', sans-serif; font-weight:700; color:var(--teal-deep); font-size:22px;}
-
+  .header-auth-btn{background:none; border:1.5px solid var(--teal-deep); color:var(--teal-deep); font-family:inherit;
+    font-size:13.5px; font-weight:700; padding:9px 18px; border-radius:999px; cursor:pointer;}
+  .header-auth-btn:hover{background:var(--teal-deep); color:#fff;}
   .hero{max-width:1000px; margin:0 auto; padding:40px 20px 20px; text-align:center;}
   .eyebrow{color:var(--gold); font-size:13px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:14px;}
   .hero h1{font-size:40px; line-height:1.2; margin:0 0 16px; color:var(--teal-deep);}
   .hero p{font-size:17px; color:var(--ink-soft); max-width:560px; margin:0 auto; line-height:1.6;}
-
   main{max-width:1000px; margin:0 auto; padding:36px 20px 60px;}
-
   .path-grid{display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:56px;}
   @media (max-width:720px){ .path-grid{grid-template-columns:1fr;} }
   .path-card{background:#fff; border-radius:20px; padding:32px 28px; box-shadow:0 8px 24px rgba(16,48,43,0.08);}
@@ -34,14 +34,12 @@
   .path-card h2{font-size:21px; margin:0 0 8px; color:var(--teal-deep);}
   .path-card p{font-size:14px; color:var(--ink-soft); line-height:1.6; margin:0 0 22px;}
   .path-btn{display:inline-block; background:var(--teal-deep); color:#fff; text-decoration:none;
-    font-size:14px; font-weight:700; padding:12px 24px; border-radius:999px;}
+    font-size:14px; font-weight:700; padding:12px 24px; border-radius:999px; border:none; cursor:pointer; font-family:inherit;}
   .path-btn:hover{background:var(--teal);}
-
   .proof-section{text-align:center; margin-bottom:56px;}
   .proof-section .eyebrow{margin-bottom:10px;}
   .proof-section h2{font-size:26px; color:var(--teal-deep); margin:0 0 10px;}
   .proof-section > p{color:var(--ink-soft); font-size:15px; max-width:480px; margin:0 auto 28px;}
-
   .guide-preview{background:#EAE3D3; border:1px solid var(--line); border-radius:18px; padding:26px 28px;
     max-width:460px; margin:0 auto; text-align:left;}
   .gp-eyebrow{color:#B9812F; font-size:11px; font-weight:700; letter-spacing:0.05em;}
@@ -52,7 +50,6 @@
   .gp-chip{font-size:11px; padding:6px 14px; border-radius:999px; background:#FBF8F1; border:1px solid var(--line); color:#20291F;}
   .gp-chip.active{background:#26382C; color:#fff; border-color:#26382C; font-weight:600;}
   .guide-link{display:inline-block; margin-top:20px; font-size:14px; font-weight:700; color:var(--teal-deep); text-decoration:underline;}
-
   .how-section{background:var(--teal-deep); border-radius:24px; padding:44px 32px; margin-bottom:20px;}
   .how-section h2{color:#fff; text-align:center; font-size:24px; margin:0 0 32px;}
   .how-grid{display:grid; grid-template-columns:repeat(3, 1fr); gap:24px;}
@@ -62,7 +59,6 @@
     display:flex; align-items:center; justify-content:center; margin:0 auto 14px; font-size:15px;}
   .how-step h3{color:#fff; font-size:15px; margin:0 0 8px;}
   .how-step p{color:#C8CFC2; font-size:13px; line-height:1.5; margin:0;}
-
   .faq-section{margin:0 0 56px;}
   .faq-section h2{font-family:'Fraunces', Georgia, serif; font-size:28px; margin:0 0 8px; color:var(--teal-deep);}
   .faq-section > p.faq-lead{color:var(--ink-soft); font-size:15px; margin:0 0 28px;}
@@ -74,7 +70,6 @@
   details.faq-item summary::after{content:'+'; position:absolute; right:20px; top:14px; font-size:20px; color:var(--gold); font-weight:400;}
   details.faq-item[open] summary::after{content:'–';}
   details.faq-item p{margin:0; padding:0 20px 18px; color:var(--ink-soft); font-size:14px; line-height:1.6;}
-
   .contact-section{margin:0 0 20px;}
   .contact-section h2{font-family:'Fraunces', Georgia, serif; font-size:28px; margin:0 0 8px; color:var(--teal-deep);}
   .contact-section > p.contact-lead{color:var(--ink-soft); font-size:15px; margin:0 0 24px;}
@@ -88,46 +83,77 @@
   .contact-card .icon svg{width:22px; height:22px;}
   .contact-card .label{font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--gold-soft); margin-bottom:2px;}
   .contact-card .value{font-weight:600; font-size:15px; color:#fff;}
-
   footer{max-width:1000px; margin:0 auto; padding:24px 20px 40px; text-align:center;
     color:var(--ink-soft); font-size:12.5px; border-top:1px solid var(--line); margin-top:20px; padding-top:24px;}
+
+  /* ===================== AUTH MODAL ===================== */
+  .modal-overlay{display:none; position:fixed; inset:0; background:rgba(16,48,43,0.55); z-index:1000;
+    align-items:center; justify-content:center; padding:20px;}
+  .modal-overlay.open{display:flex;}
+  .modal-card{background:#fff; border-radius:20px; max-width:400px; width:100%; padding:36px 30px;
+    box-shadow:0 20px 60px rgba(16,48,43,0.25); position:relative; text-align:center;}
+  .modal-close{position:absolute; top:14px; right:16px; background:none; border:none; font-size:22px; line-height:1;
+    color:var(--ink-soft); cursor:pointer; padding:4px;}
+  .modal-close:hover{color:var(--ink);}
+  .modal-brand{font-family:'Poppins', sans-serif; font-weight:700; color:var(--teal-deep); font-size:15px; margin-bottom:20px;}
+  .modal-view{display:none;}
+  .modal-view.active{display:block;}
+  .modal-view h2{font-family:'Fraunces', Georgia, serif; font-size:22px; margin:0 0 10px; color:var(--teal-deep);}
+  .modal-view p.modal-lead{color:var(--ink-soft); font-size:14px; line-height:1.55; margin:0 0 22px;}
+  .modal-btn{display:block; width:100%; padding:13px; border-radius:10px; font-size:14.5px; font-weight:700;
+    font-family:inherit; cursor:pointer; text-decoration:none; box-sizing:border-box; margin-bottom:12px;}
+  .modal-btn.primary{background:var(--teal-deep); color:#fff; border:none;}
+  .modal-btn.primary:hover{background:var(--teal);}
+  .modal-btn.secondary{background:#fff; color:var(--teal-deep); border:1.5px solid var(--teal-deep);}
+  .modal-btn.secondary:hover{background:var(--cream);}
+  #modal-login-form label{font-size:13px; font-weight:600; color:var(--teal-deep); display:block; margin-bottom:6px; text-align:left;}
+  #modal-login-form input[type="email"]{width:100%; padding:12px 14px; border:1.5px solid var(--line); border-radius:10px;
+    font-size:15px; font-family:inherit; margin-bottom:14px;}
+  #modal-login-form input[type="email"]:focus{outline:none; border-color:var(--teal);}
+  #modal-login-form button{width:100%; background:var(--teal-deep); color:#fff; border:none; padding:13px; border-radius:10px;
+    font-size:14.5px; font-weight:700; cursor:pointer; font-family:inherit;}
+  #modal-login-form button:disabled{opacity:.6; cursor:default;}
+  #modal-login-form button:hover:not(:disabled){background:var(--teal);}
+  .modal-msg{margin-top:14px; padding:12px 14px; border-radius:10px; font-size:13.5px; line-height:1.5; display:none; text-align:left;}
+  .modal-msg.ok{background:#E8F3E5; color:#2C4A2E; display:block;}
+  .modal-msg.err{background:#FBE6E0; color:#7A2E1E; display:block;}
+  .modal-back{background:none; border:none; color:var(--ink-soft); font-size:13px; font-family:inherit;
+    cursor:pointer; margin-top:16px; padding:4px;}
+  .modal-back:hover{color:var(--teal-deep);}
 </style>
 </head>
 <body>
-
 <header>
-  <div class="ring"></div>
-  <div class="wordmark">lokals</div>
+  <div class="brand-mark">
+    <div class="ring"></div>
+    <div class="wordmark">lokals</div>
+  </div>
+  <button class="header-auth-btn" id="header-login-btn" type="button">Autentificare</button>
 </header>
-
 <div class="hero">
   <div class="eyebrow">🔥 Ghid turistic local</div>
   <h1 class="serif">Turiștii descoperă zona<br>ca localnicii.</h1>
   <p>Conectăm oaspeții cazați în regiune cu afaceri locale reale — verificate, curatoriate, fără reclame plătite. Gratuit, pentru toată lumea implicată.</p>
 </div>
-
 <main>
-
   <div class="path-grid">
     <div class="path-card">
       <div class="path-icon">🏨</div>
       <h2>Operez cazare</h2>
       <p>Hotel, pensiune sau apartamente în regim hotelier? Aduceți gratuit ghidul turistic în camerele voastre — cod QR generat instant, poster printabil chiar acum.</p>
-      <a class="path-btn" href="/inregistrare-hotelier.html" target="_blank">Înscrie-te gratuit →</a>
+      <button class="path-btn" data-signup-href="/inregistrare-hotelier.html" type="button">Înscrie-te gratuit →</button>
     </div>
     <div class="path-card">
       <div class="path-icon">🛍️</div>
       <h2>Am o afacere locală</h2>
       <p>Restaurant, atelier, activitate, produs de la producător local? Fiți recomandați direct oaspeților cazați în zonă — cu poză, descriere și beneficiu opțional.</p>
-      <a class="path-btn" href="/inregistrare-partener.html" target="_blank">Înscrie-te gratiu →</a>
+      <button class="path-btn" data-signup-href="/inregistrare-partener.html" type="button">Înscrie-te gratuit →</button>
     </div>
   </div>
-
   <div class="proof-section">
     <div class="eyebrow">Dovada — nu e doar o promisiune</div>
     <h2 class="serif">Vedeți ghidul, chiar acum.</h2>
     <p>Ghidul e deja live și folosit de oaspeți reali. Așa arată chiar acum, pe telefonul unui oaspete cazat în Râșnov:</p>
-
     <div class="guide-preview">
       <div class="gp-eyebrow">🔥 GHID DE OASPEȚI · RÂȘNOV</div>
       <div class="gp-title">Recomandările gazdei</div>
@@ -143,7 +169,6 @@
     <br>
     <a class="guide-link" href="/ghid-oaspeti.html?apt=ap5" target="_blank">Deschideți ghidul live, aici →</a>
   </div>
-
   <div class="how-section">
     <h2>Cum funcționează</h2>
     <div class="how-grid">
@@ -164,70 +189,56 @@
       </div>
     </div>
   </div>
-
   <div class="faq-section">
     <h2 class="serif">Întrebări frecvente</h2>
     <p class="faq-lead">Cele mai comune nelămuriri — pentru hotelieri/proprietari și pentru afaceri partenere.</p>
-
     <div class="faq-group">
       <h3>Pentru hotelieri &amp; proprietari de apartamente</h3>
-
       <details class="faq-item">
         <summary>Ce este Lokals și cât costă?</summary>
         <p>Un ghid digital de recomandări locale — activități, restaurante, cultură, wellness — accesat de oaspeți direct din cameră, printr-un cod QR. Participarea e complet gratuită, fără abonament, cost ascuns sau obligație de continuare.</p>
       </details>
-
       <details class="faq-item">
         <summary>Cât durează înscrierea?</summary>
         <p>2 minute, direct din formularul online. Aveți nevoie doar de numele unității, o persoană de contact, adresa de livrare și numărul de camere sau apartamente operate.</p>
       </details>
-
       <details class="faq-item">
         <summary>Care e diferența dintre „Hotel/Pensiune" și „Apartamente individuale"?</summary>
         <p>Pentru un hotel sau o pensiune, toate camerele afișează același ghid, cu un singur cod QR — printat de câte ori aveți nevoie. Pentru apartamente cu identități diferite, fiecare primește propriul cod QR și propriul ghid personalizat.</p>
       </details>
-
       <details class="faq-item">
         <summary>Ce primesc imediat după înscriere?</summary>
         <p>Codul (sau codurile) QR, generate pe loc, plus o pagină deja formatată pentru printare A4 — gata de pus în cameră din prima secundă. În paralel, pregătim gratuit un suport fizic profesional, expediat prin poștă la adresa completată.</p>
       </details>
-
       <details class="faq-item">
         <summary>Ce vede, de fapt, oaspetele?</summary>
         <p>Oaspetele scanează codul din cameră și ajunge direct la ghidul digital, fără nicio aplicație de instalat — o listă curatoriată de afaceri locale pe categorii, disponibilă în română și engleză.</p>
       </details>
     </div>
-
     <div class="faq-group">
       <h3>Pentru afaceri partenere</h3>
-
       <details class="faq-item">
         <summary>Cum funcționează beneficiul oferit oaspeților?</summary>
         <p>Oaspetele generează, din ghid, un cod personal (o dată, valabil 7 zile) — un cod QR pe care îl arată la orice afacere parteneră unde vrea să-l folosească.</p>
       </details>
-
       <details class="faq-item">
         <summary>Cum confirm beneficiul, la casă?</summary>
         <p>Deschideți pagina proprie de confirmare (cea de pe cardul Lokals lipit la casă) și scanați codul cu camera telefonului sau tabletei. Pagina arată automat apartamentul oaspetelui — apăsați „Confirmă" și beneficiul e înregistrat.</p>
       </details>
-
       <details class="faq-item">
         <summary>Ce fac dacă oaspetele comandă online, fără să fie fizic la casă?</summary>
         <p>Rugați-l să scrie codul în comandă (ex. la observații). Pe aceeași pagină de confirmare găsiți un câmp „Comandă online?" — introduceți codul manual acolo și apăsați „Verifică". Restul procesului e identic.</p>
       </details>
-
       <details class="faq-item">
         <summary>Ce trebuie să configurez inițial?</summary>
         <p>Doar lipiți vizibil cardul cu codul QR propriu la casă (sau lângă zona de comenzi online). Nu instalați nimic — pagina de confirmare se deschide direct în orice browser.</p>
       </details>
-
       <details class="faq-item">
         <summary>Pot schimba beneficiul oferit mai târziu?</summary>
         <p>Oricând — anunțați-ne procentul diferit, condițiile noi sau renunțarea temporară, și actualizăm imediat, fără costuri sau proceduri.</p>
       </details>
     </div>
   </div>
-
   <div class="contact-section">
     <h2 class="serif">Contact</h2>
     <p class="contact-lead">Întrebări sau nelămuriri? Scrieți-ne oricând — suntem la un mesaj distanță, fără birocrație.</p>
@@ -257,12 +268,141 @@
       </a>
     </div>
   </div>
-
 </main>
-
 <footer>
   lokals.ro · activ acum în Râșnov și zonele învecinate
 </footer>
 
+<!-- ===================== AUTH MODAL ===================== -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-card">
+    <button class="modal-close" id="modal-close" type="button" aria-label="Închide">×</button>
+
+    <div class="modal-view active" id="view-choice">
+      <div class="modal-brand">lokals</div>
+      <h2>Bun venit</h2>
+      <p class="modal-lead">Ai deja cont pe Lokals sau te înscrii pentru prima dată?</p>
+      <button class="modal-btn primary" id="btn-choice-login" type="button">Am deja cont — Autentificare</button>
+      <a class="modal-btn secondary" id="btn-choice-signup" href="#">Sunt nou — Înscrie-te gratuit</a>
+    </div>
+
+    <div class="modal-view" id="view-login">
+      <div class="modal-brand">lokals</div>
+      <h2>Accesează contul tău</h2>
+      <p class="modal-lead">Introdu adresa de email cu care te-ai înscris ca hotelier sau ca afacere parteneră și îți trimitem un link de confirmare — fără parolă.</p>
+      <form id="modal-login-form">
+        <label for="modal-login-email">Adresa de email</label>
+        <input type="email" id="modal-login-email" name="email" placeholder="nume@exemplu.ro" required>
+        <button type="submit" id="modal-login-submit">Trimite link de confirmare</button>
+      </form>
+      <div class="modal-msg" id="modal-login-msg"></div>
+      <button class="modal-back" id="btn-back-to-choice" type="button">← Înapoi</button>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
+const SUPABASE_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const overlay = document.getElementById('modal-overlay');
+const viewChoice = document.getElementById('view-choice');
+const viewLogin = document.getElementById('view-login');
+const btnChoiceSignup = document.getElementById('btn-choice-signup');
+const loginForm = document.getElementById('modal-login-form');
+const loginEmail = document.getElementById('modal-login-email');
+const loginBtn = document.getElementById('modal-login-submit');
+const loginMsg = document.getElementById('modal-login-msg');
+
+function showView(view) {
+  document.querySelectorAll('.modal-view').forEach(v => v.classList.remove('active'));
+  view.classList.add('active');
+}
+
+function openModal(view, signupHref) {
+  if (signupHref) {
+    btnChoiceSignup.setAttribute('href', signupHref);
+  }
+  loginMsg.className = 'modal-msg';
+  loginMsg.textContent = '';
+  loginForm.reset();
+  showView(view);
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  overlay.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Butoanele "Înscrie-te gratuit" din cele două secțiuni deschid popup-ul de alegere
+document.querySelectorAll('.path-btn').forEach(btn => {
+  btn.addEventListener('click', function () {
+    openModal(viewChoice, this.getAttribute('data-signup-href'));
+  });
+});
+
+// Butonul de "Autentificare" din header deschide direct formularul de login
+document.getElementById('header-login-btn').addEventListener('click', function () {
+  openModal(viewLogin, null);
+});
+
+// În popup, "Am deja cont" trece la formularul de login
+document.getElementById('btn-choice-login').addEventListener('click', function () {
+  showView(viewLogin);
+});
+
+// "Înapoi" din login revine la ecranul de alegere
+document.getElementById('btn-back-to-choice').addEventListener('click', function () {
+  showView(viewChoice);
+});
+
+// Închidere: buton ×, click pe fundal, tasta Escape
+document.getElementById('modal-close').addEventListener('click', closeModal);
+overlay.addEventListener('click', function (e) {
+  if (e.target === overlay) closeModal();
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && overlay.classList.contains('open')) closeModal();
+});
+
+// Trimiterea formularului de login (magic link, fără parolă)
+loginForm.addEventListener('submit', async function (e) {
+  e.preventDefault();
+  const email = loginEmail.value.trim();
+  if (!email) return;
+
+  loginBtn.disabled = true;
+  loginBtn.textContent = 'Se trimite...';
+  loginMsg.className = 'modal-msg';
+  loginMsg.textContent = '';
+
+  try {
+    const { error } = await supabaseClient.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: 'https://lokals.ro/cont-confirmat.html'
+      }
+    });
+
+    if (error) throw error;
+
+    loginMsg.className = 'modal-msg ok';
+    loginMsg.textContent = `Ți-am trimis un link de confirmare la ${email}. Deschide-l pe același telefon/calculator ca să-ți activezi contul.`;
+    loginForm.reset();
+  } catch (err) {
+    loginMsg.className = 'modal-msg err';
+    loginMsg.textContent = 'Nu am putut trimite linkul chiar acum. Încearcă din nou în câteva secunde sau scrie-ne pe WhatsApp la 0751 090 407.';
+    console.error(err);
+  } finally {
+    loginBtn.disabled = false;
+    loginBtn.textContent = 'Trimite link de confirmare';
+  }
+});
+</script>
 </body>
 </html>
