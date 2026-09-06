@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lokals — Înscrie-ți unitatea de cazare</title>
+<title>Lokal — Înscrie-ți unitatea de cazare</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
@@ -69,10 +69,12 @@
 
   .print-btn{width:100%; padding:15px; border:none; border-radius:14px; background:var(--gold); color:#fff;
     font-size:15px; font-weight:700; cursor:pointer; margin-bottom:20px;}
+
   .account-cta{display:block; width:100%; padding:14px; border-radius:14px; border:2px solid var(--teal-deep);
     color:var(--teal-deep); text-align:center; font-weight:700; font-size:14.5px; text-decoration:none;
-    margin:14px 0 20px; box-sizing:border-box;}
+    margin:0 0 24px; box-sizing:border-box;}
   .account-cta:hover{background:var(--cream);}
+
   .next-steps{background:#fff; border-radius:14px; padding:18px; text-align:left; font-size:13px;
     color:var(--ink-soft); line-height:1.6; margin-bottom:24px;}
   .next-steps b{color:var(--ink);}
@@ -100,7 +102,8 @@
   .poster .p-scan-sub{color:#C8CFC2; font-size:2.4mm; text-align:center; margin-top:1.5mm;}
 
   @media print{
-        header, .hero-title, .hero-sub, .stat-row, .success-header, .print-btn, .next-steps, .poster-label, .account-cta{display:none !important;}
+    header, .hero-title, .hero-sub, .stat-row, .success-header, .print-btn, .next-steps, .poster-label, .account-cta{display:none !important;}
+    body{background:#fff; padding:0;}
     main{max-width:none; padding:0;}
     .poster-wrap{margin:0; page-break-after:always;}
     .poster{box-shadow:none; margin:0 auto;}
@@ -110,7 +113,7 @@
 <body>
 
 <header>
-  <span class="ring"></span><span class="wordmark">lokals</span>
+  <span class="ring"></span><span class="wordmark">lokal</span>
 </header>
 
 <main>
@@ -149,8 +152,8 @@
       <label for="telefon">Telefon (WhatsApp)</label>
       <input type="tel" id="telefon" required placeholder="ex. 0722 123 456">
 
-      <label for="email">Email (opțional)</label>
-      <input type="email" id="email" placeholder="ex. contact@pensiunea-mea.ro">
+      <label for="email">Email (folosit și pentru crearea contului)</label>
+      <input type="email" id="email" required placeholder="ex. contact@pensiunea-mea.ro">
 
       <label for="adresa">Adresă completă (pentru expedierea afișelor)</label>
       <textarea id="adresa" required placeholder="ex. Str. Cetății nr. 12, Râșnov, jud. Brașov, cod poștal 505400"></textarea>
@@ -188,10 +191,10 @@
     <div class="next-steps">
       <b>Ce urmează:</b> vă trimitem, gratuit, un suport profesional cu codul/codurile QR, gata de aplicat, la adresa:
       <br><b id="confirmed-address">—</b><br><br>
-            Până atunci, paginile de mai jos sunt gata de printat — de pe telefon sau de la recepție, pe orice imprimantă obișnuită (format A4).
+      Până atunci, paginile de mai jos sunt gata de printat — de pe telefon sau de la recepție, pe orice imprimantă obișnuită (format A4).
     </div>
 
-    <a class="account-cta" href="cont.html">🔑 Creează cont — acces rapid la profilul tău</a>
+    <a class="account-cta" id="account-link" href="cont.html">🔑 Creează cont — acces rapid la profilul tău</a>
 
     <div id="posters"></div>
   </div>
@@ -200,7 +203,7 @@
 <script>
 const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
-const GUIDE_BASE = "https://lokals.ro/ghid-oaspeti.html?apt=";
+const GUIDE_BASE = "https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=";
 
 async function sbFetch(path, options = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -253,7 +256,7 @@ function renderPoster(container, slug, displayName, tagline) {
   wrap.className = 'poster-wrap';
   wrap.innerHTML = `
     <div class="poster">
-      <span class="p-ring"></span><span class="p-wordmark">lokals</span>
+      <span class="p-ring"></span><span class="p-wordmark">lokal</span>
       <div class="p-eyebrow">GHIDUL GAZDEI · RÂȘNOV</div>
       <div class="p-pill">${displayName.toUpperCase()}</div>
       <div class="p-headline">Descoperă Râșnovul<br>ca un localnic.</div>
@@ -281,8 +284,8 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
   const email = document.getElementById('email').value.trim();
   const adresa = document.getElementById('adresa').value.trim();
 
-  if (!nume_afacere || !persoana_contact || !telefon || !adresa) {
-    errorEl.textContent = 'Completează toate câmpurile obligatorii, inclusiv adresa.';
+  if (!nume_afacere || !persoana_contact || !telefon || !email || !adresa) {
+    errorEl.textContent = 'Completează toate câmpurile obligatorii, inclusiv emailul și adresa.';
     return;
   }
 
@@ -348,6 +351,7 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
     document.getElementById('form-stage').classList.add('hidden');
     document.getElementById('success-stage').classList.add('visible');
     document.getElementById('confirmed-address').textContent = adresa;
+    document.getElementById('account-link').href = 'cont.html?email=' + encodeURIComponent(email);
   } catch (err) {
     errorEl.textContent = 'Nu am putut salva chiar acum. Încearcă din nou în câteva secunde.';
     btn.disabled = false;

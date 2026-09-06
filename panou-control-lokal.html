@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lokal — Panou de control</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --teal-deep:#10302B; --teal:#1A4A42; --gold:#C98A2C; --cream:#F7F2E8;
+    --ink:#181E1B; --ink-soft:#5B6459; --line:#DCD5C6; --green:#2E6B4F;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:#EAE3D3; color:var(--ink); font-family:'Inter', system-ui, sans-serif; padding:32px 16px;}
+  .wrap{max-width:880px; margin:0 auto;}
+  header{display:flex; align-items:center; gap:10px; margin-bottom:6px;}
+  .ring{width:26px; height:26px; border-radius:50%; background:var(--gold); position:relative; flex-shrink:0;}
+  .ring::after{content:''; position:absolute; inset:7px; border-radius:50%; background:#EAE3D3;}
+  .wordmark{font-family:'Poppins', sans-serif; font-weight:700; color:var(--teal-deep); font-size:22px;}
+  h1{font-size:26px; margin:14px 0 4px; color:var(--teal-deep);}
+  .lead{color:var(--ink-soft); font-size:14px; margin:0 0 28px;}
+
+  .section{margin-bottom:30px;}
+  .section-title{font-size:12px; font-weight:700; color:var(--gold); letter-spacing:0.06em;
+    text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:8px;}
+  .section-title .count{background:var(--teal-deep); color:#fff; border-radius:999px; padding:1px 8px; font-size:11px;}
+
+  table{width:100%; border-collapse:collapse; background:#fff; border-radius:12px; overflow:hidden;
+    box-shadow:0 1px 3px rgba(16,48,43,0.06);}
+  th{text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ink-soft);
+    padding:10px 14px; background:var(--cream); border-bottom:1px solid var(--line);}
+  td{padding:12px 14px; font-size:13px; border-bottom:1px solid var(--line); vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  .name{font-weight:600; color:var(--teal-deep);}
+  .sub{color:var(--ink-soft); font-size:11px; margin-top:2px;}
+  .tag{display:inline-block; font-size:10px; font-weight:700; padding:2px 8px; border-radius:999px;
+    background:var(--cream); color:var(--ink-soft); margin-left:6px;}
+  .tag.demo{background:#F3E7CF; color:#8F6222;}
+  a.link{color:var(--teal); text-decoration:none; font-family:'JetBrains Mono', monospace; font-size:11.5px;
+    word-break:break-all;}
+  a.link:hover{text-decoration:underline;}
+  .copy-btn{background:var(--teal-deep); color:#fff; border:none; border-radius:8px; padding:6px 10px;
+    font-size:11px; font-weight:600; cursor:pointer; white-space:nowrap;}
+  .copy-btn:active{transform:scale(0.96);}
+  .note-box{background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px 18px;
+    font-size:13px; color:var(--ink-soft); line-height:1.6;}
+  .note-box b{color:var(--ink);}
+  .note-box code{background:var(--cream); padding:2px 6px; border-radius:5px; font-family:'JetBrains Mono', monospace; font-size:12px;}
+  footer{text-align:center; font-size:12px; color:var(--ink-soft); margin-top:30px; padding-top:20px; border-top:1px solid var(--line);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="ring"></div>
+    <div class="wordmark">lokal</div>
+  </header>
+  <h1>Panou de control</h1>
+  <p class="lead">Toate link-urile într-un singur loc — salvează pagina asta (Ctrl+S) sau pune-o în Drive, ca s-o ai mereu la îndemână.</p>
+
+  <!-- ===================== APARTAMENTE ACTIVE ===================== -->
+  <div class="section">
+    <div class="section-title">🏠 Ghiduri active — apartamentele tale <span class="count">3</span></div>
+    <table>
+      <tr><th>Apartament</th><th>Link ghid</th><th></th></tr>
+      <tr>
+        <td><span class="name">Apartamentul 5</span><div class="sub">Beautiful views near the Fortress · Râșnov</div></td>
+        <td><a class="link" href="https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=ap5" target="_blank">…/ghid-oaspeti.html?apt=ap5</a></td>
+        <td><button class="copy-btn" onclick="copyText('https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=ap5', this)">Copiază</button></td>
+      </tr>
+      <tr>
+        <td><span class="name">Apartamentul 12</span><div class="sub">Peaceful and inviting · Râșnov</div></td>
+        <td><a class="link" href="https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=ap12" target="_blank">…/ghid-oaspeti.html?apt=ap12</a></td>
+        <td><button class="copy-btn" onclick="copyText('https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=ap12', this)">Copiază</button></td>
+      </tr>
+      <tr>
+        <td><span class="name">Family House</span><div class="sub">Family House with mountain views · Săcele-Brașov</div></td>
+        <td><a class="link" href="https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=sacele" target="_blank">…/ghid-oaspeti.html?apt=sacele</a></td>
+        <td><button class="copy-btn" onclick="copyText('https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=sacele', this)">Copiază</button></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ===================== APARTAMENTE VECINI (NOI) ===================== -->
+  <div class="section">
+    <div class="section-title">🤝 Ghiduri noi — apartamentele vecinilor (gratuit, în probă) <span class="count">3</span></div>
+    <table>
+      <tr><th>Apartament</th><th>Link ghid</th><th></th></tr>
+      <tr>
+        <td><span class="name">Apartamentul 6</span><div class="sub">The Nest Beneath the Citadel</div></td>
+        <td><a class="link" href="https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=ap6" target="_blank">…/ghid-oaspeti.html?apt=ap6</a></td>
+        <td><button class="copy-btn" onclick="copyText('https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=ap6', this)">Copiază</button></td>
+      </tr>
+      <tr>
+        <td><span class="name">Apartamentul 8</span><div class="sub">Hillside Haven</div></td>
+        <td><a class="link" href="https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=ap8" target="_blank">…/ghid-oaspeti.html?apt=ap8</a></td>
+        <td><button class="copy-btn" onclick="copyText('https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=ap8', this)">Copiază</button></td>
+      </tr>
+      <tr>
+        <td><span class="name">Apartamentul 9</span><div class="sub">Alpine Eden Hideaway</div></td>
+        <td><a class="link" href="https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=ap9" target="_blank">…/ghid-oaspeti.html?apt=ap9</a></td>
+        <td><button class="copy-btn" onclick="copyText('https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=ap9', this)">Copiază</button></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ===================== DEMO / RECRUTARE GAZDE ===================== -->
+  <div class="section">
+    <div class="section-title">🌍 Demo — pitch pentru gazde noi, alte zone <span class="count">8</span></div>
+    <table>
+      <tr><th>Zonă</th><th>Link demo</th><th></th></tr>
+      <tr><td><span class="name">Predeal-Azuga</span></td><td><a class="link" href="https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=demo-predeal" target="_blank">…?apt=demo-predeal</a></td><td><button class="copy-btn" onclick="copyText('https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=demo-predeal', this)">Copiază</button></td></tr>
+      <tr><td><span class="name">Sinaia-Bușteni</span></td><td><a class="link" href="https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=demo-sinaia" target="_blank">…?apt=demo-sinaia</a></td><td><button class="copy-btn" onclick="copyText('https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=demo-sinaia', this)">Copiază</button></td></tr>
+      <tr><td><span class="name">Bran-Moieciu</span></td><td><a class="link" href="https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=demo-bran" target="_blank">…?apt=demo-bran</a></td><td><button class="copy-btn" onclick="copyText('https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=demo-bran', this)">Copiază</button></td></tr>
+      <tr><td><span class="name">Zărnești</span></td><td><a class="link" href="https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=demo-zarnesti" target="_blank">…?apt=demo-zarnesti</a></td><td><button class="copy-btn" onclick="copyText('https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=demo-zarnesti', this)">Copiază</button></td></tr>
+      <tr><td><span class="name">Făgăraș</span></td><td><a class="link" href="https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=demo-fagaras" target="_blank">…?apt=demo-fagaras</a></td><td><button class="copy-btn" onclick="copyText('https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=demo-fagaras', this)">Copiază</button></td></tr>
+      <tr><td><span class="name">Viscri-Saschiz</span></td><td><a class="link" href="https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=demo-viscri" target="_blank">…?apt=demo-viscri</a></td><td><button class="copy-btn" onclick="copyText('https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=demo-viscri', this)">Copiază</button></td></tr>
+      <tr><td><span class="name">Covasna</span></td><td><a class="link" href="https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=demo-covasna" target="_blank">…?apt=demo-covasna</a></td><td><button class="copy-btn" onclick="copyText('https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=demo-covasna', this)">Copiază</button></td></tr>
+      <tr><td><span class="name">Vama Buzăului</span></td><td><a class="link" href="https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=demo-vama" target="_blank">…?apt=demo-vama</a></td><td><button class="copy-btn" onclick="copyText('https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=demo-vama', this)">Copiază</button></td></tr>
+    </table>
+  </div>
+
+  <!-- ===================== MONITORIZARE ===================== -->
+  <div class="section">
+    <div class="section-title">📊 Monitorizare</div>
+    <table>
+      <tr><th>Ce arată</th><th>Link</th><th></th></tr>
+      <tr>
+        <td><span class="name">Statistici accesări</span><div class="sub">Toate cele 6 apartamente, grupate pe zonă</div></td>
+        <td><a class="link" href="https://nicolaedrimbu-prog.github.io/ghid-rasnov/statistici-ghid.html" target="_blank">…/statistici-ghid.html</a></td>
+        <td><button class="copy-btn" onclick="copyText('https://nicolaedrimbu-prog.github.io/ghid-rasnov/statistici-ghid.html', this)">Copiază</button></td>
+      </tr>
+      <tr>
+        <td><span class="name">Supabase — coduri &amp; revendicări</span><div class="sub">Tabelele guest_codes / redemptions</div></td>
+        <td><a class="link" href="https://supabase.com/dashboard/project/mwtodfcwuwzgnkohxpwi/editor" target="_blank">supabase.com/dashboard/…</a></td>
+        <td><button class="copy-btn" onclick="copyText('https://supabase.com/dashboard/project/mwtodfcwuwzgnkohxpwi/editor', this)">Copiază</button></td>
+      </tr>
+      <tr>
+        <td><span class="name">Baza de date afaceri</span><div class="sub">Google Sheets — sursa live a ghidului</div></td>
+        <td><span style="color:var(--ink-soft); font-size:12px;">deschide direct din Google Drive/Sheets</span></td>
+        <td></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ===================== REDEEM / SCANARE PARTENERI ===================== -->
+  <div class="section">
+    <div class="section-title">🎁 Scanare beneficii — parteneri</div>
+    <div class="note-box">
+      <b>Nu există un link fix per afacere aici</b> — fiecare partener are propriul link, în formatul:<br><br>
+      <code>https://nicolaedrimbu-prog.github.io/ghid-rasnov/partner-redeem.html?business=<i>id-ul-afacerii</i></code><br><br>
+      <b>Exemplu, Oto Chicken:</b> <a class="link" href="https://nicolaedrimbu-prog.github.io/ghid-rasnov/partner-redeem.html?business=oto-chicken" target="_blank">…/partner-redeem.html?business=oto-chicken</a>
+      <button class="copy-btn" style="margin-left:8px;" onclick="copyText('https://nicolaedrimbu-prog.github.io/ghid-rasnov/partner-redeem.html?business=oto-chicken', this)">Copiază</button><br><br>
+      Id-ul exact al fiecărei afaceri e în coloana <b>A</b> din baza de date (Sheets). Cardurile printabile (<code>partner-cards.pdf</code>) au deja QR-ul corect generat pentru fiecare.
+    </div>
+  </div>
+
+  <!-- ===================== ÎNSCRIERE PARTENERI ===================== -->
+  <div class="section">
+    <div class="section-title">✍️ Înscriere parteneri noi</div>
+    <table>
+      <tr><th>Ce e</th><th>Link</th><th></th></tr>
+      <tr>
+        <td><span class="name">Formular Google — auto-înscriere</span></td>
+        <td><a class="link" href="https://forms.gle/UaGDwVYVR5HRf4gm6" target="_blank">forms.gle/UaGDwVYVR5HRf4gm6</a></td>
+        <td><button class="copy-btn" onclick="copyText('https://forms.gle/UaGDwVYVR5HRf4gm6', this)">Copiază</button></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ===================== CONT CLIENT ===================== -->
+  <div class="section">
+    <div class="section-title">🔑 Cont client — hotelieri &amp; parteneri</div>
+    <table>
+      <tr><th>Ce e</th><th>Link</th><th></th></tr>
+      <tr>
+        <td><span class="name">Creează cont</span><div class="sub">Confirmare acces prin email, fără parolă</div></td>
+        <td><a class="link" href="https://lokals.ro/cont.html" target="_blank">lokals.ro/cont.html</a></td>
+        <td><button class="copy-btn" onclick="copyText('https://lokals.ro/cont.html', this)">Copiază</button></td>
+      </tr>
+    </table>
+  </div>
+
+  <footer>lokal.ro · panou de control generat pentru uz intern</footer>
+</div>
+
+<script>
+function copyText(text, btn){
+  navigator.clipboard.writeText(text).then(() => {
+    const original = btn.textContent;
+    btn.textContent = '✓ Copiat';
+    setTimeout(() => { btn.textContent = original; }, 1500);
+  });
+}
+</script>
+</body>
+</html>

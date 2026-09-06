@@ -57,10 +57,18 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const form = document.getElementById('form-cont');
 const btn = document.getElementById('btn-submit');
 const msgEl = document.getElementById('msg');
+const emailInput = document.getElementById('email');
+
+// Pre-completează emailul dacă a fost trimis ca parametru în link
+// (ex. venind din ecranul de succes al inregistrare-hotelier.html / inregistrare-partener.html)
+const prefillEmail = new URLSearchParams(window.location.search).get('email');
+if (prefillEmail) {
+  emailInput.value = prefillEmail;
+}
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const email = document.getElementById('email').value.trim();
+  const email = emailInput.value.trim();
   if (!email) return;
 
   btn.disabled = true;
