@@ -107,10 +107,11 @@
   .poster .p-scan-sub{color:#C8CFC2; font-size:2.4mm; text-align:center; margin-top:1.5mm;}
 
   @media print{
-    header, .hero-title, .hero-sub, .stat-row, .success-header, .print-btn, .next-steps, .poster-label, .account-cta{display:none !important;}
+    header, .hero-title, .hero-sub, .stat-row, .success-header, .print-btn, .next-steps, .poster-label, .account-cta, .auth-banner{display:none !important;}
     body{background:#fff; padding:0;}
     main{max-width:none; padding:0;}
-    .poster-wrap{margin:0; page-break-after:always;}
+    .poster-wrap{margin:0; page-break-inside:avoid;}
+    .poster-wrap + .poster-wrap{page-break-before:always;}
     .poster{box-shadow:none; margin:0 auto;}
   }
 </style>
