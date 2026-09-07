@@ -567,7 +567,8 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     showToast('Setările au fost salvate.');
   } catch (e) {
     console.error(e);
-    showToast('Nu am putut salva. Încearcă din nou.');
+    const detail = (e && e.message) ? String(e.message).slice(0, 120) : '';
+    showToast(detail ? `Nu am putut salva: ${detail}` : 'Nu am putut salva. Încearcă din nou.');
   } finally {
     btn.disabled = false;
     btn.textContent = 'Salvează setările';
