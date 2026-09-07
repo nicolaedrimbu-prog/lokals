@@ -302,8 +302,8 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
     const { data: { session: sessionAfter } } = await supabaseClient.auth.getSession();
     if (sessionAfter && sessionAfter.user) {
       // Ești deja autentificat — nu mai are rost să-ți ceară să-ți faci cont din nou;
-      // în schimb, îl trimitem la Contul meu, unde apare și afacerea proaspăt înscrisă.
-      accountLink.textContent = '🔑 Vezi afacerea în Contul meu';
+      // în schimb, îl trimitem la Proprietățile mele, unde apare și afacerea proaspăt înscrisă.
+      accountLink.textContent = '🔑 Vezi afacerea în Proprietățile mele';
       accountLink.href = 'contul-meu.html';
     } else {
       accountLink.href = 'cont.html?email=' + encodeURIComponent(email);

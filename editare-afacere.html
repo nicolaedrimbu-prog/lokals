@@ -48,7 +48,7 @@
     <span style="width:22px; height:22px; border-radius:50%; background:var(--gold); position:relative; display:inline-block;">
       <span style="position:absolute; inset:6px; border-radius:50%; background:var(--teal-deep);"></span>
     </span>
-    <span style="font-family:'Poppins', sans-serif; font-weight:700; color:#fff; font-size:17px;">lokal</span>
+    <span style="font-family:'Poppins', sans-serif; font-weight:700; color:#fff; font-size:17px;">lokals</span>
   </div>
   <div id="header-auth" style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.08); padding:6px 12px; border-radius:999px;">
     <span id="header-auth-name" style="font-size:12px; font-weight:600; color:#fff;"></span>
@@ -69,12 +69,12 @@
   <div id="state-nomatch" style="display:none; text-align:center; padding:40px 0;">
     <p class="serif" style="font-size:20px; font-weight:700; color:var(--teal-deep);">Nu am găsit această afacere pe contul tău</p>
     <p style="color:var(--ink-soft); font-size:14px; margin:8px 0 18px;">Verifică dacă ai folosit aceeași adresă de email cu care te-ai înscris.</p>
-    <a href="contul-meu.html" style="display:inline-block; background:var(--teal-deep); color:#fff; padding:12px 22px; border-radius:999px; font-size:14px; font-weight:700; text-decoration:none;">Contul meu</a>
+    <a href="contul-meu.html" style="display:inline-block; background:var(--teal-deep); color:#fff; padding:12px 22px; border-radius:999px; font-size:14px; font-weight:700; text-decoration:none;">Proprietățile mele</a>
   </div>
 
   <div id="state-form" style="display:none;">
 
-    <a class="back-link" href="contul-meu.html">← Contul meu</a>
+    <a class="back-link" href="contul-meu.html">← Proprietățile mele</a>
 
     <div style="font-size:11px; font-weight:700; letter-spacing:.05em; color:var(--gold); text-transform:uppercase; margin-bottom:6px;">Afacere parteneră</div>
     <div class="serif" style="font-size:23px; font-weight:700; color:var(--teal-deep); margin:0 0 6px;" id="business-title">—</div>
@@ -160,6 +160,18 @@
     </div>
 
     <button class="primary" id="btn-save">Salvează modificările</button>
+
+    <div style="margin-top:4px; max-width:560px;">
+      <div style="font-size:11px; font-weight:700; letter-spacing:.05em; color:#9C4536; text-transform:uppercase; margin-bottom:8px;">Zonă cu risc</div>
+      <button id="btn-delete-open" type="button" style="width:100%; background:#fff; border:1.5px solid #9C4536; color:#9C4536; padding:13px; border-radius:13px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit;">Șterge această afacere</button>
+      <div id="delete-confirm" style="display:none; background:#FBE6E0; border-radius:14px; padding:16px; margin-top:10px;">
+        <p style="font-size:13px; color:#7A2E1E; line-height:1.55; margin:0 0 12px;"><b>Această acțiune este ireversibilă.</b> Afacerea și toate detaliile ei (descriere, poză, contact, beneficiu) vor fi șterse definitiv din ghidul turistic. O poți reconfigura oricând de la zero, printr-o nouă înscriere.</p>
+        <div style="display:flex; gap:8px;">
+          <button id="btn-delete-cancel" type="button" style="flex:1; background:#fff; border:1.5px solid var(--line); color:var(--ink); padding:11px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;">Anulează</button>
+          <button id="btn-delete-confirm" type="button" style="flex:1; background:#9C4536; border:none; color:#fff; padding:11px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;">Da, șterge definitiv</button>
+        </div>
+      </div>
+    </div>
 
   </div>
 
@@ -316,6 +328,34 @@ document.getElementById('btn-save').addEventListener('click', async () => {
   } finally {
     btn.disabled = false;
     btn.textContent = 'Salvează modificările';
+  }
+});
+
+document.getElementById('btn-delete-open').addEventListener('click', () => {
+  document.getElementById('delete-confirm').style.display = '';
+});
+document.getElementById('btn-delete-cancel').addEventListener('click', () => {
+  document.getElementById('delete-confirm').style.display = 'none';
+});
+document.getElementById('btn-delete-confirm').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-delete-confirm');
+  btn.disabled = true;
+  btn.textContent = 'Se șterge...';
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/candidati_parteneri?id=eq.${currentRow.id}`, {
+      method: 'DELETE',
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${currentSession.access_token}`,
+      },
+    });
+    if (!res.ok) throw new Error(await res.text());
+    window.location.href = 'contul-meu.html';
+  } catch (e) {
+    console.error(e);
+    showToast('Nu am putut șterge. Încearcă din nou.');
+    btn.disabled = false;
+    btn.textContent = 'Da, șterge definitiv';
   }
 });
 
