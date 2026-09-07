@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contul meu — Lokal</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Poppins:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root{
+    --teal-deep:#10302B; --teal:#1A4A42; --gold:#C98A2C; --gold-soft:#E8CE9E;
+    --cream:#F7F2E8; --ink:#181E1B; --ink-soft:#5B6459; --line:#DCD5C6;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--cream); font-family:'Inter', system-ui, sans-serif; color:var(--ink);}
+  a{color:inherit;}
+  .serif{font-family:'Fraunces', Georgia, serif;}
+  main{max-width:600px; margin:0 auto; padding:22px 16px 60px;}
+  .card{background:#fff; border-radius:16px; padding:16px; box-shadow:0 4px 16px rgba(16,48,43,0.07); margin-bottom:12px; display:flex; align-items:center; gap:14px; text-decoration:none;}
+  .card-thumb{width:52px; height:52px; border-radius:12px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:var(--cream); overflow:hidden;}
+  .card-thumb img{width:100%; height:100%; object-fit:cover;}
+  .card-info{flex:1; min-width:0;}
+  .card-name{font-size:14.5px; font-weight:700; color:var(--ink);}
+  .card-sub{font-size:12px; color:var(--ink-soft); margin-top:2px;}
+  .badge{display:inline-block; font-size:9.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; padding:3px 9px; border-radius:999px; margin-top:6px;}
+  .badge-cazare{background:#E3ECE4; color:var(--teal-deep);}
+  .badge-afacere{background:#FBEEDA; color:#8F6222;}
+  .edit-btn{flex-shrink:0; border:1.5px solid var(--line); background:#fff; color:var(--teal-deep); font-size:12px; font-weight:700; padding:8px 14px; border-radius:999px;}
+  .section-label{font-size:11px; font-weight:700; letter-spacing:.05em; color:var(--gold); text-transform:uppercase; margin:22px 0 10px;}
+  .section-label:first-of-type{margin-top:0;}
+  .add-btn{display:flex; align-items:center; justify-content:center; gap:8px; width:100%; border:1.5px dashed var(--line); background:transparent; color:var(--teal-deep); font-size:13px; font-weight:700; padding:14px; border-radius:14px; margin-top:6px; text-decoration:none; box-sizing:border-box;}
+  .empty-msg{font-size:13px; color:var(--ink-soft); padding:6px 0 4px;}
+</style>
+</head>
+<body>
+
+<div style="background:var(--teal-deep); padding:16px 18px; display:flex; align-items:center; justify-content:space-between;">
+  <a href="index.html" style="display:flex; align-items:center; gap:8px; text-decoration:none;">
+    <span style="width:22px; height:22px; border-radius:50%; background:var(--gold); position:relative; display:inline-block;">
+      <span style="position:absolute; inset:6px; border-radius:50%; background:var(--teal-deep);"></span>
+    </span>
+    <span style="font-family:'Poppins', sans-serif; font-weight:700; color:#fff; font-size:17px;">lokal</span>
+  </a>
+  <div id="header-auth" style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.08); padding:6px 12px; border-radius:999px;">
+    <span id="header-auth-name" style="font-size:12px; font-weight:600; color:#fff;"></span>
+    <span id="header-logout-btn" style="font-size:10.5px; color:var(--gold-soft); border-left:1px solid rgba(255,255,255,0.25); padding-left:8px; cursor:pointer;">Ieși din cont</span>
+  </div>
+</div>
+
+<main>
+
+  <div id="state-loading" style="padding:40px 0; text-align:center; color:var(--ink-soft); font-size:14px;">Se încarcă...</div>
+
+  <div id="state-noauth" style="display:none; text-align:center; padding:40px 0;">
+    <p class="serif" style="font-size:20px; font-weight:700; color:var(--teal-deep);">Trebuie să te autentifici</p>
+    <p style="color:var(--ink-soft); font-size:14px; margin:8px 0 18px;">Contul tău arată toate cazările și afacerile pe care le-ai înregistrat pe Lokal.</p>
+    <a href="cont.html" style="display:inline-block; background:var(--teal-deep); color:#fff; padding:12px 22px; border-radius:999px; font-size:14px; font-weight:700; text-decoration:none;">Autentifică-te</a>
+  </div>
+
+  <div id="state-empty" style="display:none; text-align:center; padding:40px 0;">
+    <p class="serif" style="font-size:20px; font-weight:700; color:var(--teal-deep);">Nu ai nimic înregistrat încă</p>
+    <p style="color:var(--ink-soft); font-size:14px; margin:8px 0 18px;">Înscrie o cazare sau o afacere parteneră, ca să apară aici.</p>
+    <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+      <a href="inregistrare-hotelier.html" style="display:inline-block; background:var(--teal-deep); color:#fff; padding:12px 22px; border-radius:999px; font-size:14px; font-weight:700; text-decoration:none;">Înscrie o cazare</a>
+      <a href="inregistrare-partener.html" style="display:inline-block; background:#fff; border:1.5px solid var(--teal-deep); color:var(--teal-deep); padding:12px 22px; border-radius:999px; font-size:14px; font-weight:700; text-decoration:none;">Înscrie o afacere</a>
+    </div>
+  </div>
+
+  <div id="state-form" style="display:none;">
+
+    <div class="serif" style="font-size:23px; font-weight:700; color:var(--teal-deep); margin:0 0 6px;">Contul meu</div>
+    <div style="font-size:13px; color:var(--ink-soft); line-height:1.55; margin-bottom:22px;">Tot ce ai înregistrat pe Lokal, la un loc — cazări și afaceri partenere.</div>
+
+    <div id="section-cazari" style="display:none;">
+      <div class="section-label">Cazările tale</div>
+      <div id="list-cazari"></div>
+      <a class="add-btn" href="inregistrare-hotelier.html">+ Adaugă o cazare nouă</a>
+    </div>
+
+    <div id="section-afaceri" style="display:none;">
+      <div class="section-label">Afacerile tale partenere</div>
+      <div id="list-afaceri"></div>
+      <a class="add-btn" href="inregistrare-partener.html">+ Adaugă o afacere parteneră nouă</a>
+    </div>
+
+  </div>
+
+</main>
+
+<script>
+const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
+const SUPABASE_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const CAZARE_ICON = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10302B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21v-14l8 -4v18"/><path d="M19 21v-10l-6 -4"/></svg>';
+const AFACERE_ICON = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8F6222" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v7a4 4 0 0 0 8 0v-7"/><path d="M12 10v11"/><path d="M9 21h6"/></svg>';
+
+function displayName(user) {
+  const meta = user.user_metadata || {};
+  if (meta.prenume) {
+    const initial = meta.nume ? meta.nume.trim().charAt(0).toUpperCase() + '.' : '';
+    return `${meta.prenume} ${initial}`.trim();
+  }
+  return user.email;
+}
+
+function showState(id) {
+  ['state-loading', 'state-noauth', 'state-empty', 'state-form'].forEach(s => {
+    document.getElementById(s).style.display = (s === id) ? '' : 'none';
+  });
+}
+
+function tipLabel(tip) {
+  return tip === 'hotel' ? 'Hotel' : 'Apartament';
+}
+
+function renderCazari(rows) {
+  const wrap = document.getElementById('list-cazari');
+  wrap.innerHTML = '';
+  rows.forEach(row => {
+    const a = document.createElement('a');
+    a.className = 'card';
+    a.href = `setari-cazare.html?slug=${encodeURIComponent(row.slug)}`;
+    const thumb = row.foto_url ? `<img src="${row.foto_url}" alt="">` : CAZARE_ICON;
+    a.innerHTML = `
+      <div class="card-thumb">${thumb}</div>
+      <div class="card-info">
+        <div class="card-name">${row.nume_afisat || row.nume_afacere}</div>
+        <div class="card-sub">${row.adresa || row.zona || ''}</div>
+        <span class="badge badge-cazare">${tipLabel(row.tip)}</span>
+      </div>
+      <div class="edit-btn">Editează</div>
+    `;
+    wrap.appendChild(a);
+  });
+}
+
+function renderAfaceri(rows) {
+  const wrap = document.getElementById('list-afaceri');
+  wrap.innerHTML = '';
+  rows.forEach(row => {
+    const a = document.createElement('a');
+    a.className = 'card';
+    a.href = `editare-afacere.html?id=${encodeURIComponent(row.id)}`;
+    const thumb = row.poza_url ? `<img src="${row.poza_url}" alt="">` : AFACERE_ICON;
+    const beneficiuTxt = row.interesat_beneficiu && row.beneficiu_propus ? 'beneficiu activ' : 'fără beneficiu setat';
+    a.innerHTML = `
+      <div class="card-thumb">${thumb}</div>
+      <div class="card-info">
+        <div class="card-name">${row.nume_afacere}</div>
+        <div class="card-sub">${row.categorie || ''}${row.categorie ? ' · ' : ''}${beneficiuTxt}</div>
+        <span class="badge badge-afacere">${row.categorie || 'Afacere'}</span>
+      </div>
+      <div class="edit-btn">Editează</div>
+    `;
+    wrap.appendChild(a);
+  });
+}
+
+async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session || !session.user) {
+    showState('state-noauth');
+    return;
+  }
+  document.getElementById('header-auth-name').textContent = displayName(session.user);
+  const email = session.user.email;
+
+  const [cazariRes, afaceriRes] = await Promise.all([
+    fetch(`${SUPABASE_URL}/rest/v1/operatori?email=eq.${encodeURIComponent(email)}&select=*&order=created_at.desc`, { headers: { apikey: SUPABASE_KEY } }),
+    fetch(`${SUPABASE_URL}/rest/v1/candidati_parteneri?email=eq.${encodeURIComponent(email)}&select=*&order=created_at.desc`, { headers: { apikey: SUPABASE_KEY } }),
+  ]);
+  const cazari = await cazariRes.json();
+  const afaceri = await afaceriRes.json();
+
+  if (!cazari.length && !afaceri.length) {
+    showState('state-empty');
+    return;
+  }
+
+  if (cazari.length) {
+    document.getElementById('section-cazari').style.display = '';
+    renderCazari(cazari);
+  }
+  if (afaceri.length) {
+    document.getElementById('section-afaceri').style.display = '';
+    renderAfaceri(afaceri);
+  }
+  showState('state-form');
+}
+
+document.getElementById('header-logout-btn').addEventListener('click', async () => {
+  await supabaseClient.auth.signOut();
+  window.location.href = 'index.html';
+});
+
+init();
+</script>
+
+</body>
+</html>

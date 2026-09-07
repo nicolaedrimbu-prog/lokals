@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lokals — Înscrie-ți unitatea de cazare</title>
+<title>Lokal — Înscrie-ți unitatea de cazare</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
@@ -210,7 +210,7 @@
 <script>
 const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
-const GUIDE_BASE = "https://nicolaedrimbu-prog.github.io/ghid-rasnov/ghid-oaspeti.html?apt=";
+const GUIDE_BASE = "https://lokals.ro/ghid-oaspeti.html?apt=";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 function displayName(user) {
@@ -363,6 +363,7 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
     const posterContainer = document.getElementById('posters');
     posterContainer.innerHTML = '';
     let savedCount = 0;
+    let singleSavedSlug = null;
 
     if (tip === 'hotel') {
       const saved = await insertOperator(baseSlug, {
@@ -371,6 +372,7 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
       });
       renderPoster(posterContainer, saved.slug, nume_afacere, nume_afacere);
       savedCount = 1;
+      singleSavedSlug = saved.slug;
       document.getElementById('success-sub').textContent =
         `Un singur cod QR — printați pagina de mai jos de ${nr_camere} ori (una per cameră).`;
     } else {
@@ -393,8 +395,12 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
     const accountLink = document.getElementById('account-link');
     const { data: { session: sessionAfter } } = await supabaseClient.auth.getSession();
     if (sessionAfter && sessionAfter.user) {
-      // Ești deja autentificat — nu mai are rost să-ți ceară să-ți faci cont din nou.
-      accountLink.style.display = 'none';
+      // Ești deja autentificat — nu mai are rost să-ți ceară să-ți faci cont din nou;
+      // în schimb, îl trimitem direct la pasul următor: completarea facilităților cazării.
+      accountLink.textContent = '🔑 Completează setările cazării (WiFi, check-in, contact)';
+      accountLink.href = singleSavedSlug
+        ? 'setari-cazare.html?slug=' + encodeURIComponent(singleSavedSlug)
+        : 'contul-meu.html';
     } else {
       accountLink.href = 'cont.html?email=' + encodeURIComponent(email);
     }

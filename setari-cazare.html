@@ -79,6 +79,7 @@
 
   <div id="state-form" style="display:none;">
 
+    <a href="contul-meu.html" style="display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color:var(--ink-soft); text-decoration:none; margin-bottom:14px;">← Contul meu</a>
     <div style="font-size:11px; font-weight:700; letter-spacing:.05em; color:var(--gold); text-transform:uppercase; margin-bottom:6px;">Cont hotelier</div>
     <div class="serif" style="font-size:23px; font-weight:700; color:var(--teal-deep); margin:0 0 6px;">Setări cazare</div>
     <div style="font-size:13px; color:var(--ink-soft); line-height:1.55; margin-bottom:18px;">Aceste informații apar în ghidul turistic al oaspeților tăi, chiar înainte de check-in.</div>
@@ -425,7 +426,8 @@ async function init() {
     showState('state-nomatch');
     return;
   }
-  currentRow = cazari[0];
+  const requestedSlug = new URLSearchParams(window.location.search).get('slug');
+  currentRow = (requestedSlug && cazari.find(r => r.slug === requestedSlug)) || cazari[0];
   renderAptSelector();
   fillForm(currentRow);
   showState('state-form');

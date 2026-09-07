@@ -25,6 +25,9 @@
   .header-auth-user.visible{display:flex;}
   .header-auth-email{font-size:13px; font-weight:600; color:var(--teal-deep); max-width:180px; overflow:hidden;
     text-overflow:ellipsis; white-space:nowrap;}
+  .header-settings-link{font-size:12.5px; font-weight:700; color:var(--teal-deep); text-decoration:none;
+    border:1px solid var(--line); padding:7px 14px; border-radius:999px;}
+  .header-settings-link:hover{border-color:var(--teal-deep); background:var(--cream);}
   .header-logout-btn{background:none; border:1px solid var(--line); color:var(--ink-soft); font-family:inherit;
     font-size:12px; font-weight:600; padding:7px 14px; border-radius:999px; cursor:pointer;}
   .header-logout-btn:hover{border-color:var(--teal-deep); color:var(--teal-deep);}
@@ -138,6 +141,7 @@
   <button class="header-auth-btn" id="header-login-btn" type="button">Autentificare</button>
   <div class="header-auth-user" id="header-auth-user">
     <span class="header-auth-email" id="header-auth-email"></span>
+    <a class="header-settings-link" id="header-settings-link" href="/contul-meu.html">Contul meu</a>
     <button class="header-logout-btn" id="header-logout-btn" type="button">Ieși din cont</button>
   </div>
 </header>
