@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Setări cazare — Lokal</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Poppins:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root{
+    --teal-deep:#10302B; --teal:#1A4A42; --gold:#C98A2C; --gold-soft:#E8CE9E;
+    --cream:#F7F2E8; --ink:#181E1B; --ink-soft:#5B6459; --line:#DCD5C6; --brick:#9C4536;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--cream); font-family:'Inter', system-ui, sans-serif; color:var(--ink);}
+  a{color:var(--teal-deep);} a:hover{color:var(--teal);}
+  .serif{font-family:'Fraunces', Georgia, serif;}
+  label{display:block; font-size:12.5px; font-weight:600; color:var(--teal-deep); margin:0 0 6px;}
+  .field{width:100%; border:1.5px solid var(--line); border-radius:11px; padding:11px 13px; font-family:'Inter', sans-serif; font-size:14px; color:var(--ink); background:#fff;}
+  .field:focus{outline:none; border-color:var(--teal);}
+  .hint{font-size:11.5px; color:var(--ink-soft); margin-top:5px; line-height:1.5;}
+  .card{background:#fff; border-radius:16px; padding:18px 18px 20px; box-shadow:0 4px 16px rgba(16,48,43,0.07); margin-bottom:14px; max-width:560px;}
+  .card-head{display:flex; align-items:center; gap:9px; margin-bottom:14px;}
+  .card-title{font-size:14.5px; font-weight:700; color:var(--teal-deep); flex:1;}
+  .badge-hotel{font-size:9.5px; font-weight:700; letter-spacing:.05em; color:#fff; background:var(--gold); padding:3px 8px; border-radius:999px; text-transform:uppercase;}
+  .row{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0;}
+  .row + .row{border-top:1px solid #F0EDE3;}
+  .field-group{margin-bottom:14px;}
+  .two-col{display:flex; gap:10px; margin-bottom:14px;}
+  .two-col > div{flex:1;}
+  .sub{font-size:11.5px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.04em; margin:14px 0 8px;}
+  .sub:first-of-type{margin-top:0;}
+  .switch-label{display:flex; align-items:center; gap:10px; cursor:pointer; font-size:13px; font-weight:600;}
+  .switch-label input{position:absolute; opacity:0; width:0; height:0;}
+  .switch-track{width:38px; height:22px; border-radius:999px; background:#DCD5C6; position:relative; flex-shrink:0; transition:background .15s;}
+  .switch-label input:checked + .switch-track{background:var(--teal-deep);}
+  .switch-knob{position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:#fff; transition:left .15s;}
+  .switch-label input:checked + .switch-track .switch-knob{left:18px;}
+  main{max-width:600px; margin:0 auto; padding:22px 16px 60px;}
+  button.primary{width:100%; background:var(--teal-deep); color:#fff; border:none; padding:15px; border-radius:13px; font-size:15px; font-weight:700; margin:6px 0 20px; font-family:inherit; cursor:pointer;}
+  button.primary:disabled{opacity:0.6; cursor:default;}
+  .apt-chip{flex:1; border:1.5px solid var(--line); background:#fff; border-radius:11px; padding:10px; text-align:center; font-size:12.5px; font-weight:600; color:var(--ink-soft); cursor:pointer;}
+  .apt-chip.active{border-color:var(--teal-deep); background:var(--cream); font-weight:700; color:var(--teal-deep);}
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--teal-deep); color:#fff; padding:12px 20px; border-radius:999px; font-size:13px; font-weight:600; opacity:0; pointer-events:none; transition:opacity .2s;}
+  .toast.show{opacity:1;}
+  #photo-preview{width:78px; height:78px; border-radius:12px; flex-shrink:0; background:linear-gradient(135deg, var(--teal-deep), var(--teal)); background-size:cover; background-position:center; display:flex; align-items:center; justify-content:center;}
+</style>
+</head>
+<body>
+
+<div style="background:var(--teal-deep); padding:16px 18px; display:flex; align-items:center; justify-content:space-between;">
+  <div style="display:flex; align-items:center; gap:8px;">
+    <span style="width:22px; height:22px; border-radius:50%; background:var(--gold); position:relative; display:inline-block;">
+      <span style="position:absolute; inset:6px; border-radius:50%; background:var(--teal-deep);"></span>
+    </span>
+    <span style="font-family:'Poppins', sans-serif; font-weight:700; color:#fff; font-size:17px;">lokal</span>
+  </div>
+  <div id="header-auth" style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.08); padding:6px 12px; border-radius:999px;">
+    <span id="header-auth-name" style="font-size:12px; font-weight:600; color:#fff;"></span>
+    <span id="header-logout-btn" style="font-size:10.5px; color:var(--gold-soft); border-left:1px solid rgba(255,255,255,0.25); padding-left:8px; cursor:pointer;">Ieși din cont</span>
+  </div>
+</div>
+
+<main>
+
+  <div id="state-loading" style="padding:40px 0; text-align:center; color:var(--ink-soft); font-size:14px;">Se încarcă...</div>
+
+  <div id="state-noauth" style="display:none; text-align:center; padding:40px 0;">
+    <p class="serif" style="font-size:20px; font-weight:700; color:var(--teal-deep);">Trebuie să te autentifici</p>
+    <p style="color:var(--ink-soft); font-size:14px; margin:8px 0 18px;">Setările de cazare sunt vizibile doar contului tău.</p>
+    <a href="cont.html" style="display:inline-block; background:var(--teal-deep); color:#fff; padding:12px 22px; border-radius:999px; font-size:14px; font-weight:700; text-decoration:none;">Autentifică-te</a>
+  </div>
+
+  <div id="state-nomatch" style="display:none; text-align:center; padding:40px 0;">
+    <p class="serif" style="font-size:20px; font-weight:700; color:var(--teal-deep);">Nu am găsit nicio cazare pe acest cont</p>
+    <p style="color:var(--ink-soft); font-size:14px; margin:8px 0 18px;">Dacă tocmai ți-ai înregistrat apartamentul sau hotelul, verifică dacă ai folosit aceeași adresă de email.</p>
+    <a href="inregistrare-hotelier.html" style="display:inline-block; background:var(--teal-deep); color:#fff; padding:12px 22px; border-radius:999px; font-size:14px; font-weight:700; text-decoration:none;">Înregistrează o cazare</a>
+  </div>
+
+  <div id="state-form" style="display:none;">
+
+    <div style="font-size:11px; font-weight:700; letter-spacing:.05em; color:var(--gold); text-transform:uppercase; margin-bottom:6px;">Cont hotelier</div>
+    <div class="serif" style="font-size:23px; font-weight:700; color:var(--teal-deep); margin:0 0 6px;">Setări cazare</div>
+    <div style="font-size:13px; color:var(--ink-soft); line-height:1.55; margin-bottom:18px;">Aceste informații apar în ghidul turistic al oaspeților tăi, chiar înainte de check-in.</div>
+
+    <div id="apt-selector" style="display:flex; gap:8px; margin-bottom:18px;"></div>
+
+    <!-- Fotografie locație -->
+    <div class="card">
+      <div class="card-head">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 13l4 -4a3 5 0 0 1 3 0l5 5"/><path d="M14 12l1.5 -1.5a3 5 0 0 1 3 0l2.5 2.5"/><circle cx="7.5" cy="8.5" r="1.5"/></svg>
+        <div class="card-title">Fotografia locației</div>
+      </div>
+      <div style="display:flex; gap:12px; align-items:center;">
+        <div id="photo-preview"></div>
+        <div style="flex:1;">
+          <label for="f-foto" style="border:1.5px dashed var(--line); border-radius:11px; padding:10px 12px; text-align:center; font-size:12.5px; font-weight:600; color:var(--teal-deep); background:#FBF9F4; display:block; cursor:pointer;">
+            <span id="f-foto-label">Încarcă o fotografie</span>
+          </label>
+          <input id="f-foto" type="file" accept="image/*" style="display:none;">
+          <div class="hint">O singură imagine, emblematică pentru locație — interior sau exterior.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Locație & acces -->
+    <div class="card">
+      <div class="card-head">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M17.657 16.657L13.414 20.9a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/></svg>
+        <div class="card-title">Locație &amp; acces</div>
+      </div>
+      <div class="field-group">
+        <label for="f-adresa">Adresă completă</label>
+        <textarea id="f-adresa" class="field" style="min-height:56px; resize:vertical;"></textarea>
+        <div class="hint">Poți lipi aici și un link Google Maps.</div>
+      </div>
+      <div class="two-col" style="margin-bottom:0;">
+        <div>
+          <label for="f-gps">Coordonate GPS</label>
+          <input id="f-gps" class="field" type="text" placeholder="45.5975, 25.4614">
+        </div>
+        <div>
+          <label for="f-parcare">Parcare</label>
+          <input id="f-parcare" class="field" type="text" placeholder="ex. Curte interioară, 6 locuri">
+        </div>
+      </div>
+    </div>
+
+    <!-- Check-in -->
+    <div class="card">
+      <div class="card-head">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.555 3.843l3.602 3.602a2.877 2.877 0 0 1 0 4.069l-2.643 2.643a2.877 2.877 0 0 1 -4.069 0l-.301 -.301l-6.558 6.558a2 2 0 0 1 -1.239 .578l-.175 .008h-1.172a1 1 0 0 1 -.993 -.883l-.007 -.117v-1.172a2 2 0 0 1 .467 -1.284l.119 -.13l.414 -.414h2v-2h2v-2l2.144 -2.144l-.301 -.301a2.877 2.877 0 0 1 0 -4.069l2.643 -2.643a2.877 2.877 0 0 1 4.069 0z"/></svg>
+        <div class="card-title">Check-in</div>
+      </div>
+      <div class="field-group">
+        <label for="f-cod-locker">Cod de acces / smartlocker</label>
+        <input id="f-cod-locker" class="field" type="text" style="font-family:monospace; font-size:16px; font-weight:700; letter-spacing:2px; border-color:var(--gold); background:var(--gold-soft);">
+        <div class="hint">Actualizează acest cod de fiecare dată când generezi unul nou (ex. TTLock) — apare instant în ghid.</div>
+      </div>
+      <div class="two-col">
+        <div>
+          <label for="f-locker-loc">Amplasare locker</label>
+          <input id="f-locker-loc" class="field" type="text">
+        </div>
+        <div>
+          <label for="f-locker-nr">Nr. locker</label>
+          <input id="f-locker-nr" class="field" type="text">
+        </div>
+      </div>
+      <div class="field-group">
+        <label for="f-checkin">Instrucțiuni check-in</label>
+        <textarea id="f-checkin" class="field" style="min-height:64px; resize:vertical;"></textarea>
+      </div>
+      <div class="sub">Recepție</div>
+      <div class="two-col" style="margin-bottom:0;">
+        <div>
+          <label for="f-receptie-program">Program recepție</label>
+          <input id="f-receptie-program" class="field" type="text">
+        </div>
+        <div>
+          <label for="f-receptie-urg">Contact urgență recepție</label>
+          <input id="f-receptie-urg" class="field" type="text">
+        </div>
+      </div>
+    </div>
+
+    <!-- Check-out -->
+    <div class="card">
+      <div class="card-head">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+        <div class="card-title">Check-out</div>
+      </div>
+      <div class="field-group">
+        <label for="f-checkout-ora">Ora de check-out</label>
+        <input id="f-checkout-ora" class="field" type="text" placeholder="12:00">
+      </div>
+      <label for="f-checkout-reguli">Recomandări la plecare</label>
+      <textarea id="f-checkout-reguli" class="field" style="min-height:64px; resize:vertical;"></textarea>
+    </div>
+
+    <!-- Regulile casei -->
+    <div class="card">
+      <div class="card-head">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6"/><path d="M9 16h6"/><path d="M9 8h1"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+        <div class="card-title">Regulile casei</div>
+      </div>
+      <div class="row" style="padding-top:0;">
+        <label class="switch-label" style="flex:1;"><span style="flex:1;">Fumat interzis în interior</span></label>
+        <label class="switch-label"><input type="checkbox" id="f-reguli-fumat" checked><span class="switch-track"><span class="switch-knob"></span></span></label>
+      </div>
+      <div class="row">
+        <span style="font-size:13px; font-weight:600;">Animale de companie acceptate</span>
+        <label class="switch-label"><input type="checkbox" id="f-reguli-animale"><span class="switch-track"><span class="switch-knob"></span></span></label>
+      </div>
+      <div class="row">
+        <span style="font-size:13px; font-weight:600;">Liniște după ora 22:00</span>
+        <label class="switch-label"><input type="checkbox" id="f-reguli-liniste" checked><span class="switch-track"><span class="switch-knob"></span></span></label>
+      </div>
+      <div style="padding-top:12px;">
+        <label for="f-reguli-extra">Alte reguli (opțional)</label>
+        <textarea id="f-reguli-extra" class="field" style="min-height:48px; resize:vertical;" placeholder="ex. Nu organizați petreceri private"></textarea>
+      </div>
+    </div>
+
+    <!-- WiFi -->
+    <div class="card">
+      <div class="card-head">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18l.01 0"/><path d="M9.172 15.172a4 4 0 0 1 5.656 0"/><path d="M6.343 12.343a8 8 0 0 1 11.314 0"/><path d="M3.515 9.515c4.686 -4.687 12.284 -4.687 17 0"/></svg>
+        <div class="card-title">Rețea WiFi</div>
+      </div>
+      <div class="field-group">
+        <label for="f-wifi-nume">Nume rețea (SSID)</label>
+        <input id="f-wifi-nume" class="field" type="text">
+      </div>
+      <label for="f-wifi-parola">Parolă</label>
+      <input id="f-wifi-parola" class="field" type="text">
+      <div class="hint">Codul QR de conectare automată se generează singur din aceste două câmpuri.</div>
+    </div>
+
+    <!-- Servicii hotel — doar tip=hotel -->
+    <div class="card" id="card-hotel" style="border:1.5px solid var(--gold-soft); display:none;">
+      <div class="card-head">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21v-14l8 -4v18"/><path d="M19 21v-10l-6 -4"/><path d="M9 9l0 .01"/><path d="M9 12l0 .01"/><path d="M9 15l0 .01"/><path d="M9 18l0 .01"/></svg>
+        <div class="card-title">Servicii hotel</div>
+        <span class="badge-hotel">Doar hotel</span>
+      </div>
+      <div class="hint" style="margin-top:-6px; margin-bottom:14px;">Această secțiune apare automat doar în ghidurile cazărilor înregistrate ca hotel.</div>
+
+      <div class="sub">Restaurant</div>
+      <div class="two-col">
+        <div><label for="f-rest-program">Program</label><input id="f-rest-program" class="field" type="text"></div>
+        <div><label for="f-rest-loc">Locație / etaj</label><input id="f-rest-loc" class="field" type="text"></div>
+      </div>
+
+      <div class="sub">Bar</div>
+      <div class="field-group"><label for="f-bar-program">Program bar</label><input id="f-bar-program" class="field" type="text"></div>
+
+      <div class="sub">SPA</div>
+      <div class="field-group"><label for="f-spa-program">Program SPA</label><input id="f-spa-program" class="field" type="text"></div>
+
+      <div class="sub">Fitness</div>
+      <div class="two-col">
+        <div><label for="f-fit-program">Program</label><input id="f-fit-program" class="field" type="text"></div>
+        <div><label for="f-fit-loc">Locație</label><input id="f-fit-loc" class="field" type="text"></div>
+      </div>
+
+      <div class="sub">Mic dejun</div>
+      <div class="field-group"><label for="f-micdejun">Program mic dejun</label><input id="f-micdejun" class="field" type="text"></div>
+
+      <div class="sub">Room service</div>
+      <div class="field-group">
+        <label for="f-roomservice">Cum se comandă</label>
+        <textarea id="f-roomservice" class="field" style="min-height:48px; resize:vertical;"></textarea>
+      </div>
+
+      <div class="sub">Mesaj din partea managementului</div>
+      <textarea id="f-mesaj-management" class="field" style="min-height:56px; resize:vertical;" placeholder="ex. Vă urăm un sejur plăcut."></textarea>
+    </div>
+
+    <!-- Contact & urgențe -->
+    <div class="card">
+      <div class="card-head">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9C4536" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 16v.01"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.871l-8.106 -13.534a1.914 1.914 0 0 0 -3.274 0z"/></svg>
+        <div class="card-title">Contact &amp; urgențe</div>
+      </div>
+      <div class="field-group">
+        <label for="f-telefon">Telefon gazdă (WhatsApp)</label>
+        <input id="f-telefon" class="field" type="tel">
+      </div>
+      <div class="row" style="padding-top:0; padding-bottom:14px;">
+        <span style="font-size:13px; font-weight:600;">Arată buton WhatsApp în ghid</span>
+        <label class="switch-label"><input type="checkbox" id="f-whatsapp-activ" checked><span class="switch-track"><span class="switch-knob"></span></span></label>
+      </div>
+      <label for="f-urg-spital">Cel mai apropiat spital / cabinet</label>
+      <input id="f-urg-spital" class="field" type="text">
+      <div class="hint">Poliția (112) apare automat în ghid.</div>
+    </div>
+
+    <button class="primary" id="btn-save">Salvează setările</button>
+
+    <div style="background:var(--teal-deep); border-radius:16px; padding:18px; max-width:560px;">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold-soft)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 15l6 -6"/><path d="M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464"/><path d="M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463"/></svg>
+        <div style="font-size:12px; font-weight:700; color:var(--gold-soft); text-transform:uppercase; letter-spacing:.04em;">Link pentru turist</div>
+      </div>
+      <div id="link-turist" style="background:rgba(255,255,255,0.08); border-radius:10px; padding:11px 13px; font-size:12.5px; color:#fff; font-family:monospace; margin-bottom:10px; word-break:break-all;"></div>
+      <div style="display:flex; gap:8px;">
+        <div id="btn-copy-link" style="flex:1; background:var(--gold); color:#fff; text-align:center; padding:10px; border-radius:10px; font-size:12.5px; font-weight:700; cursor:pointer;">Copiază linkul</div>
+      </div>
+      <div style="font-size:11.5px; color:#C8CFC2; line-height:1.5; margin-top:10px;">Trimite-l turistului cu ~24 ore înainte de sosire, direct în mesajul de pe Airbnb sau Booking. Turistul nu trebuie să se autentifice ca să-l vadă.</div>
+    </div>
+
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
+const SUPABASE_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentSession = null;
+let cazari = [];       // toate randurile din operatori pt acest email
+let currentRow = null; // randul selectat curent
+
+function displayName(user) {
+  const meta = user.user_metadata || {};
+  if (meta.prenume) {
+    const initial = meta.nume ? meta.nume.trim().charAt(0).toUpperCase() + '.' : '';
+    return `${meta.prenume} ${initial}`.trim();
+  }
+  return user.email;
+}
+
+function showState(id) {
+  ['state-loading', 'state-noauth', 'state-nomatch', 'state-form'].forEach(s => {
+    document.getElementById(s).style.display = (s === id) ? '' : 'none';
+  });
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function fillForm(row) {
+  const f = row.facilitati_cazare || {};
+  const loc = f.locatie || {};
+  const checkin = f.checkin || {};
+  const receptie = f.receptie || {};
+  const checkout = f.checkout || {};
+  const reguli = f.reguli || {};
+  const wifi = f.wifi || {};
+  const urgente = f.urgente || {};
+  const hotel = f.hotel || {};
+
+  document.getElementById('f-adresa').value = row.adresa || '';
+  document.getElementById('f-gps').value = loc.gps || '';
+  document.getElementById('f-parcare').value = loc.parcare || '';
+
+  document.getElementById('f-cod-locker').value = checkin.cod_acces || '';
+  document.getElementById('f-locker-loc').value = checkin.locker_locatie || '';
+  document.getElementById('f-locker-nr').value = checkin.locker_numar || '';
+  document.getElementById('f-checkin').value = checkin.instructiuni || '';
+  document.getElementById('f-receptie-program').value = receptie.program || '';
+  document.getElementById('f-receptie-urg').value = receptie.contact_urgenta || '';
+
+  document.getElementById('f-checkout-ora').value = checkout.ora || '';
+  document.getElementById('f-checkout-reguli').value = checkout.instructiuni || '';
+
+  document.getElementById('f-reguli-fumat').checked = reguli.fumat !== false;
+  document.getElementById('f-reguli-animale').checked = !!reguli.animale;
+  document.getElementById('f-reguli-liniste').checked = reguli.liniste !== false;
+  document.getElementById('f-reguli-extra').value = reguli.extra || '';
+
+  document.getElementById('f-wifi-nume').value = wifi.ssid || '';
+  document.getElementById('f-wifi-parola').value = wifi.parola || '';
+
+  document.getElementById('f-telefon').value = row.telefon || '';
+  document.getElementById('f-whatsapp-activ').checked = f.whatsapp_activ !== false;
+  document.getElementById('f-urg-spital').value = urgente.spital || '';
+
+  document.getElementById('card-hotel').style.display = (row.tip === 'hotel') ? '' : 'none';
+  document.getElementById('f-rest-program').value = hotel.restaurant_program || '';
+  document.getElementById('f-rest-loc').value = hotel.restaurant_locatie || '';
+  document.getElementById('f-bar-program').value = hotel.bar_program || '';
+  document.getElementById('f-spa-program').value = hotel.spa_program || '';
+  document.getElementById('f-fit-program').value = hotel.fitness_program || '';
+  document.getElementById('f-fit-loc').value = hotel.fitness_locatie || '';
+  document.getElementById('f-micdejun').value = hotel.mic_dejun_program || '';
+  document.getElementById('f-roomservice').value = hotel.room_service || '';
+  document.getElementById('f-mesaj-management').value = hotel.mesaj_management || '';
+
+  const preview = document.getElementById('photo-preview');
+  if (row.foto_url) {
+    preview.style.backgroundImage = `url('${row.foto_url}')`;
+    document.getElementById('f-foto-label').textContent = 'Schimbă fotografia';
+  } else {
+    preview.style.backgroundImage = '';
+    document.getElementById('f-foto-label').textContent = 'Încarcă o fotografie';
+  }
+
+  document.getElementById('link-turist').textContent = `lokals.ro/ghid-oaspeti.html?apt=${row.slug}`;
+}
+
+function renderAptSelector() {
+  const sel = document.getElementById('apt-selector');
+  sel.innerHTML = '';
+  if (cazari.length <= 1) return;
+  cazari.forEach(row => {
+    const chip = document.createElement('div');
+    chip.className = 'apt-chip' + (row.id === currentRow.id ? ' active' : '');
+    chip.textContent = row.nume_afisat || row.nume_afacere;
+    chip.addEventListener('click', () => {
+      currentRow = row;
+      renderAptSelector();
+      fillForm(currentRow);
+    });
+    sel.appendChild(chip);
+  });
+}
+
+async function loadCazari(email) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/operatori?email=eq.${encodeURIComponent(email)}&select=*`, {
+    headers: { apikey: SUPABASE_KEY }
+  });
+  cazari = await res.json();
+}
+
+async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session || !session.user) {
+    showState('state-noauth');
+    return;
+  }
+  currentSession = session;
+  document.getElementById('header-auth-name').textContent = displayName(session.user);
+
+  await loadCazari(session.user.email);
+  if (!cazari.length) {
+    showState('state-nomatch');
+    return;
+  }
+  currentRow = cazari[0];
+  renderAptSelector();
+  fillForm(currentRow);
+  showState('state-form');
+}
+
+document.getElementById('header-logout-btn').addEventListener('click', async () => {
+  await supabaseClient.auth.signOut();
+  window.location.href = 'index.html';
+});
+
+let pendingPhotoFile = null;
+document.getElementById('f-foto').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  pendingPhotoFile = file;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    document.getElementById('photo-preview').style.backgroundImage = `url('${ev.target.result}')`;
+  };
+  reader.readAsDataURL(file);
+  document.getElementById('f-foto-label').textContent = file.name;
+});
+
+async function uploadPhoto(file, slug) {
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  const path = `cazare/${slug}-${Date.now()}.${ext}`;
+  const { error } = await supabaseClient.storage.from('afaceri-poze').upload(path, file, { upsert: true });
+  if (error) throw error;
+  const { data } = supabaseClient.storage.from('afaceri-poze').getPublicUrl(path);
+  return data.publicUrl;
+}
+
+document.getElementById('btn-save').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true;
+  btn.textContent = 'Se salvează...';
+  try {
+    let fotoUrl = currentRow.foto_url || null;
+    if (pendingPhotoFile) {
+      fotoUrl = await uploadPhoto(pendingPhotoFile, currentRow.slug);
+    }
+
+    const facilitati_cazare = {
+      locatie: {
+        gps: document.getElementById('f-gps').value.trim(),
+        parcare: document.getElementById('f-parcare').value.trim(),
+      },
+      checkin: {
+        cod_acces: document.getElementById('f-cod-locker').value.trim(),
+        locker_locatie: document.getElementById('f-locker-loc').value.trim(),
+        locker_numar: document.getElementById('f-locker-nr').value.trim(),
+        instructiuni: document.getElementById('f-checkin').value.trim(),
+      },
+      receptie: {
+        program: document.getElementById('f-receptie-program').value.trim(),
+        contact_urgenta: document.getElementById('f-receptie-urg').value.trim(),
+      },
+      checkout: {
+        ora: document.getElementById('f-checkout-ora').value.trim(),
+        instructiuni: document.getElementById('f-checkout-reguli').value.trim(),
+      },
+      reguli: {
+        fumat: document.getElementById('f-reguli-fumat').checked,
+        animale: document.getElementById('f-reguli-animale').checked,
+        liniste: document.getElementById('f-reguli-liniste').checked,
+        extra: document.getElementById('f-reguli-extra').value.trim(),
+      },
+      wifi: {
+        ssid: document.getElementById('f-wifi-nume').value.trim(),
+        parola: document.getElementById('f-wifi-parola').value.trim(),
+      },
+      whatsapp_activ: document.getElementById('f-whatsapp-activ').checked,
+      urgente: {
+        spital: document.getElementById('f-urg-spital').value.trim(),
+      },
+      hotel: currentRow.tip === 'hotel' ? {
+        restaurant_program: document.getElementById('f-rest-program').value.trim(),
+        restaurant_locatie: document.getElementById('f-rest-loc').value.trim(),
+        bar_program: document.getElementById('f-bar-program').value.trim(),
+        spa_program: document.getElementById('f-spa-program').value.trim(),
+        fitness_program: document.getElementById('f-fit-program').value.trim(),
+        fitness_locatie: document.getElementById('f-fit-loc').value.trim(),
+        mic_dejun_program: document.getElementById('f-micdejun').value.trim(),
+        room_service: document.getElementById('f-roomservice').value.trim(),
+        mesaj_management: document.getElementById('f-mesaj-management').value.trim(),
+      } : {},
+    };
+
+    const payload = {
+      adresa: document.getElementById('f-adresa').value.trim(),
+      telefon: document.getElementById('f-telefon').value.trim(),
+      foto_url: fotoUrl,
+      facilitati_cazare,
+    };
+
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/operatori?id=eq.${currentRow.id}`, {
+      method: 'PATCH',
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${currentSession.access_token}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation',
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const updated = await res.json();
+    currentRow = updated[0];
+    cazari = cazari.map(r => r.id === currentRow.id ? currentRow : r);
+    pendingPhotoFile = null;
+    fillForm(currentRow);
+    showToast('Setările au fost salvate.');
+  } catch (e) {
+    console.error(e);
+    showToast('Nu am putut salva. Încearcă din nou.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Salvează setările';
+  }
+});
+
+document.getElementById('btn-copy-link').addEventListener('click', () => {
+  const text = document.getElementById('link-turist').textContent;
+  navigator.clipboard.writeText(`https://${text}`).then(() => showToast('Link copiat.'));
+});
+
+init();
+</script>
+
+</body>
+</html>

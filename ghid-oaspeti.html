@@ -13,6 +13,7 @@
     --bg:#EAE3D3; --surface:#FBF8F1; --ink:#20291F; --ink-soft:#5B6459;
     --spruce:#3C5B44; --spruce-deep:#26382C; --amber:#B9812F; --amber-deep:#8F6222;
     --brick:#9C4536; --line:rgba(32,41,31,0.14);
+    --gold-soft:#E8CE9E;
   }
   *{box-sizing:border-box;}
   body{margin:0; background:var(--bg); color:var(--ink); font-family:'Inter', system-ui, sans-serif;}
@@ -53,6 +54,32 @@
   .lang-btn.active{background:var(--spruce-deep) !important; color:#fff !important; border-color:var(--spruce-deep) !important;}
   footer{max-width:960px; margin:0 auto; padding:0 20px 40px; color:var(--ink-soft); font-size:12px;}
   footer .box{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:16px;}
+
+  /* ===== Informații cazare (facilități) ===== */
+  #facilitati-wrap{max-width:960px; margin:0 auto; padding:0 20px 4px;}
+  #facilitati-card{background:var(--surface); border:1px solid var(--line); border-radius:18px; overflow:hidden; margin-bottom:22px;}
+  #facilitati-hero{height:120px; background:linear-gradient(135deg, var(--spruce-deep), var(--spruce)); background-size:cover; background-position:center; display:flex; align-items:flex-end; padding:14px 18px; position:relative;}
+  #facilitati-hero-name{position:relative; color:#fff; font-weight:700; font-size:15px; text-shadow:0 1px 6px rgba(0,0,0,0.35);}
+  #facilitati-mesaj{display:none; margin:14px 18px 0; padding:12px 14px; border-left:3px solid var(--amber); background:#FBF3E2; border-radius:0 10px 10px 0; font-style:italic; font-size:13px; color:var(--ink-soft); line-height:1.5;}
+  #facilitati-sections{padding:6px 6px 10px;}
+  .fac-item{border-bottom:1px solid var(--line);}
+  .fac-item:last-child{border-bottom:none;}
+  .fac-head{display:flex; align-items:center; gap:12px; padding:14px 12px; cursor:pointer;}
+  .fac-icon{width:34px; height:34px; border-radius:10px; background:var(--spruce-deep)14; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .fac-title-wrap{flex:1; min-width:0;}
+  .fac-title{font-size:14px; font-weight:700; color:var(--ink);}
+  .fac-subtitle{font-size:12px; color:var(--ink-soft); margin-top:1px;}
+  .fac-hotel-badge{font-size:9px; font-weight:700; letter-spacing:.05em; color:#fff; background:var(--amber); padding:3px 7px; border-radius:999px; text-transform:uppercase; flex-shrink:0;}
+  .fac-chevron{flex-shrink:0; transition:transform .15s;}
+  .fac-item.open .fac-chevron{transform:rotate(180deg);}
+  .fac-body{display:none; padding:0 12px 16px 58px; font-size:13.5px; color:var(--ink-soft); line-height:1.6;}
+  .fac-item.open .fac-body{display:block;}
+  .fac-row{display:flex; align-items:flex-start; gap:8px; margin-bottom:8px;}
+  .fac-row:last-child{margin-bottom:0;}
+  .fac-pill{display:inline-flex; align-items:center; gap:6px; background:var(--bg); border-radius:999px; padding:6px 12px; font-size:12.5px; color:var(--ink); margin:4px 6px 0 0;}
+  .fac-code{font-family:'JetBrains Mono', monospace; font-size:15px; font-weight:600; letter-spacing:1.5px; background:var(--gold-soft); color:var(--ink); padding:6px 12px; border-radius:8px; display:inline-block; margin:2px 0 6px;}
+  .fac-wifi-qr{background:#fff; padding:10px; border-radius:12px; display:inline-block; margin-top:8px;}
+  .fac-toggle-off{color:var(--ink-soft);}
 </style>
 </head>
 <body>
@@ -69,6 +96,17 @@
   <p id="welcome"></p>
   <p id="subtitle-text">O selecție de afaceri locale — activități, cultură, wellness și gastronomie, alese pentru sejurul tău.</p>
 </header>
+
+<!-- ===== Informații cazare — vizibilă fără autentificare, tot ce ține de check-in/checkout/acces/urgențe ===== -->
+<div id="facilitati-wrap" style="display:none;">
+  <div id="facilitati-card">
+    <div id="facilitati-hero">
+      <div id="facilitati-hero-name"></div>
+    </div>
+    <div id="facilitati-mesaj"></div>
+    <div id="facilitati-sections"></div>
+  </div>
+</div>
 
 <nav id="filters"></nav>
 
@@ -125,6 +163,7 @@ const APT_NAMES = {
 
 let currentApt = APT_NAMES[apt];
 let currentZona = currentApt ? currentApt.zona : 'rasnov'; // implicit Râșnov, pt link-uri vechi
+let currentOperator = null; // randul complet din operatori, cand exista (foto, facilitati_cazare, tip)
 
 // ---------- Supabase (coduri beneficii + operatori auto-inscrisi) ----------
 const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
@@ -151,14 +190,17 @@ function formatPhoneRo(raw) {
 }
 
 async function resolveOperator() {
-  if (currentApt || !apt || apt === 'general') return; // deja cunoscut static, sau fara ?apt=
+  if (!apt || apt === 'general') return;
   try {
     const res = await sbFetch(`operatori?slug=eq.${encodeURIComponent(apt)}&select=*`);
     const rows = await res.json();
     if (rows && rows.length > 0) {
       const op = rows[0];
-      currentApt = { name: op.nume_afisat || op.nume_afacere, zona: op.zona || 'rasnov', telefon: formatPhoneRo(op.telefon) };
-      currentZona = currentApt.zona;
+      currentOperator = op;
+      if (!currentApt) {
+        currentApt = { name: op.nume_afisat || op.nume_afacere, zona: op.zona || 'rasnov', telefon: formatPhoneRo(op.telefon) };
+        currentZona = currentApt.zona;
+      }
     }
   } catch (e) { /* ramane fallback pe Rasnov, fara nume personalizat */ }
 }
@@ -269,6 +311,24 @@ const I18N = {
     codeLabel: "Codul tău pentru beneficii",
     codeSub: "Generează-l o dată și arată-l la orice afacere din listă care oferă un beneficiu.",
     codeBtn: "Generează codul meu",
+    fac: {
+      locatie: "Locație & acces", locatieSub: "Adresă, coordonate GPS, parcare",
+      checkin: "Check-in", checkinSub: "Cod de acces, locker, program recepție",
+      checkout: "Check-out", checkoutSub: "Oră și recomandări la plecare",
+      reguli: "Regulile casei", reguliSub: "Ce e permis și ce nu",
+      wifi: "Rețea WiFi", wifiSub: "Conectare rapidă prin cod QR",
+      servicii: "Servicii hotel", serviciiSub: "Restaurant, SPA, fitness, room service",
+      contact: "Contact & urgențe", contactSub: "Gazdă, spital, poliție",
+      openMaps: "Deschide în Maps", parcare: "Parcare", adresa: "Adresă",
+      locker: "Amplasare locker", codAcces: "Cod de acces", receptie: "Recepție",
+      program: "Program", urgentaReceptie: "Urgență recepție",
+      whatsapp: "Scrie gazdei pe WhatsApp", spital: "Spital / cabinet", politie: "Poliție",
+      fumat: "Fumat interzis în interior", animale: "Animale de companie acceptate",
+      animaleNu: "Fără animale de companie", liniste: "Liniște după ora 22:00",
+      restaurant: "Restaurant", bar: "Bar", spa: "SPA", fitness: "Fitness",
+      micDejun: "Mic dejun", roomService: "Room service",
+      wifiConnect: "Scanează pentru conectare automată",
+    },
   },
   en: {
     eyebrow: "🔥 Guest Guide",
@@ -288,27 +348,186 @@ const I18N = {
     codeLabel: "Your benefits code",
     codeSub: "Generate it once and show it at any business in the list that offers a perk.",
     codeBtn: "Generate my code",
+    fac: {
+      locatie: "Location & access", locatieSub: "Address, GPS coordinates, parking",
+      checkin: "Check-in", checkinSub: "Access code, locker, front desk hours",
+      checkout: "Check-out", checkoutSub: "Time and departure notes",
+      reguli: "House rules", reguliSub: "What's allowed and what isn't",
+      wifi: "WiFi network", wifiSub: "Quick connect via QR code",
+      servicii: "Hotel services", serviciiSub: "Restaurant, spa, fitness, room service",
+      contact: "Contact & emergencies", contactSub: "Host, hospital, police",
+      openMaps: "Open in Maps", parcare: "Parking", adresa: "Address",
+      locker: "Locker location", codAcces: "Access code", receptie: "Front desk",
+      program: "Hours", urgentaReceptie: "Front desk emergency line",
+      whatsapp: "Message the host on WhatsApp", spital: "Hospital / clinic", politie: "Police",
+      fumat: "No smoking indoors", animale: "Pets allowed",
+      animaleNu: "No pets", liniste: "Quiet hours after 22:00",
+      restaurant: "Restaurant", bar: "Bar", spa: "Spa", fitness: "Fitness",
+      micDejun: "Breakfast", roomService: "Room service",
+      wifiConnect: "Scan to connect automatically",
+    },
   },
 };
 let currentLang = 'ro';
 
-function setLang(lang){
-  currentLang = lang;
-  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
-  const t = I18N[lang];
-  const cityLabel = currentApt ? (currentZona === 'sacele-brasov' ? 'Săcele-Brașov' : 'Râșnov') : 'Râșnov';
-  document.getElementById('eyebrow-text').textContent = `${t.eyebrow} · ${cityLabel}`;
-  document.getElementById('title-text').textContent = t.title;
-  document.getElementById('subtitle-text').textContent = t.subtitle;
-  document.getElementById('welcome').textContent = currentApt ? t.welcome(currentApt.name) : '';
-  document.getElementById('feedback-label').textContent = t.feedbackLabel;
-  document.getElementById('feedback-text').placeholder = t.feedbackPlaceholder;
-  document.getElementById('feedback-btn-text').textContent = t.feedbackBtn;
-  document.getElementById('code-label').textContent = t.codeLabel;
-  document.getElementById('code-sub').textContent = t.codeSub;
-  document.getElementById('code-btn-text').textContent = t.codeBtn;
-  renderFilters();
-  render(currentFilter);
+// ---------- Iconițe (SVG, fără emoji) ----------
+const FAC_ICONS = {
+  locatie: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#26382C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M17.657 16.657L13.414 20.9a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/></svg>',
+  checkin: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#26382C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.555 3.843l3.602 3.602a2.877 2.877 0 0 1 0 4.069l-2.643 2.643a2.877 2.877 0 0 1 -4.069 0l-.301 -.301l-6.558 6.558a2 2 0 0 1 -1.239 .578l-.175 .008h-1.172a1 1 0 0 1 -.993 -.883l-.007 -.117v-1.172a2 2 0 0 1 .467 -1.284l.119 -.13l.414 -.414h2v-2h2v-2l2.144 -2.144l-.301 -.301a2.877 2.877 0 0 1 0 -4.069l2.643 -2.643a2.877 2.877 0 0 1 4.069 0z"/></svg>',
+  checkout: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#26382C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>',
+  reguli: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#26382C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6"/><path d="M9 16h6"/><path d="M9 8h1"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>',
+  wifi: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#26382C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18l.01 0"/><path d="M9.172 15.172a4 4 0 0 1 5.656 0"/><path d="M6.343 12.343a8 8 0 0 1 11.314 0"/><path d="M3.515 9.515c4.686 -4.687 12.284 -4.687 17 0"/></svg>',
+  servicii: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#26382C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21v-14l8 -4v18"/><path d="M19 21v-10l-6 -4"/><path d="M9 9l0 .01"/><path d="M9 12l0 .01"/><path d="M9 15l0 .01"/><path d="M9 18l0 .01"/></svg>',
+  contact: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9C4536" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 16v.01"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.871l-8.106 -13.534a1.914 1.914 0 0 0 -3.274 0z"/></svg>',
+  whatsapp: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3C5B44" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"/></svg>',
+  chevron: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B6459" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="fac-chevron"><path d="M6 9l6 6l6 -6"/></svg>',
+  pin: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5B6459" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M17.657 16.657L13.414 20.9a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/></svg>',
+  car: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5B6459" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h-2v-6l2 -5h9l4 5h1a2 2 0 0 1 2 2v4h-2"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/></svg>',
+};
+
+function fmt(s){ return (s || '').trim(); }
+
+// ---------- Randare secțiune "Informații cazare" — vizibilă fără autentificare ----------
+function renderFacilitati() {
+  const wrap = document.getElementById('facilitati-wrap');
+  if (!currentOperator) { wrap.style.display = 'none'; return; }
+
+  const t = I18N[currentLang].fac;
+  const f = currentOperator.facilitati_cazare || {};
+  const loc = f.locatie || {}, checkin = f.checkin || {}, receptie = f.receptie || {},
+        checkout = f.checkout || {}, reguli = f.reguli || {}, wifi = f.wifi || {},
+        urgente = f.urgente || {}, hotel = f.hotel || {};
+  const isHotel = currentOperator.tip === 'hotel';
+
+  // are cazarea macar o informatie de afisat? altfel nu aratam sectiunea deloc
+  const hasAny = currentOperator.adresa || currentOperator.foto_url || loc.gps || loc.parcare ||
+    checkin.cod_acces || checkin.instructiuni || checkout.ora || checkout.instructiuni ||
+    wifi.ssid || currentOperator.telefon || urgente.spital ||
+    (isHotel && (hotel.restaurant_program || hotel.spa_program || hotel.fitness_program || hotel.mic_dejun_program || hotel.room_service || hotel.mesaj_management));
+  if (!hasAny) { wrap.style.display = 'none'; return; }
+
+  wrap.style.display = '';
+
+  const hero = document.getElementById('facilitati-hero');
+  if (currentOperator.foto_url) hero.style.backgroundImage = `url('${currentOperator.foto_url}')`;
+  document.getElementById('facilitati-hero-name').textContent = currentApt ? currentApt.name : (currentOperator.nume_afisat || currentOperator.nume_afacere);
+
+  const mesajEl = document.getElementById('facilitati-mesaj');
+  if (isHotel && hotel.mesaj_management) {
+    mesajEl.style.display = '';
+    mesajEl.textContent = `“${hotel.mesaj_management}”`;
+  } else {
+    mesajEl.style.display = 'none';
+  }
+
+  const sections = [];
+
+  // Locație & acces
+  if (currentOperator.adresa || loc.gps || loc.parcare) {
+    let body = `<div class="fac-row">${FAC_ICONS.pin}<span>${fmt(currentOperator.adresa) || '—'}</span></div>`;
+    if (loc.gps) {
+      const mapsHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc.gps)}`;
+      body += `<a class="fac-pill" href="${mapsHref}" target="_blank" rel="noopener">${FAC_ICONS.pin} ${t.openMaps}</a>`;
+    }
+    if (loc.parcare) body += `<div class="fac-row" style="margin-top:10px;">${FAC_ICONS.car}<span><b>${t.parcare}:</b> ${fmt(loc.parcare)}</span></div>`;
+    sections.push({ key: 'locatie', title: t.locatie, subtitle: t.locatieSub, body });
+  }
+
+  // Check-in
+  if (checkin.cod_acces || checkin.instructiuni || receptie.program) {
+    let body = '';
+    if (checkin.cod_acces) body += `<div><span style="font-size:11.5px; font-weight:600; text-transform:uppercase; letter-spacing:.03em;">${t.codAcces}</span><br><span class="fac-code">${fmt(checkin.cod_acces)}</span></div>`;
+    if (checkin.locker_locatie || checkin.locker_numar) {
+      const parts = [checkin.locker_locatie, checkin.locker_numar].filter(Boolean).join(' · ');
+      body += `<div class="fac-row">${FAC_ICONS.pin}<span><b>${t.locker}:</b> ${parts}</span></div>`;
+    }
+    if (checkin.instructiuni) body += `<div class="fac-row">${fmt(checkin.instructiuni)}</div>`;
+    if (receptie.program || receptie.contact_urgenta) {
+      body += `<div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--line);"><b>${t.receptie}</b>`;
+      if (receptie.program) body += `<div class="fac-row" style="margin-top:6px;">${t.program}: ${fmt(receptie.program)}</div>`;
+      if (receptie.contact_urgenta) body += `<div class="fac-row">${t.urgentaReceptie}: ${fmt(receptie.contact_urgenta)}</div>`;
+      body += `</div>`;
+    }
+    sections.push({ key: 'checkin', title: t.checkin, subtitle: t.checkinSub, body });
+  }
+
+  // Check-out
+  if (checkout.ora || checkout.instructiuni) {
+    let body = '';
+    if (checkout.ora) body += `<div class="fac-row"><b>${t.program}:</b>&nbsp;${fmt(checkout.ora)}</div>`;
+    if (checkout.instructiuni) body += `<div class="fac-row">${fmt(checkout.instructiuni)}</div>`;
+    sections.push({ key: 'checkout', title: t.checkout, subtitle: t.checkoutSub, body });
+  }
+
+  // Regulile casei
+  if (reguli.fumat !== undefined || reguli.animale !== undefined || reguli.liniste !== undefined || reguli.extra) {
+    let body = '<div style="display:flex; flex-direction:column; gap:6px;">';
+    if (reguli.fumat !== false) body += `<div>${t.fumat}</div>`;
+    body += `<div class="${reguli.animale ? '' : 'fac-toggle-off'}">${reguli.animale ? t.animale : t.animaleNu}</div>`;
+    if (reguli.liniste !== false) body += `<div>${t.liniste}</div>`;
+    body += '</div>';
+    if (reguli.extra) body += `<div class="fac-row" style="margin-top:8px;">${fmt(reguli.extra)}</div>`;
+    sections.push({ key: 'reguli', title: t.reguli, subtitle: t.reguliSub, body });
+  }
+
+  // WiFi
+  if (wifi.ssid) {
+    const wifiPayload = `WIFI:T:WPA;S:${(wifi.ssid || '').replace(/([\\;,:"])/g, '\\$1')};P:${(wifi.parola || '').replace(/([\\;,:"])/g, '\\$1')};;`;
+    let body = `<div class="fac-row"><b>SSID:</b>&nbsp;${fmt(wifi.ssid)}</div>`;
+    if (wifi.parola) body += `<div class="fac-row"><b>${currentLang === 'en' ? 'Password' : 'Parolă'}:</b>&nbsp;${fmt(wifi.parola)}</div>`;
+    body += `<div id="fac-wifi-qr-${currentOperator.id}" class="fac-wifi-qr"></div><div style="font-size:11.5px; margin-top:6px;">${t.wifiConnect}</div>`;
+    sections.push({ key: 'wifi', title: t.wifi, subtitle: t.wifiSub, body, wifiPayload, wifiId: `fac-wifi-qr-${currentOperator.id}` });
+  }
+
+  // Servicii hotel
+  if (isHotel && (hotel.restaurant_program || hotel.bar_program || hotel.spa_program || hotel.fitness_program || hotel.mic_dejun_program || hotel.room_service)) {
+    let body = '';
+    if (hotel.restaurant_program || hotel.restaurant_locatie) body += `<div class="fac-row"><b>${t.restaurant}:</b>&nbsp;${[fmt(hotel.restaurant_program), fmt(hotel.restaurant_locatie)].filter(Boolean).join(' · ')}</div>`;
+    if (hotel.bar_program) body += `<div class="fac-row"><b>${t.bar}:</b>&nbsp;${fmt(hotel.bar_program)}</div>`;
+    if (hotel.spa_program) body += `<div class="fac-row"><b>${t.spa}:</b>&nbsp;${fmt(hotel.spa_program)}</div>`;
+    if (hotel.fitness_program || hotel.fitness_locatie) body += `<div class="fac-row"><b>${t.fitness}:</b>&nbsp;${[fmt(hotel.fitness_program), fmt(hotel.fitness_locatie)].filter(Boolean).join(' · ')}</div>`;
+    if (hotel.mic_dejun_program) body += `<div class="fac-row"><b>${t.micDejun}:</b>&nbsp;${fmt(hotel.mic_dejun_program)}</div>`;
+    if (hotel.room_service) body += `<div class="fac-row"><b>${t.roomService}:</b>&nbsp;${fmt(hotel.room_service)}</div>`;
+    sections.push({ key: 'servicii', title: t.servicii, subtitle: t.serviciiSub, body, hotelBadge: true });
+  }
+
+  // Contact & urgențe
+  if (currentOperator.telefon || urgente.spital) {
+    let body = '';
+    if (currentOperator.telefon && f.whatsapp_activ !== false) {
+      body += `<a class="fac-pill" href="https://wa.me/${formatPhoneRo(currentOperator.telefon)}" target="_blank" rel="noopener">${FAC_ICONS.whatsapp} ${t.whatsapp}</a>`;
+    }
+    if (urgente.spital) body += `<div class="fac-row" style="margin-top:10px;"><b>${t.spital}:</b>&nbsp;${fmt(urgente.spital)}</div>`;
+    body += `<div class="fac-row"><b>${t.politie}:</b>&nbsp;112</div>`;
+    sections.push({ key: 'contact', title: t.contact, subtitle: t.contactSub, body });
+  }
+
+  const container = document.getElementById('facilitati-sections');
+  container.innerHTML = '';
+  sections.forEach((sec, i) => {
+    const item = document.createElement('div');
+    item.className = 'fac-item' + (i === 0 ? ' open' : '');
+    item.innerHTML = `
+      <div class="fac-head">
+        <div class="fac-icon">${FAC_ICONS[sec.key]}</div>
+        <div class="fac-title-wrap">
+          <div class="fac-title">${sec.title}</div>
+          <div class="fac-subtitle">${sec.subtitle}</div>
+        </div>
+        ${sec.hotelBadge ? `<span class="fac-hotel-badge">HOTEL</span>` : ''}
+        ${FAC_ICONS.chevron}
+      </div>
+      <div class="fac-body">${sec.body}</div>
+    `;
+    item.querySelector('.fac-head').addEventListener('click', () => {
+      item.classList.toggle('open');
+    });
+    container.appendChild(item);
+    if (sec.wifiPayload) {
+      const qrHost = item.querySelector(`#${sec.wifiId}`);
+      if (qrHost) new QRCode(qrHost, { text: sec.wifiPayload, width: 128, height: 128 });
+    }
+  });
 }
 
 // ---------- Date live din Google Sheets ----------
@@ -442,15 +661,29 @@ function renderFilters(){
     nav.appendChild(btn);
   });
 }
-async function registerVisit(slug){
-  if (!slug || slug === 'general') return;
-  try {
-    await fetch(`https://countapi.mileshilliard.com/api/v1/hit/lokals-${encodeURIComponent(slug)}`);
-  } catch (e) { }
+
+function setLang(lang){
+  currentLang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
+  const t = I18N[lang];
+  const cityLabel = currentApt ? (currentZona === 'sacele-brasov' ? 'Săcele-Brașov' : 'Râșnov') : 'Râșnov';
+  document.getElementById('eyebrow-text').textContent = `${t.eyebrow} · ${cityLabel}`;
+  document.getElementById('title-text').textContent = t.title;
+  document.getElementById('subtitle-text').textContent = t.subtitle;
+  document.getElementById('welcome').textContent = currentApt ? t.welcome(currentApt.name) : '';
+  document.getElementById('feedback-label').textContent = t.feedbackLabel;
+  document.getElementById('feedback-text').placeholder = t.feedbackPlaceholder;
+  document.getElementById('feedback-btn-text').textContent = t.feedbackBtn;
+  document.getElementById('code-label').textContent = t.codeLabel;
+  document.getElementById('code-sub').textContent = t.codeSub;
+  document.getElementById('code-btn-text').textContent = t.codeBtn;
+  renderFacilitati();
+  renderFilters();
+  render(currentFilter);
 }
+
 async function init() {
   await resolveOperator();
-  registerVisit(apt);
   setLang('ro');
   loadPlaces();
 }
