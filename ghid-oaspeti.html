@@ -71,9 +71,7 @@
   #locatie-icon{width:36px; height:36px; border-radius:10px; background:rgba(38,56,44,0.08); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
   #locatie-title{font-size:16px; font-weight:700; color:var(--ink);}
   #locatie-subtitle{font-size:12px; color:var(--ink-soft);}
-  #locatie-adresa{font-size:13.5px; color:var(--ink); margin-bottom:12px; line-height:1.5;}
-  #locatie-map-wrap{height:170px; border-radius:12px; overflow:hidden; margin-bottom:12px; border:1px solid var(--line); background:var(--bg);}
-  #locatie-map-wrap iframe{width:100%; height:100%; border:0; display:block;}
+  #locatie-adresa{font-size:13.5px; color:var(--ink); margin-bottom:14px; line-height:1.5;}
   #locatie-directii-btn{display:flex; align-items:center; justify-content:center; gap:8px; width:100%; background:var(--spruce-deep); color:#fff; border:none; border-radius:999px; padding:13px; font-size:14px; font-weight:700; text-decoration:none; box-sizing:border-box;}
   #locatie-directii-hint{font-size:11px; color:var(--ink-soft); text-align:center; margin-top:8px; line-height:1.5;}
   #locatie-parcare{margin-top:14px; padding-top:12px; border-top:1px solid var(--line); display:none;}
@@ -148,9 +146,6 @@
           </div>
         </div>
         <div id="locatie-adresa"></div>
-        <div id="locatie-map-wrap" style="display:none;">
-          <iframe id="locatie-map-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
-        </div>
         <a id="locatie-directii-btn" href="#" target="_blank" rel="noopener" style="display:none;">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg>
           <span id="locatie-directii-text"></span>
@@ -476,8 +471,8 @@ function renderFacilitati() {
     if (currentOperator.foto_url) {
       heroBg.style.backgroundImage = `url('${currentOperator.foto_url}')`;
       heroImg.style.backgroundImage = `url('${currentOperator.foto_url}')`;
-      heroBg.style.display = '';
-      heroImg.style.display = '';
+      heroBg.style.display = 'block';
+      heroImg.style.display = 'block';
     } else {
       heroBg.style.display = 'none';
       heroImg.style.display = 'none';
@@ -486,7 +481,7 @@ function renderFacilitati() {
 
   const mesajEl = document.getElementById('facilitati-mesaj');
   if (isHotel && hotel.mesaj_management) {
-    mesajEl.style.display = '';
+    mesajEl.style.display = 'block';
     mesajEl.textContent = `“${hotel.mesaj_management}”`;
   } else {
     mesajEl.style.display = 'none';
@@ -597,7 +592,7 @@ function renderFacilitati() {
   document.getElementById('facilitati-card').style.display = sections.length ? '' : 'none';
 }
 
-// ---------- Cadranul dedicat "Locație & acces" (adresă, hartă, buton de direcții) ----------
+// ---------- Cadranul dedicat "Locație & acces" (poză, adresă, buton de direcții) ----------
 function renderLocatieCard(op, loc, t) {
   const card = document.getElementById('facilitati-locatie-card');
   const hasLocatie = !!(op.adresa || op.foto_url || loc.gps || loc.parcare);
@@ -608,22 +603,17 @@ function renderLocatieCard(op, loc, t) {
   document.getElementById('locatie-subtitle').textContent = t.locatieSub;
   document.getElementById('locatie-adresa').textContent = fmt(op.adresa) || '—';
 
-  // harta + butonul de direcții au nevoie de un punct de destinație — GPS dacă există, altfel adresa text
+  // butonul de direcții are nevoie de un punct de destinație — GPS dacă există, altfel adresa text
   const destQuery = fmt(loc.gps) || fmt(op.adresa) || '';
-  const mapWrap = document.getElementById('locatie-map-wrap');
-  const mapFrame = document.getElementById('locatie-map-frame');
   const dirBtn = document.getElementById('locatie-directii-btn');
   const dirHint = document.getElementById('locatie-directii-hint');
   if (destQuery) {
-    mapFrame.src = `https://maps.google.com/maps?q=${encodeURIComponent(destQuery)}&z=15&output=embed`;
-    mapWrap.style.display = '';
     dirBtn.href = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destQuery)}`;
     document.getElementById('locatie-directii-text').textContent = t.directions;
     dirBtn.style.display = '';
     dirHint.textContent = t.directionsHint;
     dirHint.style.display = '';
   } else {
-    mapWrap.style.display = 'none';
     dirBtn.style.display = 'none';
     dirHint.style.display = 'none';
   }
@@ -632,7 +622,7 @@ function renderLocatieCard(op, loc, t) {
   if (loc.parcare) {
     document.getElementById('locatie-parcare-label').textContent = t.parcare + ':';
     document.getElementById('locatie-parcare-text').textContent = fmt(loc.parcare);
-    parcareEl.style.display = '';
+    parcareEl.style.display = 'flex';
   } else {
     parcareEl.style.display = 'none';
   }

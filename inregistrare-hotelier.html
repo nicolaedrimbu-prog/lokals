@@ -37,6 +37,8 @@
   textarea{resize:vertical; min-height:60px;}
   input:focus, select:focus, textarea:focus{outline:none; border-color:var(--teal);}
   .hint{font-size:12px; color:var(--ink-soft); margin-top:4px;}
+  .map-preview{height:150px; border-radius:12px; overflow:hidden; border:1.5px solid var(--line); margin-top:10px; background:var(--cream); display:none;}
+  .map-preview iframe{width:100%; height:100%; border:0; display:block;}
   .error-msg{font-size:12px; color:var(--brick); margin-top:6px; min-height:16px;}
 
   .type-toggle{display:flex; gap:8px; margin-top:4px;}
@@ -164,6 +166,8 @@
       <label for="adresa">Adresă completă (pentru expedierea afișelor)</label>
       <textarea id="adresa" required placeholder="ex. Str. Cetății nr. 12, Râșnov, jud. Brașov, cod poștal 505400"></textarea>
       <div class="hint">Aici vă trimitem gratuit suportul profesional cu codurile QR.</div>
+      <div class="map-preview" id="adresa-map-wrap"><iframe id="adresa-map-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>
+      <div class="hint" id="adresa-map-hint" style="display:none;">Verifică dacă harta arată locul corect — dacă nu, completează adresa mai exact.</div>
 
       <div id="hotel-fields">
         <label for="nr_camere">Câte camere aveți?</label>
@@ -213,6 +217,27 @@ const SUPABASE_ANON_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
 const GUIDE_BASE = "https://lokals.ro/ghid-oaspeti.html?apt=";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// Hartă live: pe măsură ce hotelierul completează adresa, arătăm harta cu locația
+// respectivă — confirmare vizuală, fără să fie nevoie de un cont Google Maps API.
+function attachLiveMap(inputEl, wrapEl, frameEl, hintEl) {
+  if (!inputEl || !wrapEl || !frameEl) return;
+  let timer = null;
+  inputEl.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const value = inputEl.value.trim();
+      if (value.length < 6) { // adresă prea scurtă ca să merite o căutare
+        wrapEl.style.display = 'none';
+        if (hintEl) hintEl.style.display = 'none';
+        return;
+      }
+      frameEl.src = `https://maps.google.com/maps?q=${encodeURIComponent(value)}&z=15&output=embed`;
+      wrapEl.style.display = 'block';
+      if (hintEl) hintEl.style.display = 'block';
+    }, 700);
+  });
+}
+
 function displayName(user) {
   const meta = user.user_metadata || {};
   if (meta.prenume) {
@@ -243,6 +268,13 @@ async function initAuthState() {
   } catch (e) { console.error(e); }
 }
 initAuthState();
+
+attachLiveMap(
+  document.getElementById('adresa'),
+  document.getElementById('adresa-map-wrap'),
+  document.getElementById('adresa-map-frame'),
+  document.getElementById('adresa-map-hint')
+);
 
 async function sbFetch(path, options = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {

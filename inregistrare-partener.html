@@ -32,6 +32,8 @@
   textarea{resize:vertical; min-height:80px;}
   input:focus, select:focus, textarea:focus{outline:none; border-color:var(--teal);}
   .hint{font-size:12px; color:var(--ink-soft); margin-top:4px;}
+  .map-preview{height:150px; border-radius:12px; overflow:hidden; border:1.5px solid var(--line); margin-top:10px; display:none;}
+  .map-preview iframe{width:100%; height:100%; border:0; display:block;}
   .error-msg{font-size:12px; color:var(--brick); margin-top:6px; min-height:16px;}
   .theme-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:6px;}
   .theme-chip{border:1.5px solid var(--line); border-radius:10px; padding:9px 10px; font-size:12.5px;
@@ -118,6 +120,10 @@
         <option value="covasna-targu-secuiesc-sfantu-gheorghe">Covasna</option>
         <option value="vama-buzaului-intorsura-buzaului">Vama Buzăului</option>
       </select>
+      <label for="adresa">Adresă (opțional)</label>
+      <textarea id="adresa" placeholder="ex. Str. Cetății nr. 5, Râșnov"></textarea>
+      <div class="hint">Dacă afacerea are un sediu fix, completeaz-o — apare oaspeților ca reper pe hartă.</div>
+      <div class="map-preview" id="adresa-map-wrap"><iframe id="adresa-map-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>
       <label for="descriere">Descriere scurtă (apare exact așa în ghid)</label>
       <textarea id="descriere" required placeholder="ex. Bucătărie tradițională, terasă cu vedere spre cetate, porții generoase."></textarea>
       <div class="hint">O propoziție-două, clar și concret — oaspeții citesc rapid, de pe telefon.</div>
@@ -174,6 +180,27 @@
 const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Hartă live: pe măsură ce se completează adresa, arătăm harta cu locația respectivă —
+// confirmare vizuală, fără să fie nevoie de un cont Google Maps API.
+function attachLiveMap(inputEl, wrapEl, frameEl) {
+  if (!inputEl || !wrapEl || !frameEl) return;
+  let timer = null;
+  inputEl.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const value = inputEl.value.trim();
+      if (value.length < 6) { wrapEl.style.display = 'none'; return; }
+      frameEl.src = `https://maps.google.com/maps?q=${encodeURIComponent(value)}&z=15&output=embed`;
+      wrapEl.style.display = 'block';
+    }, 700);
+  });
+}
+attachLiveMap(
+  document.getElementById('adresa'),
+  document.getElementById('adresa-map-wrap'),
+  document.getElementById('adresa-map-frame')
+);
 
 function displayName(user) {
   const meta = user.user_metadata || {};
@@ -263,6 +290,7 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
   const email = document.getElementById('email').value.trim();
   const categorie = document.getElementById('categorie').value;
   const zona = document.getElementById('zona').value;
+  const adresa = document.getElementById('adresa').value.trim();
   const descriere = document.getElementById('descriere').value.trim();
   const website = document.getElementById('website').value.trim();
   const facebook = document.getElementById('facebook').value.trim();
@@ -288,7 +316,7 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
     method: 'POST',
     body: JSON.stringify({
       nume_afacere, persoana_contact, telefon, email: email || null,
-      categorie, zona, descriere, poza_url,
+      categorie, zona, adresa: adresa || null, descriere, poza_url,
       website: website || null, facebook: facebook || null, instagram: instagram || null,
       teme_interes: teme_interes || null,
       interesat_beneficiu, beneficiu_propus,

@@ -20,6 +20,8 @@
   .field:focus{outline:none; border-color:var(--teal);}
   .field-group{margin-bottom:14px;}
   .hint{font-size:11.5px; color:var(--ink-soft); margin-top:5px; line-height:1.5;}
+  .map-preview{height:150px; border-radius:11px; overflow:hidden; border:1.5px solid var(--line); margin-top:10px; background:var(--cream); display:none;}
+  .map-preview iframe{width:100%; height:100%; border:0; display:block;}
   .card{background:#fff; border-radius:16px; padding:18px 18px 20px; box-shadow:0 4px 16px rgba(16,48,43,0.07); margin-bottom:14px; max-width:560px;}
   .card-head{display:flex; align-items:center; gap:9px; margin-bottom:14px;}
   .card-title{font-size:14.5px; font-weight:700; color:var(--teal-deep); flex:1;}
@@ -99,6 +101,12 @@
       <div class="field-group">
         <label for="f-descriere">Descriere</label>
         <textarea id="f-descriere" class="field" style="min-height:64px; resize:vertical;"></textarea>
+      </div>
+      <div class="field-group">
+        <label for="f-adresa">Adresă (opțional)</label>
+        <textarea id="f-adresa" class="field" style="min-height:52px; resize:vertical;" placeholder="ex. Str. Cetății nr. 5, Râșnov"></textarea>
+        <div class="hint">Dacă afacerea are un sediu fix, apare oaspeților ca reper pe hartă.</div>
+        <div class="map-preview" id="adresa-map-wrap"><iframe id="adresa-map-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>
       </div>
       <div style="display:flex; gap:12px; align-items:center;">
         <div id="photo-preview"></div>
@@ -222,11 +230,27 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2200);
 }
 
+// Hartă live pentru adresă — confirmare vizuală, fără cont Google Maps API.
+function updateAdresaMapPreview() {
+  const value = document.getElementById('f-adresa').value.trim();
+  const wrap = document.getElementById('adresa-map-wrap');
+  if (value.length < 6) { wrap.style.display = 'none'; return; }
+  document.getElementById('adresa-map-frame').src = `https://maps.google.com/maps?q=${encodeURIComponent(value)}&z=15&output=embed`;
+  wrap.style.display = 'block';
+}
+let adresaMapTimer = null;
+document.getElementById('f-adresa').addEventListener('input', () => {
+  clearTimeout(adresaMapTimer);
+  adresaMapTimer = setTimeout(updateAdresaMapPreview, 700);
+});
+
 function fillForm(row) {
   document.getElementById('business-title').textContent = row.nume_afacere || '—';
   document.getElementById('f-nume').value = row.nume_afacere || '';
   document.getElementById('f-categorie').value = row.categorie || '';
   document.getElementById('f-descriere').value = row.descriere || '';
+  document.getElementById('f-adresa').value = row.adresa || '';
+  updateAdresaMapPreview();
   document.getElementById('f-telefon').value = row.telefon || '';
   document.getElementById('f-persoana').value = row.persoana_contact || '';
   document.getElementById('f-website').value = row.website || '';
@@ -308,6 +332,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
       nume_afacere: document.getElementById('f-nume').value.trim(),
       categorie: document.getElementById('f-categorie').value.trim(),
       descriere: document.getElementById('f-descriere').value.trim(),
+      adresa: document.getElementById('f-adresa').value.trim() || null,
       telefon: document.getElementById('f-telefon').value.trim(),
       persoana_contact: document.getElementById('f-persoana').value.trim(),
       website: document.getElementById('f-website').value.trim() || null,

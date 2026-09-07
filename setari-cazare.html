@@ -19,6 +19,8 @@
   .field{width:100%; border:1.5px solid var(--line); border-radius:11px; padding:11px 13px; font-family:'Inter', sans-serif; font-size:14px; color:var(--ink); background:#fff;}
   .field:focus{outline:none; border-color:var(--teal);}
   .hint{font-size:11.5px; color:var(--ink-soft); margin-top:5px; line-height:1.5;}
+  .map-preview{height:150px; border-radius:11px; overflow:hidden; border:1.5px solid var(--line); margin-top:12px; background:var(--cream); display:none;}
+  .map-preview iframe{width:100%; height:100%; border:0; display:block;}
   .card{background:#fff; border-radius:16px; padding:18px 18px 20px; box-shadow:0 4px 16px rgba(16,48,43,0.07); margin-bottom:14px; max-width:560px;}
   .card-head{display:flex; align-items:center; gap:9px; margin-bottom:14px;}
   .card-title{font-size:14.5px; font-weight:700; color:var(--teal-deep); flex:1;}
@@ -125,6 +127,8 @@
           <input id="f-parcare" class="field" type="text" placeholder="ex. Curte interioară, 6 locuri">
         </div>
       </div>
+      <div class="map-preview" id="locatie-map-wrap"><iframe id="locatie-map-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>
+      <div class="hint" id="locatie-map-hint" style="display:none;">Așa arată harta pe care o va vedea oaspetele — verifică dacă pinul e la locul corect.</div>
     </div>
 
     <!-- Check-in -->
@@ -352,6 +356,31 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2200);
 }
 
+// Hartă live pentru "Locație & acces": preferă coordonatele GPS dacă sunt completate,
+// altfel folosește adresa text — exact ce va vedea și oaspetele pe butonul "Du-mă acolo".
+function updateLocatieMapPreview() {
+  const gps = document.getElementById('f-gps').value.trim();
+  const adresa = document.getElementById('f-adresa').value.trim();
+  const query = gps || adresa;
+  const wrap = document.getElementById('locatie-map-wrap');
+  const hint = document.getElementById('locatie-map-hint');
+  if (query.length < 6) {
+    wrap.style.display = 'none';
+    hint.style.display = 'none';
+    return;
+  }
+  document.getElementById('locatie-map-frame').src = `https://maps.google.com/maps?q=${encodeURIComponent(query)}&z=15&output=embed`;
+  wrap.style.display = 'block';
+  hint.style.display = 'block';
+}
+let locatieMapTimer = null;
+function scheduleLocatieMapPreview() {
+  clearTimeout(locatieMapTimer);
+  locatieMapTimer = setTimeout(updateLocatieMapPreview, 700);
+}
+document.getElementById('f-adresa').addEventListener('input', scheduleLocatieMapPreview);
+document.getElementById('f-gps').addEventListener('input', scheduleLocatieMapPreview);
+
 function fillForm(row) {
   const f = row.facilitati_cazare || {};
   const loc = f.locatie || {};
@@ -366,6 +395,7 @@ function fillForm(row) {
   document.getElementById('f-adresa').value = row.adresa || '';
   document.getElementById('f-gps').value = loc.gps || '';
   document.getElementById('f-parcare').value = loc.parcare || '';
+  updateLocatieMapPreview();
 
   document.getElementById('f-cod-locker').value = checkin.cod_acces || '';
   document.getElementById('f-locker-loc').value = checkin.locker_locatie || '';
