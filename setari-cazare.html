@@ -333,6 +333,18 @@ function showState(id) {
   });
 }
 
+async function getFreshAccessToken() {
+  // Sesiunea capturată la încărcarea paginii poate expira dacă formularul stă deschis
+  // mai mult timp; cerem un token proaspăt (supabase-js îl reînnoiește automat dacă e nevoie).
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) {
+    window.location.href = 'cont.html';
+    throw new Error('sesiune expirată');
+  }
+  currentSession = session;
+  return session.access_token;
+}
+
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -535,11 +547,12 @@ document.getElementById('btn-save').addEventListener('click', async () => {
       facilitati_cazare,
     };
 
+    const accessToken = await getFreshAccessToken();
     const res = await fetch(`${SUPABASE_URL}/rest/v1/operatori?id=eq.${currentRow.id}`, {
       method: 'PATCH',
       headers: {
         apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${currentSession.access_token}`,
+        Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         Prefer: 'return=representation',
       },
@@ -577,11 +590,12 @@ document.getElementById('btn-delete-confirm').addEventListener('click', async ()
   btn.disabled = true;
   btn.textContent = 'Se șterge...';
   try {
+    const accessToken = await getFreshAccessToken();
     const res = await fetch(`${SUPABASE_URL}/rest/v1/operatori?id=eq.${currentRow.id}`, {
       method: 'DELETE',
       headers: {
         apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${currentSession.access_token}`,
+        Authorization: `Bearer ${accessToken}`,
       },
     });
     if (!res.ok) throw new Error(await res.text());
