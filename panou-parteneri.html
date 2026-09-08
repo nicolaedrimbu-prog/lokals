@@ -126,6 +126,24 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
+// Prindere globală de erori: dacă ceva pică în script, mesajul apare direct pe pagină
+// (mai simplu decât să deschizi consola browserului) în loc să pară că "nu se întâmplă nimic".
+window.addEventListener('error', function (e) {
+  const msgEl = document.getElementById('msg-login');
+  if (!msgEl) return;
+  msgEl.className = 'msg err';
+  msgEl.textContent = 'Eroare tehnică: ' + (e.message || 'necunoscută') + '. Trimite-mi acest mesaj.';
+});
+
+if (!window.supabase) {
+  const msgEl = document.getElementById('msg-login');
+  if (msgEl) {
+    msgEl.className = 'msg err';
+    msgEl.textContent = 'Nu s-a putut încărca librăria de autentificare (verifică blocarea reclamelor/scripturilor sau conexiunea la internet) și reîncarcă pagina.';
+  }
+  throw new Error('supabase-js nu s-a încărcat de pe CDN');
+}
+
 const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
 const SUPABASE_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
