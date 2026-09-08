@@ -56,14 +56,13 @@
   footer .box{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:16px;}
 
   /* ===== Informații cazare (facilități) ===== */
-  #facilitati-wrap{max-width:1140px; margin:0 auto; padding:0 20px 4px;}
+  #facilitati-wrap{max-width:960px; margin:0 auto; padding:0 20px 4px;}
   #facilitati-grid{display:flex; flex-direction:column; gap:14px; margin-bottom:22px;}
   #facilitati-card{background:var(--surface); border:1px solid var(--line); border-radius:18px; overflow:hidden; order:1;}
   #facilitati-locatie-card{background:var(--surface); border:1px solid var(--line); border-radius:18px; overflow:hidden; order:-1; box-shadow:0 4px 14px rgba(32,41,31,0.06);}
-  .fac-hero{height:200px; background:linear-gradient(135deg, var(--spruce-deep), var(--spruce)); position:relative; overflow:hidden;}
-  .fac-hero-bg{position:absolute; inset:-10px; background-size:cover; background-position:center; filter:blur(20px) brightness(0.75); transform:scale(1.1); display:none;}
+  .fac-hero-mobile{height:200px; position:relative; overflow:hidden; background:linear-gradient(135deg, #33493B 0%, var(--spruce-deep) 55%, #1B2721 100%);}
+  .fac-hero-mobile::before{content:''; position:absolute; inset:0; opacity:0.5; background:radial-gradient(circle at 15% 20%, rgba(255,255,255,0.12) 0%, transparent 40%); pointer-events:none;}
   .fac-hero-img{position:absolute; inset:0; background-size:contain; background-repeat:no-repeat; background-position:center; display:none;}
-  .fac-hero-desktop{display:none;}
   #facilitati-mesaj{display:none; margin:14px 18px 0; padding:12px 14px; border-left:3px solid var(--amber); background:#FBF3E2; border-radius:0 10px 10px 0; font-style:italic; font-size:13px; color:var(--ink-soft); line-height:1.5;}
   #facilitati-sections{padding:6px 6px 10px;}
   #locatie-body{padding:18px;}
@@ -71,16 +70,21 @@
   #locatie-icon{width:36px; height:36px; border-radius:10px; background:rgba(38,56,44,0.08); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
   #locatie-title{font-size:16px; font-weight:700; color:var(--ink);}
   #locatie-subtitle{font-size:12px; color:var(--ink-soft);}
+  /* Poza (exterior clădire) + harta, alaturi — doar pe desktop, langa adresa */
+  #locatie-media-desktop{display:none; gap:10px; margin-bottom:14px;}
+  .fac-hero-desktop-inline{flex:1; min-width:0; height:150px; border-radius:12px; overflow:hidden; position:relative; border:1px solid var(--line); background:linear-gradient(135deg, #33493B 0%, var(--spruce-deep) 55%, #1B2721 100%);}
+  .fac-hero-desktop-inline::before{content:''; position:absolute; inset:0; opacity:0.5; background:radial-gradient(circle at 15% 20%, rgba(255,255,255,0.12) 0%, transparent 40%); pointer-events:none;}
+  #locatie-map-wrap{flex:1; min-width:0; height:150px; border-radius:12px; overflow:hidden; border:1px solid var(--line); background:var(--bg);}
+  #locatie-map-frame{width:100%; height:100%; border:0; display:block;}
   #locatie-adresa{font-size:13.5px; color:var(--ink); margin-bottom:14px; line-height:1.5;}
   #locatie-directii-btn{display:flex; align-items:center; justify-content:center; gap:8px; width:100%; background:var(--spruce-deep); color:#fff; border:none; border-radius:999px; padding:13px; font-size:14px; font-weight:700; text-decoration:none; box-sizing:border-box;}
   #locatie-directii-hint{font-size:11px; color:var(--ink-soft); text-align:center; margin-top:8px; line-height:1.5;}
   #locatie-parcare{margin-top:14px; padding-top:12px; border-top:1px solid var(--line); display:none;}
   @media (min-width:900px){
-    #facilitati-grid{display:grid; grid-template-columns:1fr 380px; gap:24px; align-items:start;}
-    #facilitati-card{order:0;}
-    #facilitati-locatie-card{order:0; position:sticky; top:20px;}
+    #facilitati-grid{display:grid; grid-template-columns:420px 1fr; gap:24px; align-items:start;}
+    #facilitati-locatie-card{position:sticky; top:20px;}
     .fac-hero-mobile{display:none;}
-    .fac-hero-desktop{display:block;}
+    #locatie-media-desktop{display:flex;}
   }
   .fac-item{border-bottom:1px solid var(--line);}
   .fac-item:last-child{border-bottom:none;}
@@ -88,7 +92,6 @@
   .fac-icon{width:34px; height:34px; border-radius:10px; background:rgba(38,56,44,0.08); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
   .fac-title-wrap{flex:1; min-width:0;}
   .fac-title{font-size:14px; font-weight:700; color:var(--ink);}
-  .fac-subtitle{font-size:12px; color:var(--ink-soft); margin-top:1px;}
   .fac-hotel-badge{font-size:9px; font-weight:700; letter-spacing:.05em; color:#fff; background:var(--amber); padding:3px 7px; border-radius:999px; text-transform:uppercase; flex-shrink:0;}
   .fac-chevron{flex-shrink:0; transition:transform .15s;}
   .fac-item.open .fac-chevron{transform:rotate(180deg);}
@@ -100,6 +103,12 @@
   .fac-code{font-family:'JetBrains Mono', monospace; font-size:15px; font-weight:600; letter-spacing:1.5px; background:var(--gold-soft); color:var(--ink); padding:6px 12px; border-radius:8px; display:inline-block; margin:2px 0 6px;}
   .fac-wifi-qr{background:#fff; padding:10px; border-radius:12px; display:inline-block; margin-top:8px;}
   .fac-toggle-off{color:var(--ink-soft);}
+  /* Check-in restructurat — campuri separate, in ordinea: ora, cod acces, camera/apartament, note */
+  .ci-row{margin-bottom:12px;}
+  .ci-row:last-child{margin-bottom:0;}
+  .ci-label{font-size:11px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.03em; margin-bottom:4px;}
+  .ci-value{font-size:14px; color:var(--ink); font-weight:600;}
+  .ci-note{font-size:13.5px; color:var(--ink-soft); line-height:1.6; font-weight:400;}
 </style>
 </head>
 <body>
@@ -122,18 +131,13 @@
   <div id="facilitati-grid">
 
     <div id="facilitati-card">
-      <div class="fac-hero fac-hero-desktop">
-        <div id="facilitati-hero-bg-d" class="fac-hero-bg"></div>
-        <div id="facilitati-hero-img-d" class="fac-hero-img"></div>
-      </div>
       <div id="facilitati-mesaj"></div>
       <div id="facilitati-sections"></div>
     </div>
 
     <div id="facilitati-locatie-card" style="display:none;">
-      <div class="fac-hero fac-hero-mobile">
-        <div id="facilitati-hero-bg-m" class="fac-hero-bg"></div>
-        <div id="facilitati-hero-img-m" class="fac-hero-img"></div>
+      <div class="fac-hero-mobile">
+        <div id="facilitati-hero-img" class="fac-hero-img"></div>
       </div>
       <div id="locatie-body">
         <div id="locatie-head">
@@ -143,6 +147,14 @@
           <div>
             <div id="locatie-title" class="serif"></div>
             <div id="locatie-subtitle"></div>
+          </div>
+        </div>
+        <div id="locatie-media-desktop">
+          <div class="fac-hero-desktop-inline">
+            <div id="facilitati-hero-img-d" class="fac-hero-img"></div>
+          </div>
+          <div id="locatie-map-wrap">
+            <iframe id="locatie-map-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Hartă locație"></iframe>
           </div>
         </div>
         <div id="locatie-adresa"></div>
@@ -376,6 +388,8 @@ const I18N = {
       directions: "Du-mă acolo", directionsHint: "Deschide traseul în Google Maps, Waze sau Apple Maps",
       locker: "Amplasare locker", codAcces: "Cod de acces", receptie: "Recepție",
       program: "Program", urgentaReceptie: "Urgență recepție",
+      checkinOra: "Ora de la care se poate face check-in", camera: "Cameră", apartament: "Apartament",
+      noteSuplimentare: "Note suplimentare",
       whatsapp: "Scrie gazdei pe WhatsApp", spital: "Spital / cabinet", politie: "Poliție",
       fumat: "Fumat interzis în interior", animale: "Animale de companie acceptate",
       animaleNu: "Fără animale de companie", liniste: "Liniște după ora 22:00",
@@ -414,6 +428,8 @@ const I18N = {
       directions: "Take me there", directionsHint: "Opens directions in Google Maps, Waze or Apple Maps",
       locker: "Locker location", codAcces: "Access code", receptie: "Front desk",
       program: "Hours", urgentaReceptie: "Front desk emergency line",
+      checkinOra: "Check-in from", camera: "Room", apartament: "Apartment",
+      noteSuplimentare: "Additional notes",
       whatsapp: "Message the host on WhatsApp", spital: "Hospital / clinic", politie: "Police",
       fumat: "No smoking indoors", animale: "Pets allowed",
       animaleNu: "No pets", liniste: "Quiet hours after 22:00",
@@ -456,28 +472,12 @@ function renderFacilitati() {
 
   // are cazarea macar o informatie de afisat? altfel nu aratam sectiunea deloc
   const hasAny = currentOperator.adresa || currentOperator.foto_url || loc.gps || loc.parcare ||
-    checkin.cod_acces || checkin.instructiuni || checkout.ora || checkout.instructiuni ||
+    checkin.cod_acces || checkin.instructiuni || checkin.ora || checkin.unitate || checkout.ora || checkout.instructiuni ||
     wifi.ssid || currentOperator.telefon || urgente.spital ||
     (isHotel && (hotel.restaurant_program || hotel.spa_program || hotel.fitness_program || hotel.mic_dejun_program || hotel.room_service || hotel.mesaj_management));
   if (!hasAny) { wrap.style.display = 'none'; return; }
 
   wrap.style.display = '';
-
-  // Poza — populată în ambele hero-uri (mobil, în cadranul de locație; desktop, deasupra acordeonului);
-  // CSS-ul decide care e vizibil, în funcție de lățimea ecranului.
-  [['facilitati-hero-bg-d', 'facilitati-hero-img-d'], ['facilitati-hero-bg-m', 'facilitati-hero-img-m']].forEach(([bgId, imgId]) => {
-    const heroBg = document.getElementById(bgId);
-    const heroImg = document.getElementById(imgId);
-    if (currentOperator.foto_url) {
-      heroBg.style.backgroundImage = `url('${currentOperator.foto_url}')`;
-      heroImg.style.backgroundImage = `url('${currentOperator.foto_url}')`;
-      heroBg.style.display = 'block';
-      heroImg.style.display = 'block';
-    } else {
-      heroBg.style.display = 'none';
-      heroImg.style.display = 'none';
-    }
-  });
 
   const mesajEl = document.getElementById('facilitati-mesaj');
   if (isHotel && hotel.mesaj_management) {
@@ -492,22 +492,27 @@ function renderFacilitati() {
 
   const sections = [];
 
-  // Check-in
-  if (checkin.cod_acces || checkin.instructiuni || receptie.program) {
+  // Check-in — campuri separate, in ordine: ora, cod de acces, camera/apartament, note optionale
+  if (checkin.ora || checkin.cod_acces || checkin.unitate || checkin.instructiuni || receptie.program) {
     let body = '';
-    if (checkin.cod_acces) body += `<div><span style="font-size:11.5px; font-weight:600; text-transform:uppercase; letter-spacing:.03em;">${t.codAcces}</span><br><span class="fac-code">${fmt(checkin.cod_acces)}</span></div>`;
+    if (checkin.ora) body += `<div class="ci-row"><div class="ci-label">${t.checkinOra}</div><div class="ci-value">${fmt(checkin.ora)}</div></div>`;
+    if (checkin.cod_acces) body += `<div class="ci-row"><div class="ci-label">${t.codAcces}</div><span class="fac-code">${fmt(checkin.cod_acces)}</span></div>`;
     if (checkin.locker_locatie || checkin.locker_numar) {
       const parts = [checkin.locker_locatie, checkin.locker_numar].filter(Boolean).join(' · ');
       body += `<div class="fac-row">${FAC_ICONS.pin}<span><b>${t.locker}:</b> ${parts}</span></div>`;
     }
-    if (checkin.instructiuni) body += `<div class="fac-row">${fmt(checkin.instructiuni)}</div>`;
+    if (checkin.unitate) {
+      const unitLabel = isHotel ? t.camera : t.apartament;
+      body += `<div class="ci-row"><div class="ci-label">${unitLabel}</div><div class="ci-value">${fmt(checkin.unitate)}</div></div>`;
+    }
+    if (checkin.instructiuni) body += `<div class="ci-row"><div class="ci-label">${t.noteSuplimentare}</div><div class="ci-value ci-note">${fmt(checkin.instructiuni)}</div></div>`;
     if (receptie.program || receptie.contact_urgenta) {
       body += `<div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--line);"><b>${t.receptie}</b>`;
       if (receptie.program) body += `<div class="fac-row" style="margin-top:6px;">${t.program}: ${fmt(receptie.program)}</div>`;
       if (receptie.contact_urgenta) body += `<div class="fac-row">${t.urgentaReceptie}: ${fmt(receptie.contact_urgenta)}</div>`;
       body += `</div>`;
     }
-    sections.push({ key: 'checkin', title: t.checkin, subtitle: t.checkinSub, body });
+    sections.push({ key: 'checkin', title: t.checkin, body });
   }
 
   // Check-out
@@ -515,7 +520,7 @@ function renderFacilitati() {
     let body = '';
     if (checkout.ora) body += `<div class="fac-row"><b>${t.program}:</b>&nbsp;${fmt(checkout.ora)}</div>`;
     if (checkout.instructiuni) body += `<div class="fac-row">${fmt(checkout.instructiuni)}</div>`;
-    sections.push({ key: 'checkout', title: t.checkout, subtitle: t.checkoutSub, body });
+    sections.push({ key: 'checkout', title: t.checkout, body });
   }
 
   // Regulile casei
@@ -526,7 +531,7 @@ function renderFacilitati() {
     if (reguli.liniste !== false) body += `<div>${t.liniste}</div>`;
     body += '</div>';
     if (reguli.extra) body += `<div class="fac-row" style="margin-top:8px;">${fmt(reguli.extra)}</div>`;
-    sections.push({ key: 'reguli', title: t.reguli, subtitle: t.reguliSub, body });
+    sections.push({ key: 'reguli', title: t.reguli, body });
   }
 
   // WiFi
@@ -535,7 +540,7 @@ function renderFacilitati() {
     let body = `<div class="fac-row"><b>SSID:</b>&nbsp;${fmt(wifi.ssid)}</div>`;
     if (wifi.parola) body += `<div class="fac-row"><b>${currentLang === 'en' ? 'Password' : 'Parolă'}:</b>&nbsp;${fmt(wifi.parola)}</div>`;
     body += `<div id="fac-wifi-qr-${currentOperator.id}" class="fac-wifi-qr"></div><div style="font-size:11.5px; margin-top:6px;">${t.wifiConnect}</div>`;
-    sections.push({ key: 'wifi', title: t.wifi, subtitle: t.wifiSub, body, wifiPayload, wifiId: `fac-wifi-qr-${currentOperator.id}` });
+    sections.push({ key: 'wifi', title: t.wifi, body, wifiPayload, wifiId: `fac-wifi-qr-${currentOperator.id}` });
   }
 
   // Servicii hotel
@@ -547,7 +552,7 @@ function renderFacilitati() {
     if (hotel.fitness_program || hotel.fitness_locatie) body += `<div class="fac-row"><b>${t.fitness}:</b>&nbsp;${[fmt(hotel.fitness_program), fmt(hotel.fitness_locatie)].filter(Boolean).join(' · ')}</div>`;
     if (hotel.mic_dejun_program) body += `<div class="fac-row"><b>${t.micDejun}:</b>&nbsp;${fmt(hotel.mic_dejun_program)}</div>`;
     if (hotel.room_service) body += `<div class="fac-row"><b>${t.roomService}:</b>&nbsp;${fmt(hotel.room_service)}</div>`;
-    sections.push({ key: 'servicii', title: t.servicii, subtitle: t.serviciiSub, body, hotelBadge: true });
+    sections.push({ key: 'servicii', title: t.servicii, body, hotelBadge: true });
   }
 
   // Contact & urgențe
@@ -558,20 +563,19 @@ function renderFacilitati() {
     }
     if (urgente.spital) body += `<div class="fac-row" style="margin-top:10px;"><b>${t.spital}:</b>&nbsp;${fmt(urgente.spital)}</div>`;
     body += `<div class="fac-row"><b>${t.politie}:</b>&nbsp;112</div>`;
-    sections.push({ key: 'contact', title: t.contact, subtitle: t.contactSub, body });
+    sections.push({ key: 'contact', title: t.contact, body });
   }
 
   const container = document.getElementById('facilitati-sections');
   container.innerHTML = '';
-  sections.forEach((sec, i) => {
+  sections.forEach((sec) => {
     const item = document.createElement('div');
-    item.className = 'fac-item' + (i === 0 ? ' open' : '');
+    item.className = 'fac-item';
     item.innerHTML = `
       <div class="fac-head">
         <div class="fac-icon">${FAC_ICONS[sec.key]}</div>
         <div class="fac-title-wrap">
           <div class="fac-title">${sec.title}</div>
-          <div class="fac-subtitle">${sec.subtitle}</div>
         </div>
         ${sec.hotelBadge ? `<span class="fac-hotel-badge">HOTEL</span>` : ''}
         ${FAC_ICONS.chevron}
@@ -603,8 +607,34 @@ function renderLocatieCard(op, loc, t) {
   document.getElementById('locatie-subtitle').textContent = t.locatieSub;
   document.getElementById('locatie-adresa').textContent = fmt(op.adresa) || '—';
 
+  // Poza (recomandare: exteriorul clădirii/casei, ca oaspetele s-o recunoască) — populată în ambele locuri
+  // unde poate aparea (hero mobil edge-to-edge; sau inline lângă hartă pe desktop) — CSS decide care e vizibil.
+  const hasFoto = !!op.foto_url;
+  ['facilitati-hero-img', 'facilitati-hero-img-d'].forEach(id => {
+    const img = document.getElementById(id);
+    if (hasFoto) {
+      img.style.backgroundImage = `url('${op.foto_url}')`;
+      img.style.display = 'block';
+    } else {
+      img.style.display = 'none';
+    }
+  });
+
   // butonul de direcții are nevoie de un punct de destinație — GPS dacă există, altfel adresa text
   const destQuery = fmt(loc.gps) || fmt(op.adresa) || '';
+
+  // Harta (doar pe desktop, alături de poză) — embed Google Maps fără cheie API
+  const mapWrap = document.getElementById('locatie-map-wrap');
+  if (destQuery) {
+    document.getElementById('locatie-map-frame').src = `https://maps.google.com/maps?q=${encodeURIComponent(destQuery)}&z=15&output=embed`;
+    mapWrap.style.display = 'block';
+  } else {
+    mapWrap.style.display = 'none';
+  }
+  // containerul "poza + hartă" (desktop) — '' lasă CSS-ul/media query-ul să decidă vizibilitatea pe breakpoint,
+  // ascuns explicit doar când nu există nici poză, nici hartă de arătat
+  document.getElementById('locatie-media-desktop').style.display = (hasFoto || destQuery) ? '' : 'none';
+
   const dirBtn = document.getElementById('locatie-directii-btn');
   const dirHint = document.getElementById('locatie-directii-hint');
   if (destQuery) {

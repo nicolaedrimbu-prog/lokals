@@ -101,7 +101,7 @@
             <span id="f-foto-label">Încarcă o fotografie</span>
           </label>
           <input id="f-foto" type="file" accept="image/*" style="display:none;">
-          <div class="hint">O singură imagine, emblematică pentru locație — interior sau exterior.</div>
+          <div class="hint">O poză cu exteriorul clădirii/casei ajută oaspetele să recunoască locul și să se orienteze — apare în ghid lângă hartă.</div>
         </div>
       </div>
     </div>
@@ -138,6 +138,11 @@
         <div class="card-title">Check-in</div>
       </div>
       <div class="field-group">
+        <label for="f-checkin-ora">Ora de la care se poate face check-in</label>
+        <input id="f-checkin-ora" class="field" type="text" placeholder="14:00">
+        <div class="hint">Apare primul în panoul de check-in din ghid.</div>
+      </div>
+      <div class="field-group">
         <label for="f-cod-locker">Cod de acces / smartlocker</label>
         <input id="f-cod-locker" class="field" type="text" style="font-family:monospace; font-size:16px; font-weight:700; letter-spacing:2px; border-color:var(--gold); background:var(--gold-soft);">
         <div class="hint">Actualizează acest cod de fiecare dată când generezi unul nou (ex. TTLock) — apare instant în ghid.</div>
@@ -153,7 +158,12 @@
         </div>
       </div>
       <div class="field-group">
-        <label for="f-checkin">Instrucțiuni check-in</label>
+        <label for="f-checkin-unitate" id="f-checkin-unitate-label">Cameră / Apartament</label>
+        <input id="f-checkin-unitate" class="field" type="text" placeholder="ex. Apartamentul 5, etaj 2">
+        <div class="hint">Numărul sau numele camerei/apartamentului — eticheta se adaptează automat după tipul cazării.</div>
+      </div>
+      <div class="field-group">
+        <label for="f-checkin">Note suplimentare (opțional)</label>
         <textarea id="f-checkin" class="field" style="min-height:64px; resize:vertical;"></textarea>
       </div>
       <div class="sub">Recepție</div>
@@ -397,9 +407,13 @@ function fillForm(row) {
   document.getElementById('f-parcare').value = loc.parcare || '';
   updateLocatieMapPreview();
 
+  document.getElementById('f-checkin-ora').value = checkin.ora || '';
   document.getElementById('f-cod-locker').value = checkin.cod_acces || '';
   document.getElementById('f-locker-loc').value = checkin.locker_locatie || '';
   document.getElementById('f-locker-nr').value = checkin.locker_numar || '';
+  document.getElementById('f-checkin-unitate').value = checkin.unitate || '';
+  document.getElementById('f-checkin-unitate-label').textContent = (row.tip === 'hotel') ? 'Cameră' : 'Apartament';
+  document.getElementById('f-checkin-unitate').placeholder = (row.tip === 'hotel') ? 'ex. Camera 214' : 'ex. Apartamentul 5, etaj 2';
   document.getElementById('f-checkin').value = checkin.instructiuni || '';
   document.getElementById('f-receptie-program').value = receptie.program || '';
   document.getElementById('f-receptie-urg').value = receptie.contact_urgenta || '';
@@ -530,9 +544,11 @@ document.getElementById('btn-save').addEventListener('click', async () => {
         parcare: document.getElementById('f-parcare').value.trim(),
       },
       checkin: {
+        ora: document.getElementById('f-checkin-ora').value.trim(),
         cod_acces: document.getElementById('f-cod-locker').value.trim(),
         locker_locatie: document.getElementById('f-locker-loc').value.trim(),
         locker_numar: document.getElementById('f-locker-nr').value.trim(),
+        unitate: document.getElementById('f-checkin-unitate').value.trim(),
         instructiuni: document.getElementById('f-checkin').value.trim(),
       },
       receptie: {
