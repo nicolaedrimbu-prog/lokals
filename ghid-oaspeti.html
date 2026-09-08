@@ -703,25 +703,76 @@ function rowToPlace(row) {
   };
 }
 
+// Iconițe implicite pe categorie, pentru partenerii publicați din Supabase
+// (candidati_parteneri nu are un câmp de iconiță precum coloana din Sheet).
+const CAT_ICON_FALLBACK = {
+  aventura: "🧗", cultura: "🏛️", wellness: "💆", gastro: "🍽️",
+  livrare: "🚚", producatori: "🌾", facilitare: "🔗",
+};
+
+// Transformă un rând publicat din candidati_parteneri în aceeași formă
+// pe care rowToPlace() o produce din Sheet, ca ambele surse să meargă prin
+// același render(). Câmpuri absente în Supabase (iconiță, EN, place id,
+// ordine) primesc valori implicite rezonabile — vezi plan-panou-parteneri.md.
+function candidatToPlace(row) {
+  const cat = (row.categorie || "").trim();
+  if (!CATEGORII_VALIDE.has(cat)) return null;
+  return {
+    name: (row.nume_afacere || "").trim(),
+    cat,
+    icon: CAT_ICON_FALLBACK[cat] || "📍",
+    desc: (row.descriere || "").trim(),
+    desc_en: "", // fără traducere separată în formular — cade pe descrierea RO, ca la Sheet
+    website: (row.website || "").trim() || null,
+    facebook: (row.facebook || "").trim() || null,
+    instagram: (row.instagram || "").trim() || null,
+    phone: (row.telefon || "").trim() || null,
+    mapsId: null, // fără Google Maps Place ID din formular — vezi mapsUrl() mai jos
+    mapsAddress: (row.adresa || "").trim() || null,
+    photos: (row.poza_url || "").trim() ? [(row.poza_url || "").trim()] : undefined,
+    ordine: Infinity, // fără ordine manuală — apar după afacerile din Sheet
+    badge: null,
+    beneficiu: (row.beneficiu_propus || "").trim() || null,
+  };
+}
+
+async function loadPublishedCandidati() {
+  try {
+    const res = await sbFetch(`candidati_parteneri?status=eq.publicat&zona=eq.${encodeURIComponent(currentZona)}&select=*`);
+    if (!res.ok) return [];
+    const rows = await res.json();
+    return rows.map(candidatToPlace).filter(Boolean);
+  } catch (e) {
+    return []; // ghidul rămâne funcțional doar cu Sheet-ul, chiar dacă Supabase e indisponibil
+  }
+}
+
 async function loadPlaces() {
+  let sheetPlaces = [];
   try {
     const res = await fetch(SHEET_CSV_URL);
     const csvText = await res.text();
     const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
-    PLACES = parsed.data.map(rowToPlace).filter(Boolean);
-    PLACES.sort((a, b) => a.ordine - b.ordine);
+    sheetPlaces = parsed.data.map(rowToPlace).filter(Boolean);
   } catch (e) {
     document.getElementById('grid').innerHTML =
       `<p style="color:var(--brick); font-size:13px; grid-column:1/-1;">${I18N[currentLang].loadError}</p>`;
     return;
   }
+  const candidatPlaces = await loadPublishedCandidati();
+  PLACES = sheetPlaces.concat(candidatPlaces);
+  PLACES.sort((a, b) => a.ordine - b.ordine);
   renderFilters();
   render(currentFilter);
 }
 
 let currentFilter = 'toate';
 
-function mapsUrl(p){ return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name + ' Rasnov Brasov')}&query_place_id=${p.mapsId}`; }
+function mapsUrl(p){
+  if (p.mapsId) return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name + ' Rasnov Brasov')}&query_place_id=${p.mapsId}`;
+  // fără Place ID (parteneri publicați din Supabase) — căutare simplă după adresă/nume
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.mapsAddress || (p.name + ' Rasnov Brasov'))}`;
+}
 
 function render(filter){
   currentFilter = filter;
@@ -757,7 +808,7 @@ function render(filter){
         ${p.beneficiu ? `<div class="benefit-badge">🎁 ${p.beneficiu}</div>` : ''}
         <div class="actions">
           ${p.website ? `<a class="btn" href="${p.website}" target="_blank" rel="noopener">${t.website}</a>` : ''}
-          ${p.mapsId ? `<a class="btn primary" href="${mapsUrl(p)}" target="_blank" rel="noopener">${t.maps}</a>` : ''}
+          ${(p.mapsId || p.mapsAddress) ? `<a class="btn primary" href="${mapsUrl(p)}" target="_blank" rel="noopener">${t.maps}</a>` : ''}
           ${p.phone ? `<a class="btn phone" href="tel:${p.phone.replace(/\s/g,'')}">📞 ${p.phone}</a>` : ''}
           ${p.facebook
             ? `<a class="btn social facebook" href="${p.facebook}" target="_blank" rel="noopener" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>`

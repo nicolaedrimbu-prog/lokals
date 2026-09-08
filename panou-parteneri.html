@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panou parteneri — Lokals</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --teal-deep:#10302B; --teal:#1A4A42; --gold:#C98A2C; --gold-soft:#E8CE9E;
+    --cream:#F7F2E8; --ink:#181E1B; --ink-soft:#5B6459; --line:#DCD5C6; --brick:#9C4536;
+    --green:#3C6B3F; --green-soft:#E4EFE2;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--cream); color:var(--ink); font-family:'Inter', system-ui, sans-serif; min-height:100vh;}
+  .serif{font-family:'Fraunces', Georgia, serif;}
+  a{color:var(--teal-deep);}
+  .state{display:none;}
+  .state.active{display:block;}
+
+  /* ---- ecran de login (mic, centrat) ---- */
+  #view-login{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;}
+  .login-card{background:#fff; border-radius:20px; max-width:400px; width:100%; padding:34px 30px; box-shadow:0 12px 40px rgba(16,48,43,0.12);}
+  .brand{font-family:'Fraunces', Georgia, serif; font-weight:700; color:var(--teal-deep); text-align:center; margin-bottom:20px; font-size:15px;}
+  .login-card h1{font-family:'Fraunces', Georgia, serif; font-size:21px; margin:0 0 8px; color:var(--teal-deep);}
+  .login-card p.lead{color:var(--ink-soft); font-size:13.5px; line-height:1.5; margin:0 0 20px;}
+  .login-card label{font-size:12.5px; font-weight:600; color:var(--teal-deep); display:block; margin-bottom:5px;}
+  .login-card input{width:100%; padding:12px 13px; border:1.5px solid var(--line); border-radius:10px; font-size:14.5px; font-family:inherit; margin-bottom:14px;}
+  .login-card input:focus{outline:none; border-color:var(--teal);}
+  .login-card button{width:100%; background:var(--teal-deep); color:#fff; border:none; padding:13px; border-radius:10px; font-size:14.5px; font-weight:600; cursor:pointer; font-family:inherit;}
+  .login-card button:disabled{opacity:.6; cursor:default;}
+  .msg{margin-top:14px; padding:12px 14px; border-radius:10px; font-size:13.5px; line-height:1.5; display:none;}
+  .msg.err{background:#FBE6E0; color:#7A2E1E; display:block;}
+
+  /* ---- panou ---- */
+  #topbar{background:var(--teal-deep); padding:16px 40px; display:flex; align-items:center; justify-content:space-between;}
+  #topbar .left{display:flex; align-items:center; gap:14px;}
+  #topbar .logo{font-family:'Fraunces', Georgia, serif; font-weight:700; color:#fff; font-size:17px;}
+  #topbar .sep{width:1px; height:18px; background:rgba(255,255,255,0.25);}
+  #topbar .title{color:#fff; font-size:14px; font-weight:600;}
+  #topbar .right{display:flex; align-items:center; gap:14px; color:rgba(255,255,255,0.65); font-size:12.5px;}
+  #btn-logout{background:transparent; border:1px solid rgba(255,255,255,0.3); color:#fff; border-radius:999px; padding:6px 13px; font-size:12px; cursor:pointer; font-family:inherit;}
+
+  #main{max-width:1040px; margin:0 auto; padding:36px 40px 60px; width:100%;}
+  #main h1{font-size:26px; font-weight:700; color:var(--teal-deep); margin:0 0 6px;}
+  #main p.lead{font-size:14px; color:var(--ink-soft); margin:0 0 26px; line-height:1.5;}
+
+  .toolbar{display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:12px;}
+  .chips{display:flex; gap:8px; flex-wrap:wrap;}
+  .chip{background:#fff; color:var(--ink); border:1px solid var(--line); border-radius:999px; padding:8px 16px; font-size:13.5px; font-weight:600; cursor:pointer;}
+  .chip .n{opacity:.55;}
+  .chip.active{background:var(--teal-deep); color:#fff; border-color:var(--teal-deep);}
+  .chip.active .n{opacity:.7;}
+  #search{border:1.5px solid var(--line); border-radius:11px; padding:9px 14px; font-size:13.5px; font-family:inherit; width:220px; background:#fff;}
+
+  #list{display:flex; flex-direction:column; gap:12px;}
+  .prow{background:#fff; border:1px solid var(--line); border-radius:16px; padding:18px 20px;}
+  .prow-top{display:flex; align-items:center; gap:18px;}
+  .picon{width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:19px;}
+  .pinfo{flex:1; min-width:0;}
+  .pname-row{display:flex; align-items:center; gap:10px; margin-bottom:3px; flex-wrap:wrap;}
+  .pname{font-size:16px; font-weight:700; color:var(--teal-deep);}
+  .pmeta{font-size:12.5px; color:var(--ink-soft);}
+  .pbadge{font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; padding:3px 9px; border-radius:999px;}
+  .pactions{display:flex; gap:8px; flex-shrink:0; flex-wrap:wrap;}
+  .pbtn{border:1.5px solid var(--line); background:#fff; color:var(--ink); border-radius:999px; padding:9px 14px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; text-decoration:none; display:inline-block;}
+  .pbtn.brick{border-color:var(--brick); color:var(--brick);}
+  .pbtn.primary{border:none; background:var(--teal-deep); color:#fff; font-weight:700;}
+  .pbtn:disabled{opacity:.55; cursor:default;}
+  .pdetails{display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--line); font-size:13px; color:var(--ink); line-height:1.7;}
+  .pdetails.open{display:block;}
+  .pdetails b{color:var(--teal-deep);}
+  #empty, #loading{text-align:center; color:var(--ink-soft); font-size:14px; padding:40px 0;}
+  #footnote{text-align:center; font-size:12px; color:var(--ink-soft); margin-top:28px;}
+</style>
+</head>
+<body>
+
+<!-- ===== Login ===== -->
+<div class="state active" id="view-login">
+  <div class="login-card">
+    <div class="brand">lokals</div>
+    <h1>Panou parteneri</h1>
+    <p class="lead">Autentifică-te cu contul de administrator.</p>
+    <form id="form-login">
+      <label for="login-email">Email</label>
+      <input type="email" id="login-email" required autocomplete="username">
+      <label for="login-parola">Parolă</label>
+      <input type="password" id="login-parola" required autocomplete="current-password">
+      <button type="submit" id="btn-login-submit">Intră în panou</button>
+    </form>
+    <div class="msg" id="msg-login"></div>
+  </div>
+</div>
+
+<!-- ===== Panou (după login) ===== -->
+<div class="state" id="view-panel">
+  <div id="topbar">
+    <div class="left">
+      <span class="logo">lokals</span>
+      <span class="sep"></span>
+      <span class="title">Panou parteneri</span>
+    </div>
+    <div class="right">
+      <span id="admin-email"></span>
+      <button id="btn-logout">Ieși din cont</button>
+    </div>
+  </div>
+
+  <div id="main">
+    <h1 class="serif">Parteneri &amp; afaceri</h1>
+    <p class="lead">Toate afacerile înscrise în platformă. Publică un profil ca să apară live, imediat, în ghidul turistic.</p>
+
+    <div class="toolbar">
+      <div class="chips" id="chips"></div>
+      <input type="text" id="search" placeholder="Caută după nume sau email...">
+    </div>
+
+    <div id="loading">Se încarcă...</div>
+    <div id="empty" style="display:none;">Niciun rezultat pentru acest filtru.</div>
+    <div id="list"></div>
+
+    <p id="footnote">Sursă: <strong>candidați parteneri</strong> + <strong>operatori cazare</strong> din baza de date — statusul de aici controlează direct ce apare în ghid.</p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
+const SUPABASE_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Emailul contului de admin — controlul real de acces e în regula RLS "admin_full_update"
+// din Supabase; verificarea de-aici e doar ca să afișăm panoul corect, nu e granița de securitate.
+const ADMIN_EMAIL = "nicolae.drimbu@gmail.com";
+
+const CATEGORII = {
+  aventura: "Aventură", cultura: "Cultură", wellness: "Wellness", gastro: "Gastronomie",
+  livrare: "Livrare", producatori: "Producători locali", facilitare: "Facilitare",
+};
+const CAT_ICON = { aventura:"🧗", cultura:"🏛️", wellness:"💆", gastro:"🍽️", livrare:"🚚", producatori:"🌾", facilitare:"🔗" };
+
+const STATUS_LABEL = { nou: "În așteptare", publicat: "Publicat · live în ghid", respins: "Respins" };
+const STATUS_COLOR = {
+  nou: { bg: "var(--gold-soft)", fg: "#8F6222" },
+  publicat: { bg: "var(--green-soft)", fg: "var(--green)" },
+  respins: { bg: "#F1E3DF", fg: "var(--brick)" },
+};
+
+let ROWS = [];       // { source: 'candidati_parteneri'|'operatori', id, nume, categorieLabel, zona, email, data, status, raw }
+let currentFilter = 'toate';
+
+function showView(id){
+  document.querySelectorAll('.state').forEach(el => el.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function fmtData(iso){
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  return d.toLocaleDateString('ro-RO', { day:'numeric', month:'short', year:'numeric' });
+}
+
+function zonaLabel(z){
+  const map = { 'rasnov':'Râșnov', 'sacele-brasov':'Săcele-Brașov' };
+  return map[(z||'').trim()] || (z || '—');
+}
+
+// ---------- Autentificare ----------
+document.getElementById('form-login').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('login-email').value.trim();
+  const parola = document.getElementById('login-parola').value;
+  const btn = document.getElementById('btn-login-submit');
+  const msgEl = document.getElementById('msg-login');
+  msgEl.className = 'msg'; msgEl.textContent = '';
+  btn.disabled = true; btn.textContent = 'Se verifică...';
+  try {
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: parola });
+    if (error) throw error;
+    if ((data.user.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+      await supabaseClient.auth.signOut();
+      msgEl.className = 'msg err';
+      msgEl.textContent = 'Acest cont nu are acces la panoul de administrare.';
+      return;
+    }
+    enterPanel(data.user.email);
+  } catch (err) {
+    console.error(err);
+    msgEl.className = 'msg err';
+    msgEl.textContent = 'Email sau parolă greșite.';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Intră în panou';
+  }
+});
+
+document.getElementById('btn-logout').addEventListener('click', async () => {
+  await supabaseClient.auth.signOut();
+  showView('view-login');
+});
+
+function enterPanel(email){
+  document.getElementById('admin-email').textContent = email;
+  showView('view-panel');
+  loadAll();
+}
+
+async function init(){
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (session && session.user && (session.user.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+    enterPanel(session.user.email);
+  }
+}
+init();
+
+// ---------- Încărcare date ----------
+async function loadAll(){
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('list').innerHTML = '';
+  document.getElementById('empty').style.display = 'none';
+
+  const [candRes, opRes] = await Promise.all([
+    supabaseClient.from('candidati_parteneri').select('*').order('created_at', { ascending: false }),
+    supabaseClient.from('operatori').select('*').order('created_at', { ascending: false }),
+  ]);
+
+  const cand = (candRes.data || []).map(r => ({
+    source: 'candidati_parteneri', id: r.id, nume: r.nume_afacere,
+    categorieLabel: CATEGORII[r.categorie] || r.categorie || '—',
+    icon: CAT_ICON[r.categorie] || '📍',
+    zona: r.zona, email: r.email, data: r.created_at, status: r.status || 'nou', raw: r,
+  }));
+  const op = (opRes.data || []).map(r => ({
+    source: 'operatori', id: r.id, nume: r.nume_afacere,
+    categorieLabel: r.tip === 'hotel' ? 'Cazare · Hotel' : 'Cazare · Apartament',
+    icon: '🛏️',
+    zona: r.zona, email: r.email, data: r.created_at, status: r.status || 'nou', raw: r,
+  }));
+
+  ROWS = cand.concat(op).sort((a, b) => new Date(b.data) - new Date(a.data));
+  document.getElementById('loading').style.display = 'none';
+  renderChips();
+  renderList();
+}
+
+function renderChips(){
+  const counts = { toate: ROWS.length, nou: 0, publicat: 0, respins: 0 };
+  ROWS.forEach(r => { counts[r.status] = (counts[r.status] || 0) + 1; });
+  const defs = [
+    ['toate', 'Toate'], ['nou', 'În așteptare'], ['publicat', 'Publicate'], ['respins', 'Respinse'],
+  ];
+  const chips = document.getElementById('chips');
+  chips.innerHTML = defs.map(([key, label]) => `
+    <div class="chip ${currentFilter === key ? 'active' : ''}" data-filter="${key}">
+      ${label} <span class="n">(${counts[key] || 0})</span>
+    </div>
+  `).join('');
+  chips.querySelectorAll('.chip').forEach(el => {
+    el.addEventListener('click', () => { currentFilter = el.dataset.filter; renderChips(); renderList(); });
+  });
+}
+
+function renderList(){
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  let list = currentFilter === 'toate' ? ROWS : ROWS.filter(r => r.status === currentFilter);
+  if (q) list = list.filter(r => (r.nume || '').toLowerCase().includes(q) || (r.email || '').toLowerCase().includes(q));
+
+  const listEl = document.getElementById('list');
+  document.getElementById('empty').style.display = list.length ? 'none' : 'block';
+  listEl.innerHTML = list.map(r => rowHtml(r)).join('');
+
+  listEl.querySelectorAll('[data-action]').forEach(btn => {
+    btn.addEventListener('click', () => handleAction(btn, btn.dataset.source, btn.dataset.id, btn.dataset.action));
+  });
+  listEl.querySelectorAll('[data-toggle]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const details = document.getElementById('details-' + btn.dataset.toggle);
+      details.classList.toggle('open');
+      btn.textContent = details.classList.contains('open') ? 'Ascunde detalii' : 'Vezi detalii';
+    });
+  });
+}
+
+function rowHtml(r){
+  const sc = STATUS_COLOR[r.status] || STATUS_COLOR.nou;
+  const rowId = r.source + '-' + r.id;
+  const details = detailsHtml(r);
+  return `
+    <div class="prow">
+      <div class="prow-top">
+        <div class="picon" style="background:${sc.bg};">${r.icon}</div>
+        <div class="pinfo">
+          <div class="pname-row">
+            <span class="pname serif">${escapeHtml(r.nume || '(fără nume)')}</span>
+            <span class="pbadge" style="background:${sc.bg}; color:${sc.fg};">${STATUS_LABEL[r.status] || r.status}</span>
+          </div>
+          <div class="pmeta">${escapeHtml(r.categorieLabel)} · ${escapeHtml(zonaLabel(r.zona))} &nbsp;·&nbsp; ${escapeHtml(r.email || '—')} &nbsp;·&nbsp; ${fmtData(r.data)}</div>
+        </div>
+        <div class="pactions">
+          <button class="pbtn" data-toggle="${rowId}">Vezi detalii</button>
+          ${actionsHtml(r)}
+        </div>
+      </div>
+      <div class="pdetails" id="details-${rowId}">${details}</div>
+    </div>
+  `;
+}
+
+function actionsHtml(r){
+  const btns = [];
+  if (r.status !== 'publicat') {
+    btns.push(`<button class="pbtn primary" data-source="${r.source}" data-id="${r.id}" data-action="publicat">Publică</button>`);
+  }
+  if (r.status === 'nou') {
+    btns.push(`<button class="pbtn brick" data-source="${r.source}" data-id="${r.id}" data-action="respins">Respinge</button>`);
+  }
+  if (r.status === 'publicat') {
+    btns.push(`<button class="pbtn" data-source="${r.source}" data-id="${r.id}" data-action="nou">Retrage din ghid</button>`);
+  }
+  return btns.join('');
+}
+
+function detailsHtml(r){
+  const raw = r.raw;
+  const lines = [];
+  if (r.source === 'candidati_parteneri') {
+    if (raw.persoana_contact) lines.push(`<b>Persoană de contact:</b> ${escapeHtml(raw.persoana_contact)}`);
+    if (raw.telefon) lines.push(`<b>Telefon:</b> ${escapeHtml(raw.telefon)}`);
+    if (raw.adresa) lines.push(`<b>Adresă:</b> ${escapeHtml(raw.adresa)}`);
+    if (raw.descriere) lines.push(`<b>Descriere:</b> ${escapeHtml(raw.descriere)}`);
+    if (raw.website) lines.push(`<b>Website:</b> ${escapeHtml(raw.website)}`);
+    if (raw.beneficiu_propus) lines.push(`<b>Beneficiu propus:</b> ${escapeHtml(raw.beneficiu_propus)}`);
+  } else {
+    if (raw.persoana_contact) lines.push(`<b>Persoană de contact:</b> ${escapeHtml(raw.persoana_contact)}`);
+    if (raw.telefon) lines.push(`<b>Telefon:</b> ${escapeHtml(raw.telefon)}`);
+    if (raw.adresa) lines.push(`<b>Adresă:</b> ${escapeHtml(raw.adresa)}`);
+    if (raw.nr_camere) lines.push(`<b>Nr. camere/apartamente:</b> ${escapeHtml(String(raw.nr_camere))}`);
+    lines.push(`<b>Cont confirmat:</b> ${raw.cont_confirmat ? 'Da' : 'Nu'}`);
+  }
+  return lines.length ? lines.map(l => `<div>${l}</div>`).join('') : '<div style="color:var(--ink-soft);">Fără detalii suplimentare.</div>';
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function handleAction(btn, source, id, newStatus){
+  btn.disabled = true;
+  const { error } = await supabaseClient.from(source).update({ status: newStatus }).eq('id', id);
+  if (error) {
+    console.error(error);
+    alert('Nu am putut salva modificarea. Încearcă din nou.');
+    btn.disabled = false;
+    return;
+  }
+  const row = ROWS.find(r => r.source === source && String(r.id) === String(id));
+  if (row) row.status = newStatus;
+  renderChips();
+  renderList();
+}
+
+document.getElementById('search').addEventListener('input', renderList);
+</script>
+</body>
+</html>
