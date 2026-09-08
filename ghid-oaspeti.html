@@ -114,6 +114,10 @@
 <body>
 
 <header>
+  <div id="demo-banner" style="display:none; background:#9C4536; color:#fff; font-size:11.5px; font-weight:700;
+    letter-spacing:.04em; text-transform:uppercase; text-align:center; padding:7px 10px; border-radius:999px; margin-bottom:14px;">
+    Exemplu — toate datele de mai jos sunt fictive
+  </div>
   <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
     <div class="eyebrow" id="eyebrow-text">🔥 Ghid de oaspeți · Râșnov</div>
     <div id="lang-toggle" style="display:flex; gap:4px; flex-shrink:0;">
@@ -224,6 +228,31 @@ const APT_NAMES = {
   'demo-viscri':   { name: 'Demo — Ghid Lokal Viscri-Saschiz', zona: 'bunesti-viscri-saschiz-meschendorf', telefon: '40751090407' },
   'demo-covasna':  { name: 'Demo — Ghid Lokal Covasna', zona: 'covasna-targu-secuiesc-sfantu-gheorghe', telefon: '40751090407' },
   'demo-vama':     { name: 'Demo — Ghid Lokal Vama Buzăului', zona: 'vama-buzaului-intorsura-buzaului', telefon: '40751090407' },
+  'demo-rasnov':   { name: 'Exemplu — Apartament, Râșnov', zona: 'rasnov', telefon: '40751090407' },
+  'demo-sacele-brasov': { name: 'Exemplu — Cazare, Săcele-Brașov', zona: 'sacele-brasov', telefon: '40721372770' },
+  'demo-codlea':   { name: 'Demo — Ghid Lokal Codlea-Ghimbav-Cristian', zona: 'codlea-ghimbav-cristian', telefon: '40751090407' },
+};
+
+// Etichetă afișată (eyebrow) pentru fiecare zonă — folosită și de landing (bara de regiuni)
+const ZONA_LABELS = {
+  'rasnov': 'Râșnov', 'sacele-brasov': 'Săcele-Brașov', 'codlea-ghimbav-cristian': 'Codlea-Ghimbav-Cristian',
+  'predeal-azuga': 'Predeal-Azuga', 'sinaia-busteni-poiana-tapului': 'Sinaia-Bușteni-Poiana Tapului',
+  'bran-moieciu-fundata': 'Bran-Moieciu-Fundata', 'zarnesti-poiana-marului': 'Zărnești-Poiana Mărului',
+  'fagaras-sambata-de-sus': 'Făgăraș-Sâmbăta de Sus', 'bunesti-viscri-saschiz-meschendorf': 'Bunești-Viscri-Saschiz-Meschendorf',
+  'covasna-targu-secuiesc-sfantu-gheorghe': 'Covasna-Tg. Secuiesc-Sf. Gheorghe', 'vama-buzaului-intorsura-buzaului': 'Vama Buzăului-Întorsura Buzăului',
+};
+
+// Facilități complet fictive, afișate DOAR pe sloturile "demo-*" (fără operator real în Supabase) —
+// ilustrează cum arată secțiunea de check-in unui oaspete real, fără să expună vreo dată reală.
+// Un oaspete real vede mereu propriul cod, generat unic pentru sejurul lui (butonul "Generează codul meu").
+const DEMO_OPERATOR_TEMPLATE = {
+  id: 'demo', tip: 'apartament', adresa: '', foto_url: '',
+  facilitati_cazare: {
+    checkin: { ora: '15:00 (exemplu)', cod_acces: 'DEMO-482', unitate: 'Apartament exemplu',
+      instructiuni: 'Acesta este un exemplu — un oaspete real vede propriul cod de acces, unic pentru sejurul lui.' },
+    checkout: { ora: '11:00 (exemplu)' },
+    wifi: { ssid: 'Lokals-Demo', parola: 'demo1234' },
+  },
 };
 
 let currentApt = APT_NAMES[apt];
@@ -268,6 +297,12 @@ async function resolveOperator() {
       }
     }
   } catch (e) { /* ramane fallback pe Rasnov, fara nume personalizat */ }
+
+  // Sloturile "demo-*" nu au (și nu trebuie să aibă) un rând real în operatori — dacă nu s-a găsit
+  // niciunul, arătăm o secțiune de check-in cu date complet fictive, ca exemplu.
+  if (!currentOperator && apt.startsWith('demo-')) {
+    currentOperator = DEMO_OPERATOR_TEMPLATE;
+  }
 }
 
 function randomCode(len = 6) {
@@ -845,8 +880,9 @@ function setLang(lang){
   currentLang = lang;
   document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
   const t = I18N[lang];
-  const cityLabel = currentApt ? (currentZona === 'sacele-brasov' ? 'Săcele-Brașov' : 'Râșnov') : 'Râșnov';
+  const cityLabel = currentApt ? (ZONA_LABELS[currentZona] || 'Râșnov') : 'Râșnov';
   document.getElementById('eyebrow-text').textContent = `${t.eyebrow} · ${cityLabel}`;
+  document.getElementById('demo-banner').style.display = apt.startsWith('demo-') ? 'block' : 'none';
   document.getElementById('title-text').textContent = t.title;
   document.getElementById('subtitle-text').textContent = t.subtitle;
   document.getElementById('welcome').textContent = currentApt ? t.welcome(currentApt.name) : '';

@@ -89,6 +89,25 @@
 
   #empty, #loading{text-align:center; color:var(--ink-soft); font-size:14px; padding:40px 0;}
   #footnote{text-align:center; font-size:12px; color:var(--ink-soft); margin-top:28px;}
+
+  /* ---- Zone pe landing page ---- */
+  #zone-section{margin-top:44px; border-top:1px solid var(--line); padding-top:28px;}
+  #zone-section h2{font-size:20px; color:var(--teal-deep); margin:0 0 6px;}
+  #zone-section p.lead{margin:0 0 18px;}
+  .zone-row{display:flex; align-items:center; gap:14px; padding:14px 18px; background:#fff; border:1px solid var(--line); border-radius:14px; margin-bottom:9px;}
+  .zone-row.on{border-color:var(--green-soft); background:#FCFEFB;}
+  .zone-name{flex:1; font-size:14.5px; font-weight:600; color:var(--teal-deep);}
+  .zone-sub{font-size:12px; color:var(--ink-soft); margin-top:1px; font-weight:400;}
+  .zone-badge{font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; padding:3px 9px; border-radius:999px; flex-shrink:0;}
+  .zone-badge.on{background:var(--green-soft); color:var(--green);}
+  .zone-badge.off{background:#EFE9DB; color:#8F6222;}
+  .switch{position:relative; width:38px; height:22px; flex-shrink:0;}
+  .switch input{opacity:0; width:0; height:0; position:absolute;}
+  .switch .track{position:absolute; inset:0; background:var(--line); border-radius:999px; transition:.15s; cursor:pointer;}
+  .switch .track::before{content:''; position:absolute; width:16px; height:16px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.15s; box-shadow:0 1px 2px rgba(0,0,0,.2);}
+  .switch input:checked + .track{background:var(--green);}
+  .switch input:checked + .track::before{transform:translateX(16px);}
+  .switch input:disabled + .track{opacity:.55; cursor:default;}
 </style>
 </head>
 <body>
@@ -150,6 +169,13 @@
     <div id="list"></div>
 
     <p id="footnote">Sursă: <strong>candidați parteneri</strong> + <strong>operatori cazare</strong> din baza de date — statusul de aici controlează direct ce apare în ghid.</p>
+
+    <div id="zone-section">
+      <h2 class="serif">Zone pe landing page</h2>
+      <p class="lead">Controlează ce zone apar active (clickabile) în bara „Vedeți ghidul, chiar acum” de pe pagina principală. O zonă inactivă apare listată, dar marcată „În curând”.</p>
+      <div id="zone-loading" style="text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Se încarcă...</div>
+      <div id="zone-list"></div>
+    </div>
   </div>
 </div>
 
@@ -254,6 +280,7 @@ function enterPanel(email){
   document.getElementById('admin-email').textContent = email;
   showView('view-panel');
   loadAll();
+  loadZones();
 }
 
 async function init(){
@@ -294,6 +321,50 @@ async function loadAll(){
   document.getElementById('loading').style.display = 'none';
   renderChips();
   renderList();
+}
+
+// ---------- Zone pe landing page ----------
+let ZONES = [];
+
+async function loadZones(){
+  document.getElementById('zone-loading').style.display = 'block';
+  const { data, error } = await supabaseClient.from('zone_ghid').select('*').order('ordine', { ascending: true });
+  document.getElementById('zone-loading').style.display = 'none';
+  if (error) { console.error(error); return; }
+  ZONES = data || [];
+  renderZones();
+}
+
+function renderZones(){
+  const wrap = document.getElementById('zone-list');
+  wrap.innerHTML = ZONES.map(z => `
+    <div class="zone-row ${z.activa ? 'on' : ''}">
+      <div class="zone-name">${escapeHtml(z.nume)}${z.judet ? `<div class="zone-sub">${escapeHtml(z.judet)}</div>` : ''}</div>
+      <span class="zone-badge ${z.activa ? 'on' : 'off'}">${z.activa ? 'Activă' : 'În curând'}</span>
+      <label class="switch">
+        <input type="checkbox" data-zone-toggle="${escapeHtml(z.slug)}" ${z.activa ? 'checked' : ''}>
+        <span class="track"></span>
+      </label>
+    </div>
+  `).join('');
+  wrap.querySelectorAll('[data-zone-toggle]').forEach(input => {
+    input.addEventListener('change', async (e) => {
+      const slug = e.target.getAttribute('data-zone-toggle');
+      const activa = e.target.checked;
+      e.target.disabled = true;
+      const { error } = await supabaseClient.from('zone_ghid').update({ activa }).eq('slug', slug);
+      e.target.disabled = false;
+      if (error) {
+        console.error(error);
+        e.target.checked = !activa;
+        alert('Nu am putut salva schimbarea — încearcă din nou.');
+        return;
+      }
+      const z = ZONES.find(zz => zz.slug === slug);
+      if (z) z.activa = activa;
+      renderZones();
+    });
+  });
 }
 
 function renderChips(){

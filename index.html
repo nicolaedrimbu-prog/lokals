@@ -8,7 +8,7 @@
 <style>
   :root{
     --teal-deep:#10302B; --teal:#1A4A42; --gold:#C98A2C; --gold-soft:#E8CE9E;
-    --cream:#F7F2E8; --ink:#181E1B; --ink-soft:#5B6459; --line:#DCD5C6;
+    --cream:#F7F2E8; --ink:#181E1B; --ink-soft:#5B6459; --line:#DCD5C6; --brick:#9C4536;
   }
   *{box-sizing:border-box;}
   body{margin:0; background:var(--cream); color:var(--ink); font-family:'Inter', system-ui, sans-serif;}
@@ -50,8 +50,26 @@
   .proof-section .eyebrow{margin-bottom:10px;}
   .proof-section h2{font-size:26px; color:var(--teal-deep); margin:0 0 10px;}
   .proof-section > p{color:var(--ink-soft); font-size:15px; max-width:480px; margin:0 auto 28px;}
+  /* Bara de regiuni — desktop: se rupe pe mai multe rânduri; mobil: o singură bandă cu scroll orizontal */
+  .region-bar{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:22px; max-width:760px; margin-left:auto; margin-right:auto;}
+  .region-chip{font-size:13px; font-weight:600; padding:9px 16px; border-radius:999px; border:1.5px solid var(--line);
+    background:#fff; color:var(--ink); cursor:pointer; display:flex; align-items:center; gap:6px; font-family:inherit;}
+  .region-chip.active{background:var(--teal-deep); color:#fff; border-color:var(--teal-deep);}
+  .region-chip.soon{color:var(--ink-soft); background:#EFE9DB; border-style:dashed;}
+  .region-chip.soon .tag{font-size:9.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
+    background:var(--gold-soft); color:#8F6222; padding:2px 7px; border-radius:999px;}
+  @media (max-width:720px){
+    .region-bar{flex-wrap:nowrap; overflow-x:auto; justify-content:flex-start; padding:2px 20px 10px; margin:0 -20px 14px;
+      -webkit-overflow-scrolling:touch; scrollbar-width:none;}
+    .region-bar::-webkit-scrollbar{display:none;}
+    .region-chip{flex:0 0 auto; white-space:nowrap;}
+  }
+  .region-soon-msg{max-width:420px; margin:0 auto 18px; background:#fff; border:1px solid var(--line); border-radius:12px;
+    padding:10px 16px; font-size:12.5px; color:var(--ink-soft); text-align:center; display:none;}
   .guide-preview{background:#EAE3D3; border:1px solid var(--line); border-radius:18px; padding:26px 28px;
-    max-width:460px; margin:0 auto; text-align:left;}
+    max-width:460px; margin:0 auto; text-align:left; position:relative;}
+  .demo-badge{position:absolute; top:-11px; left:24px; background:var(--brick); color:#fff; font-size:10px; font-weight:700;
+    letter-spacing:.05em; text-transform:uppercase; padding:4px 11px; border-radius:999px;}
   .gp-eyebrow{color:#B9812F; font-size:11px; font-weight:700; letter-spacing:0.05em;}
   .gp-title{font-family:'Fraunces', Georgia, serif; font-weight:700; font-size:24px; color:#20291F; margin:6px 0;}
   .gp-sub{color:#3C5B44; font-weight:600; font-size:13px; margin-bottom:6px;}
@@ -190,12 +208,15 @@
   <div class="proof-section">
     <div class="eyebrow">Dovada — nu e doar o promisiune</div>
     <h2 class="serif">Vedeți ghidul, chiar acum.</h2>
-    <p>Ghidul e deja live și folosit de oaspeți reali. Așa arată chiar acum, pe telefonul unui oaspete cazat în Râșnov:</p>
+    <p>Alegeți o zonă ca să vedeți cum arată ghidul de oaspeți acolo. Zonele active au deja parteneri verificați; celelalte sunt în recrutare.</p>
+    <div class="region-bar" id="region-bar"></div>
+    <div class="region-soon-msg" id="region-soon-msg"></div>
     <div class="guide-preview">
-      <div class="gp-eyebrow">🔥 GHID DE OASPEȚI · RÂȘNOV</div>
+      <div class="demo-badge">Exemplu — date fictive</div>
+      <div class="gp-eyebrow" id="gp-eyebrow">🔥 GHID DE OASPEȚI · RÂȘNOV</div>
       <div class="gp-title">Recomandările gazdei</div>
-      <div class="gp-sub">Bun venit — Apartamentul 5</div>
-      <div class="gp-desc">O selecție de afaceri locale — activități, cultură, wellness și gastronomie, alese pentru sejurul tău.</div>
+      <div class="gp-sub">Bun venit — Apartament exemplu</div>
+      <div class="gp-desc">O selecție de afaceri locale reale — activități, cultură, wellness și gastronomie, alese pentru sejurul tău.</div>
       <div class="gp-chips">
         <span class="gp-chip active">Toate</span>
         <span class="gp-chip">Aventură</span>
@@ -204,7 +225,7 @@
       </div>
     </div>
     <br>
-    <a class="guide-link" href="/ghid-oaspeti.html?apt=ap5" target="_blank">Deschideți ghidul live, aici →</a>
+    <a class="guide-link" id="guide-preview-link" href="/ghid-oaspeti.html?apt=demo-rasnov" target="_blank">Deschideți exemplul, aici →</a>
   </div>
   <div class="how-section">
     <h2>Cum funcționează</h2>
@@ -639,6 +660,63 @@ registerForm.addEventListener('submit', async function (e) {
     regBtn.textContent = 'Creează cont';
   }
 });
+
+// ---------- Bara de regiuni (secțiunea "Dovada") ----------
+// Slug-ul zonei (din tabelul zone_ghid, controlat din panoul de admin) -> slotul "demo-*"
+// din ghid-oaspeti.html care arată acea zonă cu date de check-in complet fictive.
+const ZONE_DEMO_APT = {
+  'rasnov': 'demo-rasnov', 'sacele-brasov': 'demo-sacele-brasov', 'codlea-ghimbav-cristian': 'demo-codlea',
+  'predeal-azuga': 'demo-predeal', 'sinaia-busteni-poiana-tapului': 'demo-sinaia',
+  'bran-moieciu-fundata': 'demo-bran', 'zarnesti-poiana-marului': 'demo-zarnesti',
+  'fagaras-sambata-de-sus': 'demo-fagaras', 'bunesti-viscri-saschiz-meschendorf': 'demo-viscri',
+  'covasna-targu-secuiesc-sfantu-gheorghe': 'demo-covasna', 'vama-buzaului-intorsura-buzaului': 'demo-vama',
+};
+
+function escapeHtmlRegion(s){
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+
+async function loadRegionBar(){
+  const bar = document.getElementById('region-bar');
+  if (!bar) return;
+  try {
+    const { data, error } = await supabaseClient.from('zone_ghid').select('*').order('ordine', { ascending: true });
+    if (error) throw error;
+    const zones = data || [];
+    if (!zones.length) { bar.style.display = 'none'; return; }
+
+    bar.innerHTML = zones.map(z => (
+      z.activa
+        ? `<button type="button" class="region-chip" data-slug="${escapeHtmlRegion(z.slug)}" data-nume="${escapeHtmlRegion(z.nume)}">${escapeHtmlRegion(z.nume)}</button>`
+        : `<div class="region-chip soon" data-nume="${escapeHtmlRegion(z.nume)}">${escapeHtmlRegion(z.nume)} <span class="tag">În curând</span></div>`
+    )).join('');
+
+    const soonMsg = document.getElementById('region-soon-msg');
+    bar.querySelectorAll('.region-chip.soon').forEach(chip => {
+      chip.addEventListener('click', () => {
+        soonMsg.textContent = `Recrutăm parteneri în ${chip.getAttribute('data-nume')} — spune-ne dacă ai o afacere acolo.`;
+        soonMsg.style.display = 'block';
+      });
+    });
+
+    const activeChips = Array.from(bar.querySelectorAll('.region-chip:not(.soon)'));
+    function selectZone(slug, nume){
+      activeChips.forEach(c => c.classList.toggle('active', c.getAttribute('data-slug') === slug));
+      soonMsg.style.display = 'none';
+      const demoApt = ZONE_DEMO_APT[slug] || 'demo-rasnov';
+      document.getElementById('gp-eyebrow').textContent = `🔥 GHID DE OASPEȚI · ${nume.toUpperCase()}`;
+      document.getElementById('guide-preview-link').href = `/ghid-oaspeti.html?apt=${encodeURIComponent(demoApt)}`;
+    }
+    activeChips.forEach(chip => {
+      chip.addEventListener('click', () => selectZone(chip.getAttribute('data-slug'), chip.getAttribute('data-nume')));
+    });
+    if (activeChips.length) selectZone(activeChips[0].getAttribute('data-slug'), activeChips[0].getAttribute('data-nume'));
+  } catch (err) {
+    console.error('Nu am putut încărca zonele de pe landing:', err);
+    bar.style.display = 'none';
+  }
+}
+loadRegionBar();
 </script>
 </body>
 </html>
