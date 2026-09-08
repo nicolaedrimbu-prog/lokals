@@ -246,7 +246,7 @@ const ZONA_LABELS = {
 // ilustrează cum arată secțiunea de check-in unui oaspete real, fără să expună vreo dată reală.
 // Un oaspete real vede mereu propriul cod, generat unic pentru sejurul lui (butonul "Generează codul meu").
 const DEMO_OPERATOR_TEMPLATE = {
-  id: 'demo', tip: 'apartament',
+  id: 'demo', tip: 'apartament', telefon: '40751090407',
   adresa: 'Centrul Râșnov, Brașov (adresă exemplu)',
   foto_url: '/demo-poza-pensiune.jpg',
   facilitati_cazare: {
@@ -254,7 +254,9 @@ const DEMO_OPERATOR_TEMPLATE = {
     checkin: { ora: '15:00 (exemplu)', cod_acces: 'DEMO-482', unitate: 'Apartament exemplu',
       instructiuni: 'Acesta este un exemplu — un oaspete real vede propriul cod de acces, unic pentru sejurul lui.' },
     checkout: { ora: '11:00 (exemplu)' },
+    reguli: { fumat: false, animale: true, liniste: true, extra: 'Vă rugăm respectați liniștea vecinilor după ora 22:00 (exemplu).' },
     wifi: { ssid: 'Lokals-Demo', parola: 'demo1234' },
+    urgente: { spital: 'Spitalul Municipal Râșnov (exemplu)' },
   },
 };
 
