@@ -19,7 +19,10 @@
   .state.active{display:block;}
 
   /* ---- ecran de login (mic, centrat) ---- */
-  #view-login{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;}
+  /* display:flex e condiționat de .active — altfel câștigă mereu în fața lui .state{display:none}
+     (specificitate ID > clasă) și cardul de login rămâne vizibil peste panou. */
+  #view-login{min-height:100vh; align-items:center; justify-content:center; padding:24px;}
+  #view-login.active{display:flex;}
   .login-card{background:#fff; border-radius:20px; max-width:400px; width:100%; padding:34px 30px; box-shadow:0 12px 40px rgba(16,48,43,0.12);}
   .brand{font-family:'Fraunces', Georgia, serif; font-weight:700; color:var(--teal-deep); text-align:center; margin-bottom:20px; font-size:15px;}
   .login-card h1{font-family:'Fraunces', Georgia, serif; font-size:21px; margin:0 0 8px; color:var(--teal-deep);}
