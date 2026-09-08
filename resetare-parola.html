@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Setează parola — Lokals</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --teal-deep:#10302B; --teal:#1A4A42; --gold:#C98A2C; --gold-soft:#E8CE9E; --cream:#F7F2E8; --ink:#181E1B; --ink-soft:#5B6459; }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--cream); color:var(--ink); font-family:'Inter', system-ui, sans-serif; min-height:100vh;
+    display:flex; align-items:center; justify-content:center; padding:24px;}
+  .card{background:#fff; border-radius:20px; max-width:440px; width:100%; padding:36px 32px; box-shadow:0 12px 40px rgba(16,48,43,0.12);}
+  .brand{font-family:'Fraunces', Georgia, serif; font-weight:700; color:var(--teal-deep); text-align:center;
+    margin-bottom:22px; font-size:15px; letter-spacing:.02em;}
+  .eyebrow{font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--gold); font-weight:600; margin:0 0 8px;}
+  h1{font-family:'Fraunces', Georgia, serif; font-size:24px; margin:0 0 10px; color:var(--teal-deep);}
+  p.lead{color:var(--ink-soft); font-size:14.5px; line-height:1.55; margin:0 0 24px;}
+  label{font-size:13px; font-weight:600; color:var(--teal-deep); display:block; margin-bottom:6px;}
+  input[type="email"], input[type="password"]{width:100%; padding:13px 14px; border:1.5px solid #DDD6C4; border-radius:10px; font-size:15px;
+    font-family:inherit; margin-bottom:18px; box-sizing:border-box;}
+  input[type="email"]:focus, input[type="password"]:focus{outline:none; border-color:var(--teal);}
+  button[type="submit"]{width:100%; background:var(--teal-deep); color:#fff; border:none; padding:14px; border-radius:10px;
+    font-size:15px; font-weight:600; cursor:pointer; font-family:inherit;}
+  button[type="submit"]:disabled{opacity:.6; cursor:default;}
+  button[type="submit"]:hover:not(:disabled){background:var(--teal);}
+  .msg{margin-top:18px; padding:14px 16px; border-radius:10px; font-size:14px; line-height:1.5; display:none;}
+  .msg.ok{background:#E8F3E5; color:#2C4A2E; display:block;}
+  .msg.err{background:#FBE6E0; color:#7A2E1E; display:block;}
+  .note{margin-top:22px; font-size:12.5px; color:var(--ink-soft); line-height:1.5;}
+  .state{display:none;}
+  .state.active{display:block;}
+  .icon{font-size:36px; text-align:center; margin-bottom:6px;}
+  a.btn{display:block; text-align:center; margin-top:18px; background:var(--teal-deep); color:#fff; text-decoration:none;
+    padding:12px 22px; border-radius:10px; font-weight:600; font-size:14px;}
+  a.btn:hover{background:var(--teal);}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand">lokals</div>
+
+  <!-- ===== Pasul 1: cere link de resetare pe email ===== -->
+  <div class="state active" id="state-request">
+    <p class="eyebrow">Cont hotelier / partener</p>
+    <h1>Ai uitat parola? Sau nu ai setat încă una?</h1>
+    <p class="lead">Dacă ți-ai făcut contul înainte de actualizarea din septembrie 2026, nu ai avut niciodată o parolă — introdu emailul și îți trimitem un link ca să-ți setezi una acum.</p>
+    <form id="form-request">
+      <label for="req-email">Adresa de email</label>
+      <input type="email" id="req-email" name="email" placeholder="nume@exemplu.ro" required autocomplete="username">
+      <button type="submit" id="btn-request-submit">Trimite link de resetare</button>
+    </form>
+    <div class="msg" id="msg-request"></div>
+    <p class="note">Linkul e valabil o singură dată și expiră după câteva ore. Verifică și folderul Spam/Promoții dacă nu îl găsești.</p>
+  </div>
+
+  <!-- ===== Pasul 2: setează parola nouă (după click pe linkul din email) ===== -->
+  <div class="state" id="state-set">
+    <p class="eyebrow">Cont hotelier / partener</p>
+    <h1>Setează-ți parola</h1>
+    <p class="lead" id="set-email-lead">Alege o parolă pentru contul tău.</p>
+    <form id="form-set">
+      <label for="set-parola">Parolă nouă</label>
+      <input type="password" id="set-parola" name="parola" placeholder="minim 6 caractere" required minlength="6" autocomplete="new-password">
+      <label for="set-parola-confirma">Confirmă parola</label>
+      <input type="password" id="set-parola-confirma" name="parola_confirma" placeholder="••••••••" required minlength="6" autocomplete="new-password">
+      <button type="submit" id="btn-set-submit">Salvează parola</button>
+    </form>
+    <div class="msg" id="msg-set"></div>
+  </div>
+
+  <!-- ===== Confirmare finală ===== -->
+  <div class="state" id="state-done">
+    <div class="icon">✅</div>
+    <h1 style="text-align:center;">Parolă setată</h1>
+    <p class="lead" style="text-align:center;">Poți intra în cont oricând, de acum, cu emailul și noua parolă.</p>
+    <a class="btn" href="https://lokals.ro/contul-meu.html">Mergi la contul meu</a>
+  </div>
+
+  <!-- ===== Link expirat ===== -->
+  <div class="state" id="state-err">
+    <div class="icon">⚠️</div>
+    <h1 style="text-align:center;">Linkul nu mai e valabil</h1>
+    <p class="lead" style="text-align:center;">Linkurile de resetare expiră după câteva ore și pot fi folosite o singură dată.</p>
+    <a class="btn" href="https://lokals.ro/resetare-parola.html">Cere alt link</a>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
+const SUPABASE_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+function showState(id) {
+  document.querySelectorAll('.state').forEach(el => el.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// Pre-completează emailul dacă a venit ca parametru (ex. din linkul "Email sau parolă greșite" de pe cont.html)
+const prefillEmail = new URLSearchParams(window.location.search).get('email');
+if (prefillEmail) document.getElementById('req-email').value = prefillEmail;
+
+// ---------- Pasul 1: cerere link de resetare ----------
+document.getElementById('form-request').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('req-email').value.trim();
+  if (!email) return;
+
+  const btn = document.getElementById('btn-request-submit');
+  const msgEl = document.getElementById('msg-request');
+  btn.disabled = true;
+  btn.textContent = 'Se trimite...';
+  msgEl.className = 'msg';
+  msgEl.textContent = '';
+
+  try {
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+      redirectTo: 'https://lokals.ro/resetare-parola.html',
+    });
+    if (error) throw error;
+    msgEl.className = 'msg ok';
+    msgEl.textContent = `Ți-am trimis un link la ${email}. Deschide-l pe același telefon/calculator ca să-ți setezi parola.`;
+    document.getElementById('form-request').reset();
+  } catch (err) {
+    console.error(err);
+    msgEl.className = 'msg err';
+    msgEl.textContent = 'Nu am putut trimite linkul chiar acum. Încearcă din nou în câteva secunde sau scrie-ne pe WhatsApp la 0751 090 407.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Trimite link de resetare';
+  }
+});
+
+// ---------- Pasul 2: setare parolă nouă (după ce sesiunea de recuperare e activă) ----------
+document.getElementById('form-set').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const parola = document.getElementById('set-parola').value;
+  const parolaConfirma = document.getElementById('set-parola-confirma').value;
+  const msgEl = document.getElementById('msg-set');
+  msgEl.className = 'msg';
+  msgEl.textContent = '';
+
+  if (parola.length < 6) {
+    msgEl.className = 'msg err';
+    msgEl.textContent = 'Parola trebuie să aibă minim 6 caractere.';
+    return;
+  }
+  if (parola !== parolaConfirma) {
+    msgEl.className = 'msg err';
+    msgEl.textContent = 'Cele două parole nu coincid.';
+    return;
+  }
+
+  const btn = document.getElementById('btn-set-submit');
+  btn.disabled = true;
+  btn.textContent = 'Se salvează...';
+
+  try {
+    const { error } = await supabaseClient.auth.updateUser({ password: parola });
+    if (error) throw error;
+    showState('state-done');
+  } catch (err) {
+    console.error(err);
+    msgEl.className = 'msg err';
+    msgEl.textContent = 'Nu am putut salva parola chiar acum. Încearcă din nou în câteva secunde.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Salvează parola';
+  }
+});
+
+// ---------- La încărcare: dacă venim dintr-un link de resetare, Supabase citește automat
+// tokenul din URL și declanșează un eveniment PASSWORD_RECOVERY — trecem la pasul 2 ----------
+async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (session && session.user && session.user.email) {
+    document.getElementById('set-email-lead').textContent = `Alege o parolă nouă pentru ${session.user.email}.`;
+    showState('state-set');
+    return;
+  }
+  // dacă în URL există un token de recuperare, sesiunea poate apărea cu o mică întârziere
+  const hasRecoveryToken = window.location.hash.includes('type=recovery') || window.location.hash.includes('access_token');
+  if (!hasRecoveryToken) return; // ecranul implicit (cerere link) rămâne afișat
+
+  const { data: sub } = supabaseClient.auth.onAuthStateChange(async (event, newSession) => {
+    if (newSession && newSession.user && newSession.user.email) {
+      sub.subscription.unsubscribe();
+      document.getElementById('set-email-lead').textContent = `Alege o parolă nouă pentru ${newSession.user.email}.`;
+      showState('state-set');
+    }
+  });
+  setTimeout(async () => {
+    const { data: { session: retrySession } } = await supabaseClient.auth.getSession();
+    if (!retrySession) {
+      sub.subscription.unsubscribe();
+      showState('state-err');
+    }
+  }, 4000);
+}
+init();
+</script>
+</body>
+</html>

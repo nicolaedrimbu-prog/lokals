@@ -317,6 +317,7 @@
       </form>
       <div class="modal-msg" id="modal-login-msg"></div>
       <p class="modal-switch">Nu ai încă un cont? <a id="link-to-register">Creează unul</a></p>
+      <p class="modal-switch"><a id="link-forgot-password">Ai uitat parola sau nu ai setat încă una?</a></p>
       <button class="modal-back" id="btn-back-to-choice" type="button">← Înapoi</button>
     </div>
 
@@ -480,6 +481,10 @@ document.getElementById('link-to-login').addEventListener('click', function () {
   loginEmail.value = regEmail.value;
   showView(viewLogin);
 });
+document.getElementById('link-forgot-password').addEventListener('click', function () {
+  const email = loginEmail.value.trim();
+  window.location.href = 'resetare-parola.html' + (email ? '?email=' + encodeURIComponent(email) : '');
+});
 
 // Închidere: buton ×, click pe fundal, tasta Escape
 document.getElementById('modal-close').addEventListener('click', closeModal);
@@ -506,9 +511,15 @@ loginForm.addEventListener('submit', async function (e) {
     const { error } = await supabaseClient.auth.signInWithPassword({ email, password: parola });
     if (error) {
       loginMsg.className = 'modal-msg err';
-      loginMsg.textContent = /email not confirmed/i.test(error.message || '')
-        ? 'Contul nu e încă confirmat — caută emailul de confirmare în inbox (sau Spam) și dă click pe link.'
-        : 'Email sau parolă greșite. Verifică datele sau creează un cont nou.';
+      if (/email not confirmed/i.test(error.message || '')) {
+        loginMsg.textContent = 'Contul nu e încă confirmat — caută emailul de confirmare în inbox (sau Spam) și dă click pe link.';
+      } else {
+        loginMsg.innerHTML = `Email sau parolă greșite. Dacă ți-ai făcut contul înainte de septembrie 2026, s-ar putea să nu ai încă o parolă setată — <a id="modal-link-go-reset">setează-ți una aici</a>.`;
+        const linkReset = document.getElementById('modal-link-go-reset');
+        if (linkReset) linkReset.addEventListener('click', () => {
+          window.location.href = 'resetare-parola.html?email=' + encodeURIComponent(email);
+        });
+      }
       return;
     }
     await refreshAuthUI();
@@ -570,10 +581,13 @@ registerForm.addEventListener('submit', async function (e) {
 
     if (data && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
       regMsg.className = 'modal-msg err';
-      regMsg.innerHTML = `Există deja un cont cu ${email}. <a id="modal-link-go-login">Intră în cont</a> în loc să creezi unul nou.`;
+      regMsg.innerHTML = `Există deja un cont cu ${email}. <a id="modal-link-go-login">Intră în cont</a> — sau, dacă nu ai încă o parolă (cont mai vechi), <a id="modal-link-go-reset-2">setează-ți una aici</a>.`;
       document.getElementById('modal-link-go-login').addEventListener('click', function () {
         loginEmail.value = email;
         showView(viewLogin);
+      });
+      document.getElementById('modal-link-go-reset-2').addEventListener('click', function () {
+        window.location.href = 'resetare-parola.html?email=' + encodeURIComponent(email);
       });
       return;
     }
@@ -591,7 +605,11 @@ registerForm.addEventListener('submit', async function (e) {
     const detail = (err && err.message) || '';
     regMsg.className = 'modal-msg err';
     if (/already registered|already exists/i.test(detail)) {
-      regMsg.textContent = `Există deja un cont cu ${email}. Intră în cont din ecranul anterior.`;
+      regMsg.innerHTML = `Există deja un cont cu ${email}. Intră în cont din ecranul anterior — sau, dacă nu ai încă o parolă, <a id="modal-link-go-reset-3">setează-ți una aici</a>.`;
+      const linkReset3 = document.getElementById('modal-link-go-reset-3');
+      if (linkReset3) linkReset3.addEventListener('click', function () {
+        window.location.href = 'resetare-parola.html?email=' + encodeURIComponent(email);
+      });
     } else if (/password/i.test(detail)) {
       regMsg.textContent = 'Parola nu respectă cerințele minime (cel puțin 6 caractere).';
     } else {
