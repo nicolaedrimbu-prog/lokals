@@ -6,50 +6,83 @@
 <title>Contul tău — Lokals</title>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{ --teal-deep:#10302B; --teal:#1A4A42; --gold:#C98A2C; --gold-soft:#E8CE9E; --cream:#F7F2E8; --ink:#181E1B; --ink-soft:#5B6459; }
+  :root{ --teal-deep:#10302B; --teal:#1A4A42; --gold:#C98A2C; --gold-soft:#E8CE9E; --cream:#F7F2E8; --ink:#181E1B; --ink-soft:#5B6459; --brick:#9C4536; }
   *{box-sizing:border-box;}
   body{margin:0; background:var(--cream); color:var(--ink); font-family:'Inter', system-ui, sans-serif; min-height:100vh;
     display:flex; align-items:center; justify-content:center; padding:24px;}
   .card{background:#fff; border-radius:20px; max-width:440px; width:100%; padding:36px 32px; box-shadow:0 12px 40px rgba(16,48,43,0.12);}
+  .brand{font-family:'Fraunces', Georgia, serif; font-weight:700; color:var(--teal-deep); text-align:center;
+    margin-bottom:22px; font-size:15px; letter-spacing:.02em;}
+  .tabs{display:flex; gap:6px; background:var(--cream); border-radius:12px; padding:4px; margin-bottom:24px;}
+  .tab{flex:1; border:none; background:transparent; padding:10px; border-radius:9px; font-family:inherit;
+    font-size:13.5px; font-weight:700; color:var(--ink-soft); cursor:pointer;}
+  .tab.active{background:#fff; color:var(--teal-deep); box-shadow:0 2px 6px rgba(16,48,43,0.1);}
   .eyebrow{font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--gold); font-weight:600; margin:0 0 8px;}
-  h1{font-family:'Fraunces', Georgia, serif; font-size:26px; margin:0 0 10px; color:var(--teal-deep);}
-  p.lead{color:var(--ink-soft); font-size:14.5px; line-height:1.55; margin:0 0 26px;}
+  h1{font-family:'Fraunces', Georgia, serif; font-size:24px; margin:0 0 10px; color:var(--teal-deep);}
+  p.lead{color:var(--ink-soft); font-size:14.5px; line-height:1.55; margin:0 0 24px;}
   label{font-size:13px; font-weight:600; color:var(--teal-deep); display:block; margin-bottom:6px;}
-  input[type="email"], input[type="text"]{width:100%; padding:13px 14px; border:1.5px solid #DDD6C4; border-radius:10px; font-size:15px;
+  input[type="email"], input[type="text"], input[type="password"]{width:100%; padding:13px 14px; border:1.5px solid #DDD6C4; border-radius:10px; font-size:15px;
     font-family:inherit; margin-bottom:18px; box-sizing:border-box;}
-  input[type="email"]:focus, input[type="text"]:focus{outline:none; border-color:var(--teal);}
-  button{width:100%; background:var(--teal-deep); color:#fff; border:none; padding:14px; border-radius:10px;
+  input[type="email"]:focus, input[type="text"]:focus, input[type="password"]:focus{outline:none; border-color:var(--teal);}
+  .field-hint{font-size:11.5px; color:var(--ink-soft); margin:-12px 0 18px;}
+  button[type="submit"]{width:100%; background:var(--teal-deep); color:#fff; border:none; padding:14px; border-radius:10px;
     font-size:15px; font-weight:600; cursor:pointer; font-family:inherit;}
-  button:disabled{opacity:.6; cursor:default;}
-  button:hover:not(:disabled){background:var(--teal);}
+  button[type="submit"]:disabled{opacity:.6; cursor:default;}
+  button[type="submit"]:hover:not(:disabled){background:var(--teal);}
   .msg{margin-top:18px; padding:14px 16px; border-radius:10px; font-size:14px; line-height:1.5; display:none;}
   .msg.ok{background:#E8F3E5; color:#2C4A2E; display:block;}
   .msg.err{background:#FBE6E0; color:#7A2E1E; display:block;}
+  .msg a{color:inherit; font-weight:700; text-decoration:underline; cursor:pointer;}
   .note{margin-top:22px; font-size:12.5px; color:var(--ink-soft); line-height:1.5;}
-  .brand{font-family:'Fraunces', Georgia, serif; font-weight:700; color:var(--teal-deep); text-align:center;
-    margin-bottom:22px; font-size:15px; letter-spacing:.02em;}
+  .form-panel{display:none;}
+  .form-panel.active{display:block;}
 </style>
 </head>
 <body>
 <div class="card">
   <div class="brand">lokals</div>
   <p class="eyebrow">Cont hotelier / partener</p>
-  <h1>Accesează contul tău</h1>
-  <p class="lead">Introdu adresa de email cu care te-ai înscris pe Lokals (ca hotelier sau ca afacere parteneră) și îți trimitem un link de confirmare — fără parolă.</p>
 
-  <form id="form-cont">
-    <label for="prenume">Prenume</label>
-    <input type="text" id="prenume" name="prenume" placeholder="ex. Andrei" required>
-    <label for="nume">Nume</label>
-    <input type="text" id="nume" name="nume" placeholder="ex. Popescu" required>
-    <label for="email">Adresa de email</label>
-    <input type="email" id="email" name="email" placeholder="nume@exemplu.ro" required>
-    <button type="submit" id="btn-submit">Trimite link de confirmare</button>
-  </form>
+  <div class="tabs">
+    <button type="button" class="tab" id="tab-login" data-mode="login">Autentificare</button>
+    <button type="button" class="tab" id="tab-register" data-mode="register">Cont nou</button>
+  </div>
 
-  <div class="msg" id="msg"></div>
+  <!-- ===== Autentificare (email + parolă) ===== -->
+  <div class="form-panel" id="panel-login">
+    <h1>Accesează contul tău</h1>
+    <p class="lead">Introdu emailul și parola cu care te-ai înregistrat pe Lokals.</p>
+    <form id="form-login">
+      <label for="login-email">Adresa de email</label>
+      <input type="email" id="login-email" name="email" placeholder="nume@exemplu.ro" required autocomplete="username">
+      <label for="login-parola">Parolă</label>
+      <input type="password" id="login-parola" name="parola" placeholder="••••••••" required autocomplete="current-password">
+      <button type="submit" id="btn-login-submit">Intră în cont</button>
+    </form>
+    <div class="msg" id="msg-login"></div>
+  </div>
 
-  <p class="note">Linkul e valabil o singură dată și expiră după câteva ore, din motive de siguranță. Dacă nu găsești emailul, verifică și folderul Spam/Promoții.</p>
+  <!-- ===== Cont nou (prenume, nume, email, parolă) ===== -->
+  <div class="form-panel" id="panel-register">
+    <h1>Creează-ți contul</h1>
+    <p class="lead">Îți trimitem un link de confirmare pe email — contul devine activ după ce dai click pe el.</p>
+    <form id="form-register">
+      <label for="reg-prenume">Prenume</label>
+      <input type="text" id="reg-prenume" name="prenume" placeholder="ex. Andrei" required autocomplete="given-name">
+      <label for="reg-nume">Nume</label>
+      <input type="text" id="reg-nume" name="nume" placeholder="ex. Popescu" required autocomplete="family-name">
+      <label for="reg-email">Adresa de email</label>
+      <input type="email" id="reg-email" name="email" placeholder="nume@exemplu.ro" required autocomplete="username">
+      <label for="reg-parola">Parolă</label>
+      <input type="password" id="reg-parola" name="parola" placeholder="minim 6 caractere" required autocomplete="new-password" minlength="6">
+      <label for="reg-parola-confirma">Confirmă parola</label>
+      <input type="password" id="reg-parola-confirma" name="parola_confirma" placeholder="••••••••" required autocomplete="new-password" minlength="6">
+      <button type="submit" id="btn-register-submit">Creează cont</button>
+    </form>
+    <div class="msg" id="msg-register"></div>
+  </div>
+
+  <p class="note" id="note-text">Linkul de confirmare e valabil o singură dată și expiră după câteva ore, din motive de siguranță. Dacă nu găsești emailul, verifică și folderul Spam/Promoții.</p>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -58,54 +91,145 @@ const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
 const SUPABASE_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const form = document.getElementById('form-cont');
-const btn = document.getElementById('btn-submit');
-const msgEl = document.getElementById('msg');
-const emailInput = document.getElementById('email');
-const prenumeInput = document.getElementById('prenume');
-const numeInput = document.getElementById('nume');
+const NOTE_LOGIN = 'Ai uitat parola sau nu ai încă un cont? Folosește fila „Cont nou” de mai sus.';
+const NOTE_REGISTER = 'Linkul de confirmare e valabil o singură dată și expiră după câteva ore, din motive de siguranță. Dacă nu găsești emailul, verifică și folderul Spam/Promoții.';
 
-// Pre-completează emailul dacă a fost trimis ca parametru în link
-// (ex. venind din ecranul de succes al inregistrare-hotelier.html / inregistrare-partener.html)
-const prefillEmail = new URLSearchParams(window.location.search).get('email');
+const tabs = { login: document.getElementById('tab-login'), register: document.getElementById('tab-register') };
+const panels = { login: document.getElementById('panel-login'), register: document.getElementById('panel-register') };
+const noteEl = document.getElementById('note-text');
+
+function setMode(mode) {
+  Object.keys(tabs).forEach(k => {
+    tabs[k].classList.toggle('active', k === mode);
+    panels[k].classList.toggle('active', k === mode);
+  });
+  noteEl.textContent = mode === 'login' ? NOTE_LOGIN : NOTE_REGISTER;
+}
+tabs.login.addEventListener('click', () => setMode('login'));
+tabs.register.addEventListener('click', () => setMode('register'));
+
+// Pre-completează emailul dacă a fost trimis ca parametru în link, și alege fila inițială
+// (ex. venind din ecranul de succes al inregistrare-hotelier.html / inregistrare-partener.html,
+// care trimite direct pe fila "Cont nou" cu emailul deja completat)
+const urlParams = new URLSearchParams(window.location.search);
+const prefillEmail = urlParams.get('email');
+const initialMode = urlParams.get('mode') === 'register' ? 'register' : 'login';
 if (prefillEmail) {
-  emailInput.value = prefillEmail;
+  document.getElementById('login-email').value = prefillEmail;
+  document.getElementById('reg-email').value = prefillEmail;
+}
+setMode(initialMode);
+
+function showMsg(el, type, text) {
+  el.className = 'msg ' + type;
+  el.innerHTML = text;
 }
 
-form.addEventListener('submit', async (e) => {
+// ---------- Autentificare ----------
+document.getElementById('form-login').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const prenume = prenumeInput.value.trim();
-  const nume = numeInput.value.trim();
-  const email = emailInput.value.trim();
-  if (!prenume || !nume || !email) return;
+  const email = document.getElementById('login-email').value.trim();
+  const parola = document.getElementById('login-parola').value;
+  if (!email || !parola) return;
 
+  const btn = document.getElementById('btn-login-submit');
+  const msgEl = document.getElementById('msg-login');
   btn.disabled = true;
-  btn.textContent = 'Se trimite...';
+  btn.textContent = 'Se autentifică...';
   msgEl.className = 'msg';
   msgEl.textContent = '';
 
   try {
-    localStorage.setItem('lokals_pending_name', JSON.stringify({ prenume, nume }));
-    const { error } = await supabaseClient.auth.signInWithOtp({
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password: parola });
+    if (error) {
+      if (/email not confirmed/i.test(error.message || '')) {
+        showMsg(msgEl, 'err', 'Contul nu e încă confirmat — caută emailul de confirmare în inbox (sau Spam) și dă click pe link.');
+      } else {
+        showMsg(msgEl, 'err', 'Email sau parolă greșite. Verifică datele sau creează un cont nou din fila de mai sus.');
+      }
+      return;
+    }
+    const pendingIntent = localStorage.getItem('lokals_signup_intent');
+    if (pendingIntent) {
+      localStorage.removeItem('lokals_signup_intent');
+      window.location.href = pendingIntent;
+      return;
+    }
+    window.location.href = 'contul-meu.html';
+  } catch (err) {
+    console.error(err);
+    showMsg(msgEl, 'err', 'Nu am putut verifica datele chiar acum. Încearcă din nou în câteva secunde.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Intră în cont';
+  }
+});
+
+// ---------- Cont nou ----------
+document.getElementById('form-register').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const prenume = document.getElementById('reg-prenume').value.trim();
+  const nume = document.getElementById('reg-nume').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const parola = document.getElementById('reg-parola').value;
+  const parolaConfirma = document.getElementById('reg-parola-confirma').value;
+  if (!prenume || !nume || !email || !parola) return;
+
+  const msgEl = document.getElementById('msg-register');
+  msgEl.className = 'msg';
+  msgEl.textContent = '';
+
+  if (parola.length < 6) {
+    showMsg(msgEl, 'err', 'Parola trebuie să aibă minim 6 caractere.');
+    return;
+  }
+  if (parola !== parolaConfirma) {
+    showMsg(msgEl, 'err', 'Cele două parole nu coincid.');
+    return;
+  }
+
+  const btn = document.getElementById('btn-register-submit');
+  btn.disabled = true;
+  btn.textContent = 'Se creează contul...';
+
+  try {
+    const { data, error } = await supabaseClient.auth.signUp({
       email,
+      password: parola,
       options: {
         emailRedirectTo: 'https://lokals.ro/cont-confirmat.html',
-        data: { prenume, nume }
-      }
+        data: { prenume, nume },
+      },
     });
 
     if (error) throw error;
 
-    msgEl.className = 'msg ok';
-    msgEl.textContent = `Ți-am trimis un link de confirmare la ${email}. Deschide-l pe același telefon/calculator ca să-ți activezi contul.`;
-    form.reset();
+    // Supabase nu dă eroare explicită pentru un email deja înregistrat (măsură anti-enumerare) —
+    // dar întoarce un utilizator fără nicio "identitate" nouă atașată, semn că exista deja un cont.
+    if (data && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      showMsg(msgEl, 'err', `Există deja un cont cu ${email}. <a id="link-go-login">Intră în cont</a> în loc să creezi unul nou.`);
+      document.getElementById('link-go-login').addEventListener('click', () => {
+        document.getElementById('login-email').value = email;
+        setMode('login');
+      });
+      return;
+    }
+
+    showMsg(msgEl, 'ok', `Ți-am trimis un link de confirmare la ${email}. Deschide-l pe același telefon/calculator ca să-ți activezi contul.`);
+    document.getElementById('form-register').reset();
   } catch (err) {
-    msgEl.className = 'msg err';
-    msgEl.textContent = 'Nu am putut trimite linkul chiar acum. Încearcă din nou în câteva secunde sau scrie-ne pe WhatsApp la 0751 090 407.';
     console.error(err);
+    const detail = (err && err.message) || '';
+    if (/already registered|already exists/i.test(detail)) {
+      showMsg(msgEl, 'err', `Există deja un cont cu ${email}. Intră în cont din fila „Autentificare”.`);
+    } else if (/password/i.test(detail)) {
+      showMsg(msgEl, 'err', 'Parola nu respectă cerințele minime (cel puțin 6 caractere).');
+    } else {
+      showMsg(msgEl, 'err', 'Nu am putut crea contul chiar acum. Încearcă din nou în câteva secunde sau scrie-ne pe WhatsApp la 0751 090 407.');
+    }
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Trimite link de confirmare';
+    btn.textContent = 'Creează cont';
   }
 });
 </script>

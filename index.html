@@ -116,20 +116,23 @@
   .modal-btn.primary:hover{background:var(--teal);}
   .modal-btn.secondary{background:#fff; color:var(--teal-deep); border:1.5px solid var(--teal-deep);}
   .modal-btn.secondary:hover{background:var(--cream);}
-  #modal-login-form label{font-size:13px; font-weight:600; color:var(--teal-deep); display:block; margin-bottom:6px; text-align:left;}
-  #modal-login-form input[type="email"], #modal-login-form input[type="text"]{width:100%; padding:12px 14px;
+  .modal-form label{font-size:13px; font-weight:600; color:var(--teal-deep); display:block; margin-bottom:6px; text-align:left;}
+  .modal-form input[type="email"], .modal-form input[type="text"], .modal-form input[type="password"]{width:100%; padding:12px 14px;
     border:1.5px solid var(--line); border-radius:10px; font-size:15px; font-family:inherit; margin-bottom:14px; box-sizing:border-box;}
-  #modal-login-form input[type="email"]:focus, #modal-login-form input[type="text"]:focus{outline:none; border-color:var(--teal);}
-  #modal-login-form button{width:100%; background:var(--teal-deep); color:#fff; border:none; padding:13px; border-radius:10px;
+  .modal-form input[type="email"]:focus, .modal-form input[type="text"]:focus, .modal-form input[type="password"]:focus{outline:none; border-color:var(--teal);}
+  .modal-form button[type="submit"]{width:100%; background:var(--teal-deep); color:#fff; border:none; padding:13px; border-radius:10px;
     font-size:14.5px; font-weight:700; cursor:pointer; font-family:inherit;}
-  #modal-login-form button:disabled{opacity:.6; cursor:default;}
-  #modal-login-form button:hover:not(:disabled){background:var(--teal);}
+  .modal-form button[type="submit"]:disabled{opacity:.6; cursor:default;}
+  .modal-form button[type="submit"]:hover:not(:disabled){background:var(--teal);}
   .modal-msg{margin-top:14px; padding:12px 14px; border-radius:10px; font-size:13.5px; line-height:1.5; display:none; text-align:left;}
   .modal-msg.ok{background:#E8F3E5; color:#2C4A2E; display:block;}
   .modal-msg.err{background:#FBE6E0; color:#7A2E1E; display:block;}
+  .modal-msg a{color:inherit; font-weight:700; text-decoration:underline; cursor:pointer;}
   .modal-back{background:none; border:none; color:var(--ink-soft); font-size:13px; font-family:inherit;
     cursor:pointer; margin-top:16px; padding:4px;}
   .modal-back:hover{color:var(--teal-deep);}
+  .modal-switch{font-size:13px; color:var(--ink-soft); margin-top:14px;}
+  .modal-switch a{color:var(--teal-deep); font-weight:700; text-decoration:underline; cursor:pointer;}
 </style>
 </head>
 <body>
@@ -304,18 +307,39 @@
     <div class="modal-view" id="view-login">
       <div class="modal-brand">lokals</div>
       <h2>Accesează contul tău</h2>
-      <p class="modal-lead">Introdu numele tău și adresa de email cu care te-ai înscris ca hotelier sau ca afacere parteneră și îți trimitem un link de confirmare — fără parolă.</p>
-      <form id="modal-login-form">
-        <label for="modal-login-prenume">Prenume</label>
-        <input type="text" id="modal-login-prenume" name="prenume" placeholder="ex. Andrei" required>
-        <label for="modal-login-nume">Nume</label>
-        <input type="text" id="modal-login-nume" name="nume" placeholder="ex. Popescu" required>
+      <p class="modal-lead">Introdu emailul și parola cu care te-ai înregistrat pe Lokals.</p>
+      <form class="modal-form" id="modal-login-form">
         <label for="modal-login-email">Adresa de email</label>
-        <input type="email" id="modal-login-email" name="email" placeholder="nume@exemplu.ro" required>
-        <button type="submit" id="modal-login-submit">Trimite link de confirmare</button>
+        <input type="email" id="modal-login-email" name="email" placeholder="nume@exemplu.ro" required autocomplete="username">
+        <label for="modal-login-parola">Parolă</label>
+        <input type="password" id="modal-login-parola" name="parola" placeholder="••••••••" required autocomplete="current-password">
+        <button type="submit" id="modal-login-submit">Intră în cont</button>
       </form>
       <div class="modal-msg" id="modal-login-msg"></div>
+      <p class="modal-switch">Nu ai încă un cont? <a id="link-to-register">Creează unul</a></p>
       <button class="modal-back" id="btn-back-to-choice" type="button">← Înapoi</button>
+    </div>
+
+    <div class="modal-view" id="view-register">
+      <div class="modal-brand">lokals</div>
+      <h2>Creează-ți contul</h2>
+      <p class="modal-lead">Îți trimitem un link de confirmare pe email — contul devine activ după ce dai click pe el.</p>
+      <form class="modal-form" id="modal-register-form">
+        <label for="modal-reg-prenume">Prenume</label>
+        <input type="text" id="modal-reg-prenume" name="prenume" placeholder="ex. Andrei" required autocomplete="given-name">
+        <label for="modal-reg-nume">Nume</label>
+        <input type="text" id="modal-reg-nume" name="nume" placeholder="ex. Popescu" required autocomplete="family-name">
+        <label for="modal-reg-email">Adresa de email</label>
+        <input type="email" id="modal-reg-email" name="email" placeholder="nume@exemplu.ro" required autocomplete="username">
+        <label for="modal-reg-parola">Parolă</label>
+        <input type="password" id="modal-reg-parola" name="parola" placeholder="minim 6 caractere" required autocomplete="new-password" minlength="6">
+        <label for="modal-reg-parola-confirma">Confirmă parola</label>
+        <input type="password" id="modal-reg-parola-confirma" name="parola_confirma" placeholder="••••••••" required autocomplete="new-password" minlength="6">
+        <button type="submit" id="modal-register-submit">Creează cont</button>
+      </form>
+      <div class="modal-msg" id="modal-register-msg"></div>
+      <p class="modal-switch">Ai deja cont? <a id="link-to-login">Autentifică-te</a></p>
+      <button class="modal-back" id="btn-back-to-choice-2" type="button">← Înapoi</button>
     </div>
 
   </div>
@@ -330,13 +354,21 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const overlay = document.getElementById('modal-overlay');
 const viewChoice = document.getElementById('view-choice');
 const viewLogin = document.getElementById('view-login');
+const viewRegister = document.getElementById('view-register');
 const btnChoiceSignup = document.getElementById('btn-choice-signup');
 const loginForm = document.getElementById('modal-login-form');
-const loginPrenume = document.getElementById('modal-login-prenume');
-const loginNume = document.getElementById('modal-login-nume');
 const loginEmail = document.getElementById('modal-login-email');
+const loginParola = document.getElementById('modal-login-parola');
 const loginBtn = document.getElementById('modal-login-submit');
 const loginMsg = document.getElementById('modal-login-msg');
+const registerForm = document.getElementById('modal-register-form');
+const regPrenume = document.getElementById('modal-reg-prenume');
+const regNume = document.getElementById('modal-reg-nume');
+const regEmail = document.getElementById('modal-reg-email');
+const regParola = document.getElementById('modal-reg-parola');
+const regParolaConfirma = document.getElementById('modal-reg-parola-confirma');
+const regBtn = document.getElementById('modal-register-submit');
+const regMsg = document.getElementById('modal-register-msg');
 
 function displayName(user) {
   const meta = user.user_metadata || {};
@@ -359,6 +391,9 @@ function openModal(view, signupHref) {
   loginMsg.className = 'modal-msg';
   loginMsg.textContent = '';
   loginForm.reset();
+  regMsg.className = 'modal-msg';
+  regMsg.textContent = '';
+  registerForm.reset();
   showView(view);
   overlay.classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -421,16 +456,29 @@ headerLoginBtn.addEventListener('click', function () {
 });
 
 // În popup, "Am deja cont" trece la formularul de login — reținem și de unde a pornit
-// (hotelier/partener), ca după confirmare să continue direct la pasul de înscriere
+// (hotelier/partener), ca după autentificare să continue direct la pasul de înscriere
 document.getElementById('btn-choice-login').addEventListener('click', function () {
   const intent = btnChoiceSignup.getAttribute('href');
   if (intent) localStorage.setItem('lokals_signup_intent', intent);
   showView(viewLogin);
 });
 
-// "Înapoi" din login revine la ecranul de alegere
+// "Înapoi" din login/register revine la ecranul de alegere
 document.getElementById('btn-back-to-choice').addEventListener('click', function () {
   showView(viewChoice);
+});
+document.getElementById('btn-back-to-choice-2').addEventListener('click', function () {
+  showView(viewChoice);
+});
+
+// Comutare directă între login și cont nou, fără să treacă prin ecranul de alegere
+document.getElementById('link-to-register').addEventListener('click', function () {
+  regEmail.value = loginEmail.value;
+  showView(viewRegister);
+});
+document.getElementById('link-to-login').addEventListener('click', function () {
+  loginEmail.value = regEmail.value;
+  showView(viewLogin);
 });
 
 // Închidere: buton ×, click pe fundal, tasta Escape
@@ -442,41 +490,116 @@ document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape' && overlay.classList.contains('open')) closeModal();
 });
 
-// Trimiterea formularului de login (magic link, fără parolă)
+// ---------- Autentificare (email + parolă) ----------
 loginForm.addEventListener('submit', async function (e) {
   e.preventDefault();
-  const prenume = loginPrenume.value.trim();
-  const nume = loginNume.value.trim();
   const email = loginEmail.value.trim();
-  if (!prenume || !nume || !email) return;
+  const parola = loginParola.value;
+  if (!email || !parola) return;
 
   loginBtn.disabled = true;
-  loginBtn.textContent = 'Se trimite...';
+  loginBtn.textContent = 'Se autentifică...';
   loginMsg.className = 'modal-msg';
   loginMsg.textContent = '';
 
   try {
-    localStorage.setItem('lokals_pending_name', JSON.stringify({ prenume, nume }));
-    const { error } = await supabaseClient.auth.signInWithOtp({
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password: parola });
+    if (error) {
+      loginMsg.className = 'modal-msg err';
+      loginMsg.textContent = /email not confirmed/i.test(error.message || '')
+        ? 'Contul nu e încă confirmat — caută emailul de confirmare în inbox (sau Spam) și dă click pe link.'
+        : 'Email sau parolă greșite. Verifică datele sau creează un cont nou.';
+      return;
+    }
+    await refreshAuthUI();
+    const pendingIntent = localStorage.getItem('lokals_signup_intent');
+    if (pendingIntent) {
+      localStorage.removeItem('lokals_signup_intent');
+      window.location.href = pendingIntent;
+      return;
+    }
+    closeModal();
+  } catch (err) {
+    loginMsg.className = 'modal-msg err';
+    loginMsg.textContent = 'Nu am putut verifica datele chiar acum. Încearcă din nou în câteva secunde.';
+    console.error(err);
+  } finally {
+    loginBtn.disabled = false;
+    loginBtn.textContent = 'Intră în cont';
+  }
+});
+
+// ---------- Cont nou (prenume, nume, email, parolă + confirmare pe email) ----------
+registerForm.addEventListener('submit', async function (e) {
+  e.preventDefault();
+  const prenume = regPrenume.value.trim();
+  const nume = regNume.value.trim();
+  const email = regEmail.value.trim();
+  const parola = regParola.value;
+  const parolaConfirma = regParolaConfirma.value;
+  if (!prenume || !nume || !email || !parola) return;
+
+  regMsg.className = 'modal-msg';
+  regMsg.textContent = '';
+
+  if (parola.length < 6) {
+    regMsg.className = 'modal-msg err';
+    regMsg.textContent = 'Parola trebuie să aibă minim 6 caractere.';
+    return;
+  }
+  if (parola !== parolaConfirma) {
+    regMsg.className = 'modal-msg err';
+    regMsg.textContent = 'Cele două parole nu coincid.';
+    return;
+  }
+
+  regBtn.disabled = true;
+  regBtn.textContent = 'Se creează contul...';
+
+  try {
+    const { data, error } = await supabaseClient.auth.signUp({
       email,
+      password: parola,
       options: {
         emailRedirectTo: 'https://lokals.ro/cont-confirmat.html',
-        data: { prenume, nume }
-      }
+        data: { prenume, nume },
+      },
     });
 
     if (error) throw error;
 
-    loginMsg.className = 'modal-msg ok';
-    loginMsg.textContent = `Ți-am trimis un link de confirmare la ${email}. Deschide-l pe același telefon/calculator ca să-ți activezi contul.`;
-    loginForm.reset();
+    if (data && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      regMsg.className = 'modal-msg err';
+      regMsg.innerHTML = `Există deja un cont cu ${email}. <a id="modal-link-go-login">Intră în cont</a> în loc să creezi unul nou.`;
+      document.getElementById('modal-link-go-login').addEventListener('click', function () {
+        loginEmail.value = email;
+        showView(viewLogin);
+      });
+      return;
+    }
+
+    // Butonul "Sunt nou" ține deja minte formularul de înscriere țintă în btnChoiceSignup —
+    // îl reținem ca "intent", exact ca la login, ca după confirmarea de pe email să continue acolo.
+    const intent = btnChoiceSignup.getAttribute('href');
+    if (intent) localStorage.setItem('lokals_signup_intent', intent);
+
+    regMsg.className = 'modal-msg ok';
+    regMsg.textContent = `Ți-am trimis un link de confirmare la ${email}. Deschide-l pe același telefon/calculator ca să-ți activezi contul.`;
+    registerForm.reset();
   } catch (err) {
-    loginMsg.className = 'modal-msg err';
-    loginMsg.textContent = 'Nu am putut trimite linkul chiar acum. Încearcă din nou în câteva secunde sau scrie-ne pe WhatsApp la 0751 090 407.';
     console.error(err);
+    const detail = (err && err.message) || '';
+    regMsg.className = 'modal-msg err';
+    if (/already registered|already exists/i.test(detail)) {
+      regMsg.textContent = `Există deja un cont cu ${email}. Intră în cont din ecranul anterior.`;
+    } else if (/password/i.test(detail)) {
+      regMsg.textContent = 'Parola nu respectă cerințele minime (cel puțin 6 caractere).';
+    } else {
+      regMsg.textContent = 'Nu am putut crea contul chiar acum. Încearcă din nou în câteva secunde sau scrie-ne pe WhatsApp la 0751 090 407.';
+    }
   } finally {
-    loginBtn.disabled = false;
-    loginBtn.textContent = 'Trimite link de confirmare';
+    regBtn.disabled = false;
+    regBtn.textContent = 'Creează cont';
   }
 });
 </script>

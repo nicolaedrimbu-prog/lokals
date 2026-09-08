@@ -334,7 +334,7 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
       accountLink.textContent = '🔑 Vezi afacerea în Proprietățile mele';
       accountLink.href = 'contul-meu.html';
     } else {
-      accountLink.href = 'cont.html?email=' + encodeURIComponent(email);
+      accountLink.href = 'cont.html?mode=register&email=' + encodeURIComponent(email);
     }
   } else {
     errorEl.textContent = 'Nu am putut trimite chiar acum. Încearcă din nou în câteva secunde.';

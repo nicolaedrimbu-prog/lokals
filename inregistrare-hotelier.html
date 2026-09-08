@@ -434,7 +434,7 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
         ? 'setari-cazare.html?slug=' + encodeURIComponent(singleSavedSlug)
         : 'contul-meu.html';
     } else {
-      accountLink.href = 'cont.html?email=' + encodeURIComponent(email);
+      accountLink.href = 'cont.html?mode=register&email=' + encodeURIComponent(email);
     }
   } catch (err) {
     errorEl.textContent = 'Nu am putut salva chiar acum. Încearcă din nou în câteva secunde.';
