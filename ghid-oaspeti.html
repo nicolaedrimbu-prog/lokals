@@ -246,8 +246,11 @@ const ZONA_LABELS = {
 // ilustrează cum arată secțiunea de check-in unui oaspete real, fără să expună vreo dată reală.
 // Un oaspete real vede mereu propriul cod, generat unic pentru sejurul lui (butonul "Generează codul meu").
 const DEMO_OPERATOR_TEMPLATE = {
-  id: 'demo', tip: 'apartament', adresa: '', foto_url: '',
+  id: 'demo', tip: 'apartament',
+  adresa: 'Centrul Râșnov, Brașov (adresă exemplu)',
+  foto_url: '/demo-poza-pensiune.jpg',
   facilitati_cazare: {
+    locatie: { gps: 'Cetatea Râșnov, Brașov', parcare: 'Parcare gratuită în apropiere (exemplu)' },
     checkin: { ora: '15:00 (exemplu)', cod_acces: 'DEMO-482', unitate: 'Apartament exemplu',
       instructiuni: 'Acesta este un exemplu — un oaspete real vede propriul cod de acces, unic pentru sejurul lui.' },
     checkout: { ora: '11:00 (exemplu)' },
