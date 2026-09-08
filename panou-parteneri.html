@@ -59,7 +59,11 @@
   #list{display:flex; flex-direction:column; gap:12px;}
   .prow{background:#fff; border:1px solid var(--line); border-radius:16px; padding:18px 20px;}
   .prow-top{display:flex; align-items:center; gap:18px;}
-  .picon{width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:19px;}
+  .picon{width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:19px; overflow:hidden;}
+  .picon img{width:100%; height:100%; object-fit:cover; display:block;}
+  .pphoto-large{width:100%; max-width:340px; height:190px; border-radius:12px; overflow:hidden; margin-bottom:12px; border:1px solid var(--line); background:var(--cream);}
+  .pphoto-large img{width:100%; height:100%; object-fit:cover; display:block; cursor:zoom-in;}
+  .pphoto-missing{width:100%; max-width:340px; height:100px; border-radius:12px; margin-bottom:12px; border:1.5px dashed var(--line); background:var(--cream); display:flex; align-items:center; justify-content:center; color:var(--ink-soft); font-size:12.5px; text-align:center; padding:10px;}
   .pinfo{flex:1; min-width:0;}
   .pname-row{display:flex; align-items:center; gap:10px; margin-bottom:3px; flex-wrap:wrap;}
   .pname{font-size:16px; font-weight:700; color:var(--teal-deep);}
@@ -118,6 +122,9 @@
       <div class="chips" id="chips"></div>
       <input type="text" id="search" placeholder="Caută după nume sau email...">
     </div>
+    <div class="toolbar" style="margin-top:-8px;">
+      <div class="chips" id="chips-zona"></div>
+    </div>
 
     <div id="loading">Se încarcă...</div>
     <div id="empty" style="display:none;">Niciun rezultat pentru acest filtru.</div>
@@ -168,8 +175,9 @@ const STATUS_COLOR = {
   respins: { bg: "#F1E3DF", fg: "var(--brick)" },
 };
 
-let ROWS = [];       // { source: 'candidati_parteneri'|'operatori', id, nume, categorieLabel, zona, email, data, status, raw }
+let ROWS = [];       // { source: 'candidati_parteneri'|'operatori', id, nume, categorieLabel, zona, email, data, status, foto, raw }
 let currentFilter = 'toate';
+let currentZonaFilter = 'toate';
 
 function showView(id){
   document.querySelectorAll('.state').forEach(el => el.classList.remove('active'));
@@ -250,13 +258,15 @@ async function loadAll(){
     source: 'candidati_parteneri', id: r.id, nume: r.nume_afacere,
     categorieLabel: CATEGORII[r.categorie] || r.categorie || '—',
     icon: CAT_ICON[r.categorie] || '📍',
-    zona: r.zona, email: r.email, data: r.created_at, status: r.status || 'nou', raw: r,
+    zona: r.zona, email: r.email, data: r.created_at, status: r.status || 'nou',
+    foto: (r.poza_url || '').trim() || null, raw: r,
   }));
   const op = (opRes.data || []).map(r => ({
     source: 'operatori', id: r.id, nume: r.nume_afacere,
     categorieLabel: r.tip === 'hotel' ? 'Cazare · Hotel' : 'Cazare · Apartament',
     icon: '🛏️',
-    zona: r.zona, email: r.email, data: r.created_at, status: r.status || 'nou', raw: r,
+    zona: r.zona, email: r.email, data: r.created_at, status: r.status || 'nou',
+    foto: (r.foto_url || '').trim() || null, raw: r,
   }));
 
   ROWS = cand.concat(op).sort((a, b) => new Date(b.data) - new Date(a.data));
@@ -280,11 +290,32 @@ function renderChips(){
   chips.querySelectorAll('.chip').forEach(el => {
     el.addEventListener('click', () => { currentFilter = el.dataset.filter; renderChips(); renderList(); });
   });
+
+  // Chip-uri de zonă — construite dinamic din zonele prezente în date, ca lista să rămână
+  // corectă și dacă apar zone noi (vezi și expansion-zones — zone noi).
+  const zoneCounts = { toate: ROWS.length };
+  const zoneOrder = [];
+  ROWS.forEach(r => {
+    const z = (r.zona || '').trim() || '—';
+    if (!(z in zoneCounts)) { zoneCounts[z] = 0; zoneOrder.push(z); }
+    zoneCounts[z]++;
+  });
+  const zoneDefs = [['toate', 'Toate zonele'], ...zoneOrder.sort().map(z => [z, zonaLabel(z)])];
+  const chipsZona = document.getElementById('chips-zona');
+  chipsZona.innerHTML = zoneDefs.map(([key, label]) => `
+    <div class="chip ${currentZonaFilter === key ? 'active' : ''}" data-zona="${escapeHtml(key)}">
+      ${escapeHtml(label)} <span class="n">(${zoneCounts[key] || 0})</span>
+    </div>
+  `).join('');
+  chipsZona.querySelectorAll('.chip').forEach(el => {
+    el.addEventListener('click', () => { currentZonaFilter = el.dataset.zona; renderChips(); renderList(); });
+  });
 }
 
 function renderList(){
   const q = document.getElementById('search').value.trim().toLowerCase();
   let list = currentFilter === 'toate' ? ROWS : ROWS.filter(r => r.status === currentFilter);
+  if (currentZonaFilter !== 'toate') list = list.filter(r => ((r.zona || '').trim() || '—') === currentZonaFilter);
   if (q) list = list.filter(r => (r.nume || '').toLowerCase().includes(q) || (r.email || '').toLowerCase().includes(q));
 
   const listEl = document.getElementById('list');
@@ -310,7 +341,7 @@ function rowHtml(r){
   return `
     <div class="prow">
       <div class="prow-top">
-        <div class="picon" style="background:${sc.bg};">${r.icon}</div>
+        <div class="picon" style="background:${sc.bg};">${r.foto ? `<img src="${escapeHtml(r.foto)}" alt="">` : r.icon}</div>
         <div class="pinfo">
           <div class="pname-row">
             <span class="pname serif">${escapeHtml(r.nume || '(fără nume)')}</span>
@@ -344,6 +375,11 @@ function actionsHtml(r){
 
 function detailsHtml(r){
   const raw = r.raw;
+  // Poza rămâne vizibilă aici indiferent de status — retragerea din ghid schimbă doar
+  // statusul, nu șterge poza_url/foto_url din bază, deci trebuie să se vadă mereu clar.
+  const photoHtml = r.foto
+    ? `<a href="${escapeHtml(r.foto)}" target="_blank" rel="noopener" class="pphoto-large"><img src="${escapeHtml(r.foto)}" alt="Poză ${escapeHtml(r.nume || '')}"></a>`
+    : `<div class="pphoto-missing">Fără poză încărcată${r.source === 'candidati_parteneri' ? ' (câmp poza_url gol)' : ' (câmp foto_url gol)'}</div>`;
   const lines = [];
   if (r.source === 'candidati_parteneri') {
     if (raw.persoana_contact) lines.push(`<b>Persoană de contact:</b> ${escapeHtml(raw.persoana_contact)}`);
@@ -359,7 +395,8 @@ function detailsHtml(r){
     if (raw.nr_camere) lines.push(`<b>Nr. camere/apartamente:</b> ${escapeHtml(String(raw.nr_camere))}`);
     lines.push(`<b>Cont confirmat:</b> ${raw.cont_confirmat ? 'Da' : 'Nu'}`);
   }
-  return lines.length ? lines.map(l => `<div>${l}</div>`).join('') : '<div style="color:var(--ink-soft);">Fără detalii suplimentare.</div>';
+  const linesHtml = lines.length ? lines.map(l => `<div>${l}</div>`).join('') : '<div style="color:var(--ink-soft);">Fără detalii suplimentare.</div>';
+  return photoHtml + linesHtml;
 }
 
 function escapeHtml(s){
