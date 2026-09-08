@@ -77,6 +77,16 @@
   .pdetails{display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--line); font-size:13px; color:var(--ink); line-height:1.7;}
   .pdetails.open{display:block;}
   .pdetails b{color:var(--teal-deep);}
+
+  .efield{margin-bottom:12px;}
+  .efield label{display:block; font-size:11.5px; font-weight:700; color:var(--teal-deep); text-transform:uppercase; letter-spacing:.03em; margin-bottom:4px;}
+  .efield input, .efield select, .efield textarea{width:100%; border:1.5px solid var(--line); border-radius:9px; padding:9px 11px; font-size:13.5px; font-family:inherit; background:#fff; color:var(--ink);}
+  .efield textarea{resize:vertical; min-height:64px;}
+  .egrid{display:grid; grid-template-columns:1fr 1fr; gap:0 14px;}
+  .esave-row{display:flex; align-items:center; gap:10px; margin-top:4px;}
+  .esave-msg{font-size:12.5px; color:var(--green);}
+  .esave-msg.err{color:var(--brick);}
+
   #empty, #loading{text-align:center; color:var(--ink-soft); font-size:14px; padding:40px 0;}
   #footnote{text-align:center; font-size:12px; color:var(--ink-soft); margin-top:28px;}
 </style>
@@ -120,7 +130,16 @@
 
     <div class="toolbar">
       <div class="chips" id="chips"></div>
-      <input type="text" id="search" placeholder="Caută după nume sau email...">
+      <div style="display:flex; gap:8px;">
+        <select id="sort" style="border:1.5px solid var(--line); border-radius:11px; padding:9px 12px; font-size:13.5px; font-family:inherit; background:#fff; color:var(--ink);">
+          <option value="data-desc">Cele mai noi</option>
+          <option value="data-asc">Cele mai vechi</option>
+          <option value="nume-asc">Nume A–Z</option>
+          <option value="nume-desc">Nume Z–A</option>
+          <option value="status">Status</option>
+        </select>
+        <input type="text" id="search" placeholder="Caută după nume sau email...">
+      </div>
     </div>
     <div class="toolbar" style="margin-top:-8px;">
       <div class="chips" id="chips-zona"></div>
@@ -178,6 +197,8 @@ const STATUS_COLOR = {
 let ROWS = [];       // { source: 'candidati_parteneri'|'operatori', id, nume, categorieLabel, zona, email, data, status, foto, raw }
 let currentFilter = 'toate';
 let currentZonaFilter = 'toate';
+let currentSort = 'data-desc';
+const STATUS_ORDER = { nou: 0, publicat: 1, respins: 2 };
 
 function showView(id){
   document.querySelectorAll('.state').forEach(el => el.classList.remove('active'));
@@ -312,11 +333,25 @@ function renderChips(){
   });
 }
 
+function sortRows(list){
+  const sorted = list.slice();
+  switch (currentSort) {
+    case 'data-asc': sorted.sort((a, b) => new Date(a.data) - new Date(b.data)); break;
+    case 'nume-asc': sorted.sort((a, b) => (a.nume || '').localeCompare(b.nume || '', 'ro')); break;
+    case 'nume-desc': sorted.sort((a, b) => (b.nume || '').localeCompare(a.nume || '', 'ro')); break;
+    case 'status': sorted.sort((a, b) => (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9) || new Date(b.data) - new Date(a.data)); break;
+    case 'data-desc':
+    default: sorted.sort((a, b) => new Date(b.data) - new Date(a.data));
+  }
+  return sorted;
+}
+
 function renderList(){
   const q = document.getElementById('search').value.trim().toLowerCase();
   let list = currentFilter === 'toate' ? ROWS : ROWS.filter(r => r.status === currentFilter);
   if (currentZonaFilter !== 'toate') list = list.filter(r => ((r.zona || '').trim() || '—') === currentZonaFilter);
   if (q) list = list.filter(r => (r.nume || '').toLowerCase().includes(q) || (r.email || '').toLowerCase().includes(q));
+  list = sortRows(list);
 
   const listEl = document.getElementById('list');
   document.getElementById('empty').style.display = list.length ? 'none' : 'block';
@@ -330,6 +365,12 @@ function renderList(){
       const details = document.getElementById('details-' + btn.dataset.toggle);
       details.classList.toggle('open');
       btn.textContent = details.classList.contains('open') ? 'Ascunde detalii' : 'Vezi detalii';
+    });
+  });
+  listEl.querySelectorAll('[data-save-row]').forEach(form => {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      handleSave(form);
     });
   });
 }
@@ -373,30 +414,127 @@ function actionsHtml(r){
   return btns.join('');
 }
 
+// Câmpurile editabile din panou, per tabel. type: 'text'|'tel'|'email'|'url'|'textarea'|'select'|'number'.
+const CAND_FIELDS = [
+  { key: 'nume_afacere', label: 'Nume afacere', type: 'text' },
+  { key: 'categorie', label: 'Categorie', type: 'select', options: Object.entries(CATEGORII) },
+  { key: 'zona', label: 'Zonă', type: 'text' },
+  { key: 'persoana_contact', label: 'Persoană de contact', type: 'text' },
+  { key: 'telefon', label: 'Telefon', type: 'tel' },
+  { key: 'email', label: 'Email', type: 'email' },
+  { key: 'adresa', label: 'Adresă', type: 'text', full: true },
+  { key: 'descriere', label: 'Descriere', type: 'textarea', full: true },
+  { key: 'website', label: 'Website', type: 'url' },
+  { key: 'facebook', label: 'Facebook', type: 'url' },
+  { key: 'instagram', label: 'Instagram', type: 'url' },
+  { key: 'beneficiu_propus', label: 'Beneficiu propus', type: 'text', full: true },
+];
+const OP_FIELDS = [
+  { key: 'nume_afacere', label: 'Nume cazare', type: 'text' },
+  { key: 'tip', label: 'Tip', type: 'select', options: [['hotel','Hotel'],['apartament','Apartament']] },
+  { key: 'zona', label: 'Zonă', type: 'text' },
+  { key: 'persoana_contact', label: 'Persoană de contact', type: 'text' },
+  { key: 'telefon', label: 'Telefon', type: 'tel' },
+  { key: 'email', label: 'Email', type: 'email' },
+  { key: 'adresa', label: 'Adresă', type: 'text', full: true },
+  { key: 'nr_camere', label: 'Nr. camere/apartamente', type: 'number' },
+];
+
+function fieldHtml(f, value){
+  const v = value == null ? '' : String(value);
+  if (f.type === 'textarea') {
+    return `<textarea name="${f.key}">${escapeHtml(v)}</textarea>`;
+  }
+  if (f.type === 'select') {
+    const opts = f.options.map(([val, lbl]) => `<option value="${escapeHtml(val)}" ${val === v ? 'selected' : ''}>${escapeHtml(lbl)}</option>`).join('');
+    return `<select name="${f.key}">${opts}</select>`;
+  }
+  return `<input type="${f.type === 'number' ? 'number' : f.type}" name="${f.key}" value="${escapeHtml(v)}">`;
+}
+
 function detailsHtml(r){
   const raw = r.raw;
+  const rowId = r.source + '-' + r.id;
   // Poza rămâne vizibilă aici indiferent de status — retragerea din ghid schimbă doar
   // statusul, nu șterge poza_url/foto_url din bază, deci trebuie să se vadă mereu clar.
   const photoHtml = r.foto
     ? `<a href="${escapeHtml(r.foto)}" target="_blank" rel="noopener" class="pphoto-large"><img src="${escapeHtml(r.foto)}" alt="Poză ${escapeHtml(r.nume || '')}"></a>`
     : `<div class="pphoto-missing">Fără poză încărcată${r.source === 'candidati_parteneri' ? ' (câmp poza_url gol)' : ' (câmp foto_url gol)'}</div>`;
-  const lines = [];
-  if (r.source === 'candidati_parteneri') {
-    if (raw.persoana_contact) lines.push(`<b>Persoană de contact:</b> ${escapeHtml(raw.persoana_contact)}`);
-    if (raw.telefon) lines.push(`<b>Telefon:</b> ${escapeHtml(raw.telefon)}`);
-    if (raw.adresa) lines.push(`<b>Adresă:</b> ${escapeHtml(raw.adresa)}`);
-    if (raw.descriere) lines.push(`<b>Descriere:</b> ${escapeHtml(raw.descriere)}`);
-    if (raw.website) lines.push(`<b>Website:</b> ${escapeHtml(raw.website)}`);
-    if (raw.beneficiu_propus) lines.push(`<b>Beneficiu propus:</b> ${escapeHtml(raw.beneficiu_propus)}`);
-  } else {
-    if (raw.persoana_contact) lines.push(`<b>Persoană de contact:</b> ${escapeHtml(raw.persoana_contact)}`);
-    if (raw.telefon) lines.push(`<b>Telefon:</b> ${escapeHtml(raw.telefon)}`);
-    if (raw.adresa) lines.push(`<b>Adresă:</b> ${escapeHtml(raw.adresa)}`);
-    if (raw.nr_camere) lines.push(`<b>Nr. camere/apartamente:</b> ${escapeHtml(String(raw.nr_camere))}`);
-    lines.push(`<b>Cont confirmat:</b> ${raw.cont_confirmat ? 'Da' : 'Nu'}`);
+
+  const fields = r.source === 'candidati_parteneri' ? CAND_FIELDS : OP_FIELDS;
+  const fieldsHtml = fields.map(f => `
+    <div class="efield" style="${f.full ? 'grid-column:1/-1;' : ''}">
+      <label for="ef-${rowId}-${f.key}">${escapeHtml(f.label)}</label>
+      ${fieldHtml(f, raw[f.key]).replace('<input', `<input id="ef-${rowId}-${f.key}"`).replace('<select', `<select id="ef-${rowId}-${f.key}"`).replace('<textarea', `<textarea id="ef-${rowId}-${f.key}"`)}
+    </div>
+  `).join('');
+
+  const extraHtml = r.source === 'operatori'
+    ? `<div style="margin:6px 0 12px; color:var(--ink-soft);">Cont confirmat: ${raw.cont_confirmat ? 'Da' : 'Nu'}</div>`
+    : '';
+
+  return `
+    ${photoHtml}
+    <form data-save-row="${rowId}" data-source="${r.source}" data-id="${r.id}">
+      <div class="egrid">${fieldsHtml}</div>
+      ${extraHtml}
+      <div class="esave-row">
+        <button type="submit" class="pbtn primary">Salvează modificările</button>
+        <span class="esave-msg" id="esave-msg-${rowId}"></span>
+      </div>
+    </form>
+  `;
+}
+
+async function handleSave(form){
+  const source = form.dataset.source;
+  const id = form.dataset.id;
+  const rowId = form.dataset.saveRow;
+  const msgEl = document.getElementById('esave-msg-' + rowId);
+  const btn = form.querySelector('button[type="submit"]');
+  const fields = source === 'candidati_parteneri' ? CAND_FIELDS : OP_FIELDS;
+
+  const payload = {};
+  fields.forEach(f => {
+    const el = form.querySelector(`[name="${f.key}"]`);
+    if (!el) return;
+    let val = el.value;
+    if (f.type === 'number') { payload[f.key] = val === '' ? null : Number(val); return; }
+    payload[f.key] = val.trim();
+  });
+
+  btn.disabled = true;
+  msgEl.className = 'esave-msg'; msgEl.textContent = '';
+  const { error } = await supabaseClient.from(source).update(payload).eq('id', id);
+  btn.disabled = false;
+  if (error) {
+    console.error(error);
+    msgEl.className = 'esave-msg err';
+    msgEl.textContent = 'Nu am putut salva. Încearcă din nou.';
+    return;
   }
-  const linesHtml = lines.length ? lines.map(l => `<div>${l}</div>`).join('') : '<div style="color:var(--ink-soft);">Fără detalii suplimentare.</div>';
-  return photoHtml + linesHtml;
+  const row = ROWS.find(r => r.source === source && String(r.id) === String(id));
+  if (row) {
+    Object.assign(row.raw, payload);
+    row.nume = row.raw.nume_afacere;
+    row.zona = row.raw.zona;
+    row.email = row.raw.email;
+    if (source === 'candidati_parteneri') row.categorieLabel = CATEGORII[row.raw.categorie] || row.raw.categorie || '—';
+    else row.categorieLabel = row.raw.tip === 'hotel' ? 'Cazare · Hotel' : 'Cazare · Apartament';
+  }
+  msgEl.className = 'esave-msg';
+  msgEl.textContent = 'Salvat.';
+  renderChips();
+  renderList();
+  // redeschide detaliile după re-randare, ca admin să vadă confirmarea fără să caute cardul din nou
+  const details = document.getElementById('details-' + rowId);
+  if (details) {
+    details.classList.add('open');
+    const toggleBtn = document.querySelector(`[data-toggle="${rowId}"]`);
+    if (toggleBtn) toggleBtn.textContent = 'Ascunde detalii';
+    const newMsgEl = document.getElementById('esave-msg-' + rowId);
+    if (newMsgEl) newMsgEl.textContent = 'Salvat.';
+  }
 }
 
 function escapeHtml(s){
@@ -419,6 +557,7 @@ async function handleAction(btn, source, id, newStatus){
 }
 
 document.getElementById('search').addEventListener('input', renderList);
+document.getElementById('sort').addEventListener('change', (e) => { currentSort = e.target.value; renderList(); });
 </script>
 </body>
 </html>
