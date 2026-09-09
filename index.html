@@ -68,22 +68,28 @@
     padding:10px 16px; font-size:12.5px; color:var(--ink-soft); text-align:center; display:none;}
   /* ===== Ghid demo live — laptop + telefon, iframe real spre ghid-oaspeti.html ===== */
   .demo-devices{display:flex; align-items:flex-end; justify-content:center; gap:32px; flex-wrap:wrap; margin:0 auto;}
-  .demo-laptop{width:100%; max-width:520px;}
+  .demo-laptop{width:520px; max-width:100%;}
   .demo-laptop-chrome{background:#1c1c1c; border-radius:11px 11px 0 0; padding:8px 11px 0;}
   .demo-laptop-dots{display:flex; gap:5px; margin-bottom:7px;}
   .demo-laptop-dots span{width:7px; height:7px; border-radius:50%; background:#4a4a4a; display:inline-block;}
   .demo-laptop-address{background:#2c2c2c; border-radius:6px 6px 0 0; padding:5px 11px; display:flex; align-items:center; gap:6px;}
   .demo-laptop-address .lock{color:#7cbf8f; font-size:9.5px;}
   .demo-laptop-address .url{color:#c9c9c9; font-size:10.5px; font-family:monospace; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  .demo-laptop-screen{background:#EAE3D3; height:420px; border-left:1px solid #000; border-right:1px solid #000; overflow:hidden;}
-  .demo-laptop-screen iframe{width:100%; height:100%; border:0; display:block;}
+  /* Ecranul afișat e mai mic decât pagina reală — randăm iframe-ul la dimensiune de desktop autentică
+     (declanșează layout-ul cu 2 coloane din ghid) apoi îl scalăm vizual în jos, ca proporțiile textului să rămână corecte. */
+  .demo-laptop-screen{width:520px; height:380px; background:#EAE3D3; border-left:1px solid #000; border-right:1px solid #000; overflow:hidden; position:relative;}
+  .demo-laptop-scale{width:1040px; height:760px; transform:scale(0.5); transform-origin:top left;}
+  .demo-laptop-scale iframe{width:1040px; height:760px; border:0; display:block;}
   .demo-laptop-base{height:13px; background:linear-gradient(180deg,#2c2c2c,#1c1c1c); border-radius:0 0 9px 9px; position:relative;}
   .demo-laptop-base::after{content:''; position:absolute; left:50%; top:0; transform:translateX(-50%); width:64px; height:5px; background:#111; border-radius:0 0 4px 4px;}
   .demo-phone{flex-shrink:0;}
   .demo-phone-frame{background:#1c1c1c; border-radius:24px; padding:7px; box-shadow:0 10px 26px rgba(16,48,43,0.18);}
   .demo-phone-notch{width:54px; height:14px; background:#1c1c1c; border-radius:0 0 9px 9px; margin:0 auto; position:relative; top:7px; z-index:2;}
-  .demo-phone-screen{width:230px; height:440px; background:#EAE3D3; overflow:hidden; border-radius:16px; margin-top:-14px;}
-  .demo-phone-screen iframe{width:100%; height:100%; border:0; display:block;}
+  /* Aceeași logică: iframe randat la dimensiune reală de telefon (390×844), apoi scalat vizual —
+     altfel textul paginii reale (gândită pentru un telefon adevărat) apare disproporționat de mare. */
+  .demo-phone-screen{width:210px; height:455px; background:#EAE3D3; overflow:hidden; border-radius:16px; margin-top:-14px; position:relative;}
+  .demo-phone-scale{width:390px; height:844px; transform:scale(0.53846); transform-origin:top left;}
+  .demo-phone-scale iframe{width:390px; height:844px; border:0; display:block;}
   @media (max-width:640px){
     .demo-devices{gap:20px;}
     .demo-laptop{display:none;}
@@ -230,7 +236,9 @@
           <div class="demo-laptop-address"><span class="lock">🔒</span><span class="url" id="demo-url-text">lokals.ro/ghid-oaspeti.html?apt=demo-rasnov</span></div>
         </div>
         <div class="demo-laptop-screen">
-          <iframe id="demo-iframe-desktop" src="/ghid-oaspeti.html?apt=demo-rasnov" loading="lazy" title="Exemplu ghid de oaspeți — vedere desktop"></iframe>
+          <div class="demo-laptop-scale">
+            <iframe id="demo-iframe-desktop" src="/ghid-oaspeti.html?apt=demo-rasnov" loading="lazy" title="Exemplu ghid de oaspeți — vedere desktop"></iframe>
+          </div>
         </div>
         <div class="demo-laptop-base"></div>
       </div>
@@ -238,7 +246,9 @@
         <div class="demo-phone-frame">
           <div class="demo-phone-notch"></div>
           <div class="demo-phone-screen">
-            <iframe id="demo-iframe-phone" src="/ghid-oaspeti.html?apt=demo-rasnov" loading="lazy" title="Exemplu ghid de oaspeți — vedere telefon"></iframe>
+            <div class="demo-phone-scale">
+              <iframe id="demo-iframe-phone" src="/ghid-oaspeti.html?apt=demo-rasnov" loading="lazy" title="Exemplu ghid de oaspeți — vedere telefon"></iframe>
+            </div>
           </div>
         </div>
       </div>
