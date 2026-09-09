@@ -46,6 +46,11 @@
   .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--teal-deep); color:#fff; padding:12px 20px; border-radius:999px; font-size:13px; font-weight:600; opacity:0; pointer-events:none; transition:opacity .2s;}
   .toast.show{opacity:1;}
   #photo-preview{width:78px; height:78px; border-radius:12px; flex-shrink:0; background:linear-gradient(135deg, var(--teal-deep), var(--teal)); background-size:cover; background-position:center; display:flex; align-items:center; justify-content:center;}
+  .rule-row{display:flex; align-items:center; gap:8px; margin-bottom:8px;}
+  .rule-row:last-child{margin-bottom:0;}
+  .rule-num{width:22px; height:22px; border-radius:50%; background:var(--cream); border:1px solid var(--line); color:var(--ink-soft);
+    font-size:10.5px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .field::placeholder{color:#A9A192; font-style:italic;}
 </style>
 </head>
 <body>
@@ -140,12 +145,12 @@
       <div class="field-group">
         <label for="f-checkin-ora">Ora de la care se poate face check-in</label>
         <input id="f-checkin-ora" class="field" type="text" placeholder="14:00">
-        <div class="hint">Apare primul în panoul de check-in din ghid.</div>
+        <div class="hint">Acest text apare doar aici — în ghidul turistului se vede direct ora, fără eticheta repetată.</div>
       </div>
       <div class="field-group">
         <label for="f-cod-locker">Cod de acces / smartlocker</label>
         <input id="f-cod-locker" class="field" type="text" style="font-family:monospace; font-size:16px; font-weight:700; letter-spacing:2px; border-color:var(--gold); background:var(--gold-soft);">
-        <div class="hint">Actualizează acest cod de fiecare dată când generezi unul nou (ex. TTLock) — apare instant în ghid.</div>
+        <div class="hint">Actualizează acest cod de fiecare dată când generezi unul nou (ex. TTLock) — apare instant în ghid, mărit, ușor de citit la sosire.</div>
       </div>
       <div class="two-col">
         <div>
@@ -165,6 +170,7 @@
       <div class="field-group">
         <label for="f-checkin">Note suplimentare (opțional)</label>
         <textarea id="f-checkin" class="field" style="min-height:64px; resize:vertical;"></textarea>
+        <div class="hint">Apare cu marcaj (•) în ghid, ca o listă de atenționat.</div>
       </div>
       <div class="sub">Recepție</div>
       <div class="two-col" style="margin-bottom:0;">
@@ -186,11 +192,12 @@
         <div class="card-title">Check-out</div>
       </div>
       <div class="field-group">
-        <label for="f-checkout-ora">Ora de check-out</label>
+        <label for="f-checkout-ora">Ora până la care turistul trebuie să elibereze camera/apartamentul</label>
         <input id="f-checkout-ora" class="field" type="text" placeholder="12:00">
       </div>
       <label for="f-checkout-reguli">Recomandări la plecare</label>
       <textarea id="f-checkout-reguli" class="field" style="min-height:64px; resize:vertical;"></textarea>
+      <div class="hint">Apare cu marcaj (•) în ghid.</div>
     </div>
 
     <!-- Regulile casei -->
@@ -199,22 +206,8 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6"/><path d="M9 16h6"/><path d="M9 8h1"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
         <div class="card-title">Regulile casei</div>
       </div>
-      <div class="row" style="padding-top:0;">
-        <label class="switch-label" style="flex:1;"><span style="flex:1;">Fumat interzis în interior</span></label>
-        <label class="switch-label"><input type="checkbox" id="f-reguli-fumat" checked><span class="switch-track"><span class="switch-knob"></span></span></label>
-      </div>
-      <div class="row">
-        <span style="font-size:13px; font-weight:600;">Animale de companie acceptate</span>
-        <label class="switch-label"><input type="checkbox" id="f-reguli-animale"><span class="switch-track"><span class="switch-knob"></span></span></label>
-      </div>
-      <div class="row">
-        <span style="font-size:13px; font-weight:600;">Liniște după ora 22:00</span>
-        <label class="switch-label"><input type="checkbox" id="f-reguli-liniste" checked><span class="switch-track"><span class="switch-knob"></span></span></label>
-      </div>
-      <div style="padding-top:12px;">
-        <label for="f-reguli-extra">Alte reguli (opțional)</label>
-        <textarea id="f-reguli-extra" class="field" style="min-height:48px; resize:vertical;" placeholder="ex. Nu organizați petreceri private"></textarea>
-      </div>
+      <div class="hint" style="margin-top:-4px; margin-bottom:12px;">Până la 10 reguli, în ordinea în care le completezi. Câmpurile goale nu apar deloc în ghid — apar cu marcaj (•), ca o listă.</div>
+      <div id="reguli-lista"></div>
     </div>
 
     <!-- WiFi -->
@@ -286,9 +279,8 @@
         <span style="font-size:13px; font-weight:600;">Arată buton WhatsApp în ghid</span>
         <label class="switch-label"><input type="checkbox" id="f-whatsapp-activ" checked><span class="switch-track"><span class="switch-knob"></span></span></label>
       </div>
-      <label for="f-urg-spital">Cel mai apropiat spital / cabinet</label>
-      <input id="f-urg-spital" class="field" type="text">
-      <div class="hint">Poliția (112) apare automat în ghid.</div>
+      <div class="hint" style="margin-bottom:12px;">Contacte suplimentare (spital, farmacie, service urgențe etc.) — câmpurile goale nu apar în ghid. Poliția (112) apare mereu automat.</div>
+      <div id="contacte-lista"></div>
     </div>
 
     <button class="primary" id="btn-save">Salvează setările</button>
@@ -391,6 +383,58 @@ function scheduleLocatieMapPreview() {
 document.getElementById('f-adresa').addEventListener('input', scheduleLocatieMapPreview);
 document.getElementById('f-gps').addEventListener('input', scheduleLocatieMapPreview);
 
+// ---------- Regulile casei & Contact/urgențe: liste dinamice de câmpuri libere ----------
+const REGULI_MAX = 10;
+const REGULI_EXEMPLE = [
+  'Fumat interzis în interior', 'Fără animale de companie', 'Liniște după ora 22:00',
+  'Nu sunt acceptate petreceri private',
+];
+const CONTACTE_MAX = 5;
+const CONTACTE_EXEMPLE = [
+  'Spital Municipal Râșnov: 0268 xxx xxx', 'Farmacie de gardă',
+];
+
+function buildNumberedFields(containerId, count, idPrefix, exemple) {
+  const wrap = document.getElementById(containerId);
+  wrap.innerHTML = '';
+  for (let i = 1; i <= count; i++) {
+    const row = document.createElement('div');
+    row.className = 'rule-row';
+    const num = document.createElement('div');
+    num.className = 'rule-num';
+    num.textContent = i;
+    const input = document.createElement('input');
+    input.className = 'field';
+    input.type = 'text';
+    input.id = `${idPrefix}-${i}`;
+    const ex = exemple[i - 1];
+    input.placeholder = ex ? `${idPrefix === 'f-regula' ? 'Regulă' : 'Contact'} ${i} — ex. ${ex}` : `${idPrefix === 'f-regula' ? 'Regulă' : 'Contact'} ${i} (opțional)`;
+    row.appendChild(num);
+    row.appendChild(input);
+    wrap.appendChild(row);
+  }
+}
+buildNumberedFields('reguli-lista', REGULI_MAX, 'f-regula', REGULI_EXEMPLE);
+buildNumberedFields('contacte-lista', CONTACTE_MAX, 'f-contact', CONTACTE_EXEMPLE);
+
+// Migrare din formatul vechi (comutatoare fumat/animale/liniste/extra, câmp unic spital) —
+// pre-completează noile câmpuri numerotate, o singură dată, ca proprietarul să nu piardă ce avea salvat.
+function legacyReguliToList(reguli) {
+  if (Array.isArray(reguli.lista)) return reguli.lista;
+  const out = [];
+  if (reguli.fumat !== false) out.push('Fumat interzis în interior');
+  if (reguli.animale) out.push('Animale de companie acceptate');
+  if (reguli.liniste !== false) out.push('Liniște după ora 22:00');
+  if (reguli.extra) out.push(reguli.extra);
+  return out;
+}
+function legacyUrgenteToList(urgente) {
+  if (Array.isArray(urgente.lista)) return urgente.lista;
+  const out = [];
+  if (urgente.spital) out.push(urgente.spital);
+  return out;
+}
+
 function fillForm(row) {
   const f = row.facilitati_cazare || {};
   const loc = f.locatie || {};
@@ -421,17 +465,20 @@ function fillForm(row) {
   document.getElementById('f-checkout-ora').value = checkout.ora || '';
   document.getElementById('f-checkout-reguli').value = checkout.instructiuni || '';
 
-  document.getElementById('f-reguli-fumat').checked = reguli.fumat !== false;
-  document.getElementById('f-reguli-animale').checked = !!reguli.animale;
-  document.getElementById('f-reguli-liniste').checked = reguli.liniste !== false;
-  document.getElementById('f-reguli-extra').value = reguli.extra || '';
+  const reguliList = legacyReguliToList(reguli);
+  for (let i = 1; i <= REGULI_MAX; i++) {
+    document.getElementById(`f-regula-${i}`).value = reguliList[i - 1] || '';
+  }
 
   document.getElementById('f-wifi-nume').value = wifi.ssid || '';
   document.getElementById('f-wifi-parola').value = wifi.parola || '';
 
   document.getElementById('f-telefon').value = row.telefon || '';
   document.getElementById('f-whatsapp-activ').checked = f.whatsapp_activ !== false;
-  document.getElementById('f-urg-spital').value = urgente.spital || '';
+  const contacteList = legacyUrgenteToList(urgente);
+  for (let i = 1; i <= CONTACTE_MAX; i++) {
+    document.getElementById(`f-contact-${i}`).value = contacteList[i - 1] || '';
+  }
 
   document.getElementById('card-hotel').style.display = (row.tip === 'hotel') ? '' : 'none';
   document.getElementById('f-rest-program').value = hotel.restaurant_program || '';
@@ -560,10 +607,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
         instructiuni: document.getElementById('f-checkout-reguli').value.trim(),
       },
       reguli: {
-        fumat: document.getElementById('f-reguli-fumat').checked,
-        animale: document.getElementById('f-reguli-animale').checked,
-        liniste: document.getElementById('f-reguli-liniste').checked,
-        extra: document.getElementById('f-reguli-extra').value.trim(),
+        lista: Array.from({ length: REGULI_MAX }, (_, i) => document.getElementById(`f-regula-${i + 1}`).value.trim()).filter(Boolean),
       },
       wifi: {
         ssid: document.getElementById('f-wifi-nume').value.trim(),
@@ -571,7 +615,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
       },
       whatsapp_activ: document.getElementById('f-whatsapp-activ').checked,
       urgente: {
-        spital: document.getElementById('f-urg-spital').value.trim(),
+        lista: Array.from({ length: CONTACTE_MAX }, (_, i) => document.getElementById(`f-contact-${i + 1}`).value.trim()).filter(Boolean),
       },
       hotel: currentRow.tip === 'hotel' ? {
         restaurant_program: document.getElementById('f-rest-program').value.trim(),
