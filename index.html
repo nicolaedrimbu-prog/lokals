@@ -83,19 +83,24 @@
   .demo-laptop-base{height:13px; background:linear-gradient(180deg,#2c2c2c,#1c1c1c); border-radius:0 0 9px 9px; position:relative;}
   .demo-laptop-base::after{content:''; position:absolute; left:50%; top:0; transform:translateX(-50%); width:64px; height:5px; background:#111; border-radius:0 0 4px 4px;}
   .demo-phone{flex-shrink:0;}
-  .demo-phone-frame{background:#1c1c1c; border-radius:24px; padding:7px; box-shadow:0 10px 26px rgba(16,48,43,0.18);}
-  .demo-phone-notch{width:54px; height:14px; background:#1c1c1c; border-radius:0 0 9px 9px; margin:0 auto; position:relative; top:7px; z-index:2;}
+  .demo-phone-frame{background:#1c1c1c; border-radius:22px; padding:6px; box-shadow:0 8px 20px rgba(16,48,43,0.18);}
+  .demo-phone-notch{width:43px; height:11px; background:#1c1c1c; border-radius:0 0 8px 8px; margin:0 auto; position:relative; top:6px; z-index:2;}
   /* Aceeași logică: iframe randat la dimensiune reală de telefon (390×844), apoi scalat vizual —
-     altfel textul paginii reale (gândită pentru un telefon adevărat) apare disproporționat de mare. */
-  .demo-phone-screen{width:210px; height:455px; background:#EAE3D3; overflow:hidden; border-radius:16px; margin-top:-14px; position:relative;}
-  .demo-phone-scale{width:390px; height:844px; transform:scale(0.53846); transform-origin:top left;}
+     altfel textul paginii reale (gândită pentru un telefon adevărat) apare disproporționat de mare.
+     Cadrul vizibil e cu 20% mai mic decât varianta anterioară, ca proporția față de laptop să fie realistă. */
+  .demo-phone-screen{width:168px; height:364px; background:#EAE3D3; overflow:hidden; border-radius:14px; margin-top:-11px; position:relative;}
+  .demo-phone-scale{width:390px; height:844px; transform:scale(0.43077); transform-origin:top left;}
   .demo-phone-scale iframe{width:390px; height:844px; border:0; display:block;}
   @media (max-width:640px){
     .demo-devices{gap:20px;}
     .demo-laptop{display:none;}
   }
-  .demo-caption{max-width:520px; margin:20px auto 0; font-size:13px; color:var(--ink-soft); text-align:center; line-height:1.6;}
-  .guide-link{display:inline-block; margin-top:14px; font-size:14px; font-weight:700; color:var(--teal-deep); text-decoration:underline;}
+  /* Blocul de sub cele două ecrane — separat vizual, clic oriunde deschide ghidul demo în tab nou */
+  .demo-open-block{display:block; max-width:520px; margin:36px auto 0; background:#fff; border:1px solid var(--line);
+    border-radius:16px; padding:18px 22px; text-align:center; text-decoration:none; transition:border-color .15s, box-shadow .15s;}
+  .demo-open-block:hover{border-color:var(--teal-deep); box-shadow:0 6px 18px rgba(16,48,43,0.08);}
+  .demo-open-block .demo-caption{margin:0 0 10px; color:var(--ink-soft); font-size:13px; line-height:1.6;}
+  .demo-open-block .demo-open-cta{display:inline-flex; align-items:center; gap:6px; font-size:14px; font-weight:700; color:var(--teal-deep);}
   .how-section{background:var(--teal-deep); border-radius:24px; padding:44px 32px; margin-bottom:20px;}
   .how-section h2{color:#fff; text-align:center; font-size:24px; margin:0 0 32px;}
   .how-grid{display:grid; grid-template-columns:repeat(3, 1fr); gap:24px;}
@@ -253,8 +258,10 @@
         </div>
       </div>
     </div>
-    <p class="demo-caption">Ambele ecrane se derulează liber — e chiar ghidul funcțional, cu poza cazării, harta, informațiile de check-in și toate afacerile partenere active în zonă.</p>
-    <a class="guide-link" id="guide-preview-link" href="/ghid-oaspeti.html?apt=demo-rasnov" target="_blank">Deschideți-l pe tot ecranul →</a>
+    <a class="demo-open-block" id="guide-preview-link" href="/ghid-oaspeti.html?apt=demo-rasnov" target="_blank">
+      <p class="demo-caption">Ambele ecrane se derulează liber — e chiar ghidul funcțional, cu poza cazării, harta, informațiile de check-in și toate afacerile partenere active în zonă.</p>
+      <span class="demo-open-cta">Deschideți ghidul complet în browser →</span>
+    </a>
   </div>
   <div class="how-section">
     <h2>Cum funcționează</h2>
