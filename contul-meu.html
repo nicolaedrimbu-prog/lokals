@@ -212,21 +212,22 @@ function renderAfaceri(rows) {
   const wrap = document.getElementById('list-afaceri');
   wrap.innerHTML = '';
   rows.forEach(row => {
-    const a = document.createElement('a');
-    a.className = 'card';
-    a.href = `editare-afacere.html?id=${encodeURIComponent(row.id)}`;
+    const card = document.createElement('div');
+    card.className = 'card';
     const thumb = row.poza_url ? `<img src="${row.poza_url}" alt="">` : AFACERE_ICON;
     const beneficiuTxt = row.interesat_beneficiu && row.beneficiu_propus ? 'beneficiu activ' : 'fără beneficiu setat';
-    a.innerHTML = `
-      <div class="card-thumb">${thumb}</div>
-      <div class="card-info">
-        <div class="card-name">${row.nume_afacere}</div>
-        <div class="card-sub">${row.categorie || ''}${row.categorie ? ' · ' : ''}${beneficiuTxt}</div>
-        <span class="badge badge-afacere">${row.categorie || 'Afacere'}</span>
-      </div>
-      <div class="edit-btn">Editează</div>
+    card.innerHTML = `
+      <a class="card-main" href="editare-afacere.html?id=${encodeURIComponent(row.id)}">
+        <div class="card-thumb">${thumb}</div>
+        <div class="card-info">
+          <div class="card-name">${row.nume_afacere}</div>
+          <div class="card-sub">${row.categorie || ''}${row.categorie ? ' · ' : ''}${beneficiuTxt}</div>
+          <span class="badge badge-afacere">${row.categorie || 'Afacere'}</span>
+        </div>
+        <div class="edit-btn">Editează</div>
+      </a>
     `;
-    wrap.appendChild(a);
+    wrap.appendChild(card);
   });
 }
 
