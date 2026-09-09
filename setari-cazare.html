@@ -51,6 +51,42 @@
   .rule-num{width:22px; height:22px; border-radius:50%; background:var(--cream); border:1px solid var(--line); color:var(--ink-soft);
     font-size:10.5px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
   .field::placeholder{color:#A9A192; font-style:italic;}
+
+  /* ===== Layout cu previzualizare live (telefon) alături de formular ===== */
+  .layout-wrap{display:flex; flex-direction:column; gap:22px; max-width:1040px; margin:0 auto; padding:22px 16px 60px;}
+  @media (min-width:980px){
+    .layout-wrap{flex-direction:row; align-items:flex-start;}
+    #preview-panel{position:sticky; top:20px; flex-shrink:0;}
+  }
+  main{max-width:600px; margin:0; padding:0; flex:1; min-width:0;}
+
+  /* ===== Previzualizare — recreează exact stilul ghidului turistului (ghid-oaspeti.html) ===== */
+  #preview-panel{width:340px; max-width:100%;}
+  .gv-phone{background:#EAE3D3; border-radius:28px; overflow:hidden; border:7px solid #1c1c1c; box-shadow:0 10px 30px rgba(16,48,43,0.18);}
+  .gv-phone-inner{padding:16px 14px 24px; font-family:'Inter', system-ui, sans-serif;}
+  .gv-eyebrow{color:#8F6222; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px;}
+  .gv-caption{color:#5B6459; font-size:11px; margin-bottom:10px;}
+  .gv-card{background:#FBF8F1; border:1px solid rgba(32,41,31,0.14); border-radius:16px; overflow:hidden;}
+  .gv-item{border-bottom:1px solid rgba(32,41,31,0.14);}
+  .gv-item:last-child{border-bottom:none;}
+  .gv-head{display:flex; align-items:center; gap:10px; padding:12px 12px 8px;}
+  .gv-icon{width:28px; height:28px; border-radius:9px; background:rgba(38,56,44,0.08); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .gv-title{font-size:12.5px; font-weight:700; color:#20291F;}
+  .gv-body{padding:0 12px 14px 50px; font-size:12.5px; color:#5B6459; line-height:1.55;}
+  .gv-row{display:flex; align-items:flex-start; gap:6px; margin-bottom:7px;}
+  .gv-row:last-child{margin-bottom:0;}
+  .gv-stat{font-family:'Fraunces', Georgia, serif; font-size:22px; font-weight:700; color:#20291F; line-height:1; margin-bottom:8px;}
+  .gv-label{font-size:9.5px; font-weight:700; color:#5B6459; text-transform:uppercase; letter-spacing:.03em; margin-bottom:3px;}
+  .gv-value{font-size:12.5px; color:#20291F; font-weight:600; margin-bottom:8px;}
+  .gv-code{font-family:monospace; font-size:22px; font-weight:700; letter-spacing:2px; background:var(--gold-soft); color:#20291F;
+    padding:8px 14px; border-radius:10px; display:inline-block; margin:2px 0 8px;}
+  .gv-bullets{list-style:none; margin:0; padding:0;}
+  .gv-bullets li{position:relative; padding-left:14px; margin-bottom:6px;}
+  .gv-bullets li:last-child{margin-bottom:0;}
+  .gv-bullets li::before{content:'•'; position:absolute; left:0; color:#8F6222; font-weight:700;}
+  .gv-note{position:relative; padding-left:14px;}
+  .gv-note::before{content:'•'; position:absolute; left:0; color:#8F6222; font-weight:700;}
+  .gv-empty{font-size:12.5px; color:#5B6459; font-style:italic; padding:18px 14px;}
 </style>
 </head>
 <body>
@@ -68,6 +104,7 @@
   </div>
 </div>
 
+<div class="layout-wrap">
 <main>
 
   <div id="state-loading" style="padding:40px 0; text-align:center; color:var(--ink-soft); font-size:14px;">Se încarcă...</div>
@@ -313,6 +350,62 @@
 
 </main>
 
+<aside id="preview-panel" style="display:none;">
+    <div class="gv-phone">
+      <div class="gv-phone-inner">
+        <div class="gv-eyebrow">🔥 Ghid de oaspeți</div>
+        <div class="gv-caption">Așa arată — în timp real, pe măsură ce completezi formularul.</div>
+        <div class="gv-card" id="gv-card">
+
+          <div class="gv-item" id="gv-item-checkin" style="display:none;">
+            <div class="gv-head">
+              <div class="gv-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#26382C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.555 3.843l3.602 3.602a2.877 2.877 0 0 1 0 4.069l-2.643 2.643a2.877 2.877 0 0 1 -4.069 0l-.301 -.301l-6.558 6.558a2 2 0 0 1 -1.239 .578l-.175 .008h-1.172a1 1 0 0 1 -.993 -.883l-.007 -.117v-1.172a2 2 0 0 1 .467 -1.284l.119 -.13l.414 -.414h2v-2h2v-2l2.144 -2.144l-.301 -.301a2.877 2.877 0 0 1 0 -4.069l2.643 -2.643a2.877 2.877 0 0 1 4.069 0z"/></svg></div>
+              <div class="gv-title">Check-in</div>
+            </div>
+            <div class="gv-body" id="gv-body-checkin"></div>
+          </div>
+
+          <div class="gv-item" id="gv-item-checkout" style="display:none;">
+            <div class="gv-head">
+              <div class="gv-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#26382C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
+              <div class="gv-title">Check-out</div>
+            </div>
+            <div class="gv-body" id="gv-body-checkout"></div>
+          </div>
+
+          <div class="gv-item" id="gv-item-reguli" style="display:none;">
+            <div class="gv-head">
+              <div class="gv-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#26382C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6"/><path d="M9 16h6"/><path d="M9 8h1"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg></div>
+              <div class="gv-title">Regulile casei</div>
+            </div>
+            <div class="gv-body" id="gv-body-reguli"></div>
+          </div>
+
+          <div class="gv-item" id="gv-item-wifi" style="display:none;">
+            <div class="gv-head">
+              <div class="gv-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#26382C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18l.01 0"/><path d="M9.172 15.172a4 4 0 0 1 5.656 0"/><path d="M6.343 12.343a8 8 0 0 1 11.314 0"/><path d="M3.515 9.515c4.686 -4.687 12.284 -4.687 17 0"/></svg></div>
+              <div class="gv-title">Rețea WiFi</div>
+            </div>
+            <div class="gv-body" id="gv-body-wifi"></div>
+          </div>
+
+          <div class="gv-item" id="gv-item-contact" style="display:none;">
+            <div class="gv-head">
+              <div class="gv-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9C4536" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 16v.01"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.871l-8.106 -13.534a1.914 1.914 0 0 0 -3.274 0z"/></svg></div>
+              <div class="gv-title">Contact &amp; urgențe</div>
+            </div>
+            <div class="gv-body" id="gv-body-contact"></div>
+          </div>
+
+          <div class="gv-empty" id="gv-empty" style="display:none;">Completează un câmp mai jos ca să vezi cum arată în ghid.</div>
+
+        </div>
+      </div>
+    </div>
+</aside>
+
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -337,6 +430,7 @@ function showState(id) {
   ['state-loading', 'state-noauth', 'state-nomatch', 'state-form'].forEach(s => {
     document.getElementById(s).style.display = (s === id) ? '' : 'none';
   });
+  document.getElementById('preview-panel').style.display = (id === 'state-form') ? '' : 'none';
 }
 
 async function getFreshAccessToken() {
@@ -409,6 +503,7 @@ function buildNumberedFields(containerId, count, idPrefix, exemple) {
     input.id = `${idPrefix}-${i}`;
     const ex = exemple[i - 1];
     input.placeholder = ex ? `${idPrefix === 'f-regula' ? 'Regulă' : 'Contact'} ${i} — ex. ${ex}` : `${idPrefix === 'f-regula' ? 'Regulă' : 'Contact'} ${i} (opțional)`;
+    input.addEventListener('input', schedulePreview);
     row.appendChild(num);
     row.appendChild(input);
     wrap.appendChild(row);
@@ -434,6 +529,90 @@ function legacyUrgenteToList(urgente) {
   if (urgente.spital) out.push(urgente.spital);
   return out;
 }
+
+// ---------- Previzualizare live — cum vede turistul, actualizată în timp real ----------
+function val(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
+function esc(s) { return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+function renderPreview() {
+  const isHotel = currentRow && currentRow.tip === 'hotel';
+  let anyVisible = false;
+
+  // Check-in
+  const ciOra = val('f-checkin-ora'), ciCod = val('f-cod-locker'), ciUnit = val('f-checkin-unitate'), ciNote = val('f-checkin');
+  const ciHas = ciOra || ciCod || ciUnit || ciNote;
+  document.getElementById('gv-item-checkin').style.display = ciHas ? '' : 'none';
+  if (ciHas) {
+    anyVisible = true;
+    let body = '';
+    if (ciOra) body += `<div class="gv-stat">${esc(ciOra)}</div>`;
+    if (ciCod) body += `<div class="gv-label">Cod de acces</div><span class="gv-code">${esc(ciCod)}</span>`;
+    if (ciUnit) body += `<div class="gv-label">${isHotel ? 'Cameră' : 'Apartament'}</div><div class="gv-value">${esc(ciUnit)}</div>`;
+    if (ciNote) body += `<div class="gv-label">Note suplimentare</div><div class="gv-value gv-note" style="font-weight:400;">${esc(ciNote)}</div>`;
+    document.getElementById('gv-body-checkin').innerHTML = body;
+  }
+
+  // Check-out
+  const coOra = val('f-checkout-ora'), coNote = val('f-checkout-reguli');
+  const coHas = coOra || coNote;
+  document.getElementById('gv-item-checkout').style.display = coHas ? '' : 'none';
+  if (coHas) {
+    anyVisible = true;
+    let body = '';
+    if (coOra) body += `<div class="gv-stat">${esc(coOra)}</div>`;
+    if (coNote) body += `<div class="gv-row gv-note">${esc(coNote)}</div>`;
+    document.getElementById('gv-body-checkout').innerHTML = body;
+  }
+
+  // Regulile casei
+  const reguliList = Array.from({ length: REGULI_MAX }, (_, i) => val(`f-regula-${i + 1}`)).filter(Boolean);
+  document.getElementById('gv-item-reguli').style.display = reguliList.length ? '' : 'none';
+  if (reguliList.length) {
+    anyVisible = true;
+    document.getElementById('gv-body-reguli').innerHTML = `<ul class="gv-bullets">${reguliList.map(r => `<li>${esc(r)}</li>`).join('')}</ul>`;
+  }
+
+  // WiFi
+  const wifiSsid = val('f-wifi-nume'), wifiParola = val('f-wifi-parola');
+  document.getElementById('gv-item-wifi').style.display = wifiSsid ? '' : 'none';
+  if (wifiSsid) {
+    anyVisible = true;
+    let body = `<div class="gv-row"><b>SSID:</b>&nbsp;${esc(wifiSsid)}</div>`;
+    if (wifiParola) body += `<div class="gv-row"><b>Parolă:</b>&nbsp;${esc(wifiParola)}</div>`;
+    document.getElementById('gv-body-wifi').innerHTML = body;
+  }
+
+  // Contact & urgențe
+  const telefon = val('f-telefon');
+  const whatsappActiv = document.getElementById('f-whatsapp-activ').checked;
+  const contacteList = Array.from({ length: CONTACTE_MAX }, (_, i) => val(`f-contact-${i + 1}`)).filter(Boolean);
+  const contactHas = telefon || contacteList.length;
+  document.getElementById('gv-item-contact').style.display = contactHas ? '' : 'none';
+  if (contactHas) {
+    anyVisible = true;
+    let body = '';
+    if (telefon && whatsappActiv) body += `<div class="gv-row" style="font-weight:600;">📱 Scrie gazdei pe WhatsApp</div>`;
+    contacteList.forEach(c => { body += `<div class="gv-row">${esc(c)}</div>`; });
+    body += `<div class="gv-row"><b>Poliție:</b>&nbsp;112</div>`;
+    document.getElementById('gv-body-contact').innerHTML = body;
+  }
+
+  document.getElementById('gv-empty').style.display = anyVisible ? 'none' : '';
+}
+
+let previewTimer = null;
+function schedulePreview() {
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(renderPreview, 150);
+}
+
+// Câmpurile statice (nu cele generate dinamic pentru reguli/contacte, care au deja listener-ul lor)
+['f-checkin-ora', 'f-cod-locker', 'f-checkin-unitate', 'f-checkin', 'f-checkout-ora', 'f-checkout-reguli',
+ 'f-telefon', 'f-wifi-nume', 'f-wifi-parola'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', schedulePreview);
+});
+document.getElementById('f-whatsapp-activ').addEventListener('change', schedulePreview);
 
 function fillForm(row) {
   const f = row.facilitati_cazare || {};
@@ -501,6 +680,8 @@ function fillForm(row) {
   }
 
   document.getElementById('link-turist').textContent = `lokals.ro/ghid-oaspeti.html?apt=${row.slug}`;
+
+  renderPreview();
 }
 
 function renderAptSelector() {

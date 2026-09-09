@@ -101,6 +101,7 @@
   .fac-row:last-child{margin-bottom:0;}
   .fac-pill{display:inline-flex; align-items:center; gap:6px; background:var(--bg); border-radius:999px; padding:6px 12px; font-size:12.5px; color:var(--ink); margin:4px 6px 0 0;}
   .fac-code{font-family:'JetBrains Mono', monospace; font-size:15px; font-weight:600; letter-spacing:1.5px; background:var(--gold-soft); color:var(--ink); padding:6px 12px; border-radius:8px; display:inline-block; margin:2px 0 6px;}
+  .fac-code-big{font-family:'JetBrains Mono', monospace; font-size:30px; font-weight:700; letter-spacing:3px; background:var(--gold-soft); color:var(--ink); padding:12px 22px; border-radius:12px; display:inline-block; margin:4px 0 8px;}
   .fac-wifi-qr{background:#fff; padding:10px; border-radius:12px; display:inline-block; margin-top:8px;}
   .fac-toggle-off{color:var(--ink-soft);}
   /* Check-in restructurat — campuri separate, in ordinea: ora, cod acces, camera/apartament, note */
@@ -109,6 +110,16 @@
   .ci-label{font-size:11px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.03em; margin-bottom:4px;}
   .ci-value{font-size:14px; color:var(--ink); font-weight:600;}
   .ci-note{font-size:13.5px; color:var(--ink-soft); line-height:1.6; font-weight:400;}
+  /* Ora de check-in/check-out — valoare mare, fara eticheta redundanta (eticheta ramane doar in formularul proprietarului) */
+  .stat-value{font-family:'Fraunces', Georgia, serif; font-size:28px; font-weight:700; color:var(--ink); line-height:1;}
+  /* Regulile casei — bullet points, doar reguli completate */
+  .rules-list{list-style:none; margin:0; padding:0;}
+  .rules-list li{position:relative; padding-left:16px; margin-bottom:8px;}
+  .rules-list li:last-child{margin-bottom:0;}
+  .rules-list li::before{content:'•'; position:absolute; left:0; color:var(--amber-deep); font-weight:700;}
+  /* Orice text liber completat de proprietar (note, recomandari, mesaje) -- acelasi principiu de bullet */
+  .note-bullet{position:relative; padding-left:16px;}
+  .note-bullet::before{content:'•'; position:absolute; left:0; color:var(--amber-deep); font-weight:700;}
 </style>
 </head>
 <body>
@@ -253,10 +264,10 @@ const DEMO_OPERATOR_TEMPLATE = {
     locatie: { gps: 'Cetatea Râșnov, Brașov', parcare: 'Parcare gratuită în apropiere (exemplu)' },
     checkin: { ora: '15:00 (exemplu)', cod_acces: 'DEMO-482', unitate: 'Apartament exemplu',
       instructiuni: 'Acesta este un exemplu — un oaspete real vede propriul cod de acces, unic pentru sejurul lui.' },
-    checkout: { ora: '11:00 (exemplu)' },
-    reguli: { fumat: false, animale: true, liniste: true, extra: 'Vă rugăm respectați liniștea vecinilor după ora 22:00 (exemplu).' },
+    checkout: { ora: '11:00 (exemplu)', instructiuni: 'Vă rugăm să nu lăsați resturi alimentare în apartament după plecare (exemplu).' },
+    reguli: { lista: ['Fumat interzis în interior', 'Animale de companie acceptate', 'Liniște după ora 22:00 (exemplu)'] },
     wifi: { ssid: 'Lokals-Demo', parola: 'demo1234' },
-    urgente: { spital: 'Spitalul Municipal Râșnov (exemplu)' },
+    urgente: { lista: ['Spitalul Municipal Râșnov (exemplu)'] },
   },
 };
 
@@ -535,8 +546,8 @@ function renderFacilitati() {
   // Check-in — campuri separate, in ordine: ora, cod de acces, camera/apartament, note optionale
   if (checkin.ora || checkin.cod_acces || checkin.unitate || checkin.instructiuni || receptie.program) {
     let body = '';
-    if (checkin.ora) body += `<div class="ci-row"><div class="ci-label">${t.checkinOra}</div><div class="ci-value">${fmt(checkin.ora)}</div></div>`;
-    if (checkin.cod_acces) body += `<div class="ci-row"><div class="ci-label">${t.codAcces}</div><span class="fac-code">${fmt(checkin.cod_acces)}</span></div>`;
+    if (checkin.ora) body += `<div class="ci-row"><div class="stat-value">${fmt(checkin.ora)}</div></div>`;
+    if (checkin.cod_acces) body += `<div class="ci-row"><div class="ci-label">${t.codAcces}</div><span class="fac-code-big">${fmt(checkin.cod_acces)}</span></div>`;
     if (checkin.locker_locatie || checkin.locker_numar) {
       const parts = [checkin.locker_locatie, checkin.locker_numar].filter(Boolean).join(' · ');
       body += `<div class="fac-row">${FAC_ICONS.pin}<span><b>${t.locker}:</b> ${parts}</span></div>`;
@@ -545,7 +556,7 @@ function renderFacilitati() {
       const unitLabel = isHotel ? t.camera : t.apartament;
       body += `<div class="ci-row"><div class="ci-label">${unitLabel}</div><div class="ci-value">${fmt(checkin.unitate)}</div></div>`;
     }
-    if (checkin.instructiuni) body += `<div class="ci-row"><div class="ci-label">${t.noteSuplimentare}</div><div class="ci-value ci-note">${fmt(checkin.instructiuni)}</div></div>`;
+    if (checkin.instructiuni) body += `<div class="ci-row"><div class="ci-label">${t.noteSuplimentare}</div><div class="ci-value ci-note note-bullet">${fmt(checkin.instructiuni)}</div></div>`;
     if (receptie.program || receptie.contact_urgenta) {
       body += `<div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--line);"><b>${t.receptie}</b>`;
       if (receptie.program) body += `<div class="fac-row" style="margin-top:6px;">${t.program}: ${fmt(receptie.program)}</div>`;
@@ -558,19 +569,24 @@ function renderFacilitati() {
   // Check-out
   if (checkout.ora || checkout.instructiuni) {
     let body = '';
-    if (checkout.ora) body += `<div class="fac-row"><b>${t.program}:</b>&nbsp;${fmt(checkout.ora)}</div>`;
-    if (checkout.instructiuni) body += `<div class="fac-row">${fmt(checkout.instructiuni)}</div>`;
+    if (checkout.ora) body += `<div class="ci-row"><div class="stat-value">${fmt(checkout.ora)}</div></div>`;
+    if (checkout.instructiuni) body += `<div class="fac-row note-bullet">${fmt(checkout.instructiuni)}</div>`;
     sections.push({ key: 'checkout', title: t.checkout, body });
   }
 
-  // Regulile casei
-  if (reguli.fumat !== undefined || reguli.animale !== undefined || reguli.liniste !== undefined || reguli.extra) {
-    let body = '<div style="display:flex; flex-direction:column; gap:6px;">';
-    if (reguli.fumat !== false) body += `<div>${t.fumat}</div>`;
-    body += `<div class="${reguli.animale ? '' : 'fac-toggle-off'}">${reguli.animale ? t.animale : t.animaleNu}</div>`;
-    if (reguli.liniste !== false) body += `<div>${t.liniste}</div>`;
-    body += '</div>';
-    if (reguli.extra) body += `<div class="fac-row" style="margin-top:8px;">${fmt(reguli.extra)}</div>`;
+  // Regulile casei — format nou: pana la 10 reguli libere, cu bullet points (reguli.lista);
+  // format vechi (comutatoare fumat/animale/liniste + extra) pastrat pentru cazarile neactualizate inca.
+  const reguliLista = Array.isArray(reguli.lista) ? reguli.lista.filter(Boolean) : null;
+  if (reguliLista && reguliLista.length) {
+    const body = `<ul class="rules-list">${reguliLista.map(r => `<li>${fmt(r)}</li>`).join('')}</ul>`;
+    sections.push({ key: 'reguli', title: t.reguli, body });
+  } else if (!reguliLista && (reguli.fumat !== undefined || reguli.animale !== undefined || reguli.liniste !== undefined || reguli.extra)) {
+    const items = [];
+    if (reguli.fumat !== false) items.push(t.fumat);
+    items.push(reguli.animale ? t.animale : t.animaleNu);
+    if (reguli.liniste !== false) items.push(t.liniste);
+    let body = `<ul class="rules-list">${items.map(i => `<li>${i}</li>`).join('')}</ul>`;
+    if (reguli.extra) body += `<div class="fac-row note-bullet" style="margin-top:8px;">${fmt(reguli.extra)}</div>`;
     sections.push({ key: 'reguli', title: t.reguli, body });
   }
 
@@ -591,18 +607,22 @@ function renderFacilitati() {
     if (hotel.spa_program) body += `<div class="fac-row"><b>${t.spa}:</b>&nbsp;${fmt(hotel.spa_program)}</div>`;
     if (hotel.fitness_program || hotel.fitness_locatie) body += `<div class="fac-row"><b>${t.fitness}:</b>&nbsp;${[fmt(hotel.fitness_program), fmt(hotel.fitness_locatie)].filter(Boolean).join(' · ')}</div>`;
     if (hotel.mic_dejun_program) body += `<div class="fac-row"><b>${t.micDejun}:</b>&nbsp;${fmt(hotel.mic_dejun_program)}</div>`;
-    if (hotel.room_service) body += `<div class="fac-row"><b>${t.roomService}:</b>&nbsp;${fmt(hotel.room_service)}</div>`;
+    if (hotel.room_service) body += `<div class="fac-row note-bullet"><b>${t.roomService}:</b>&nbsp;${fmt(hotel.room_service)}</div>`;
     sections.push({ key: 'servicii', title: t.servicii, body, hotelBadge: true });
   }
 
-  // Contact & urgențe
-  if (currentOperator.telefon || urgente.spital) {
+  // Contact & urgențe — format nou: pana la 5 contacte libere (urgente.lista); formatul vechi
+  // (camp unic "spital") ramane afisat pentru cazarile neactualizate inca.
+  const contacteLista = Array.isArray(urgente.lista) ? urgente.lista.filter(Boolean) : (urgente.spital ? [urgente.spital] : []);
+  if (currentOperator.telefon || contacteLista.length) {
     let body = '';
     if (currentOperator.telefon && f.whatsapp_activ !== false) {
       body += `<a class="fac-pill" href="https://wa.me/${formatPhoneRo(currentOperator.telefon)}" target="_blank" rel="noopener">${FAC_ICONS.whatsapp} ${t.whatsapp}</a>`;
     }
-    if (urgente.spital) body += `<div class="fac-row" style="margin-top:10px;"><b>${t.spital}:</b>&nbsp;${fmt(urgente.spital)}</div>`;
-    body += `<div class="fac-row"><b>${t.politie}:</b>&nbsp;112</div>`;
+    if (contacteLista.length) {
+      body += `<div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">${contacteLista.map(c => `<div class="fac-row" style="margin-bottom:0;">${fmt(c)}</div>`).join('')}</div>`;
+    }
+    body += `<div class="fac-row" style="margin-top:10px;"><b>${t.politie}:</b>&nbsp;112</div>`;
     sections.push({ key: 'contact', title: t.contact, body });
   }
 
