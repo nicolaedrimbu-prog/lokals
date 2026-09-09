@@ -221,7 +221,9 @@ const STATUS_COLOR = {
 };
 
 let ROWS = [];       // { source: 'candidati_parteneri'|'operatori', id, nume, categorieLabel, zona, email, data, status, foto, raw }
-let currentFilter = 'toate';
+// Filtrul poate fi precompletat din link (ex. ?filter=nou din emailul de notificare admin)
+const REQUESTED_FILTER = new URLSearchParams(window.location.search).get('filter');
+let currentFilter = ['toate', 'nou', 'publicat', 'respins'].includes(REQUESTED_FILTER) ? REQUESTED_FILTER : 'toate';
 let currentZonaFilter = 'toate';
 let currentSort = 'data-desc';
 const STATUS_ORDER = { nou: 0, publicat: 1, respins: 2 };
