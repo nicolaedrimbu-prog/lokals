@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Afiș QR — Lokals</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Poppins:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root{
+    --teal-deep:#10302B; --teal:#1A4A42; --gold:#C98A2C; --gold-soft:#E8CE9E;
+    --cream:#F7F2E8; --ink:#181E1B; --ink-soft:#5B6459; --line:#DCD5C6;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:#EFE9DA; font-family:'Inter', system-ui, sans-serif; color:var(--ink);}
+  .serif{font-family:'Fraunces', Georgia, serif;}
+
+  .toolbar{max-width:794px; margin:0 auto; padding:18px 0; display:flex; justify-content:space-between; align-items:center;}
+  .back-link{font-size:13px; font-weight:600; color:var(--teal-deep); text-decoration:none;}
+  .print-btn{background:var(--teal-deep); color:#fff; border:none; font-size:13.5px; font-weight:700; padding:10px 20px; border-radius:999px; cursor:pointer; font-family:inherit;}
+
+  .poster{width:794px; min-height:1123px; background:var(--cream); margin:0 auto 40px; box-shadow:0 10px 30px rgba(16,48,43,0.14);
+    display:flex; flex-direction:column; align-items:center; padding:64px 64px 56px; position:relative; overflow:hidden;}
+  .poster::before{content:''; position:absolute; top:0; left:0; right:0; height:14px; background:var(--teal-deep);}
+  .logo-row{display:flex; align-items:center; gap:10px; margin-bottom:52px;}
+  .logo-dot{width:26px; height:26px; border-radius:50%; background:var(--gold); position:relative; display:inline-block;}
+  .logo-dot::after{content:''; position:absolute; inset:7px; border-radius:50%; background:var(--teal-deep);}
+  .logo-word{font-family:'Poppins', sans-serif; font-weight:700; color:var(--teal-deep); font-size:22px;}
+  .eyebrow{color:var(--gold); font-size:15px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; margin-bottom:14px;}
+  .headline{font-size:40px; font-weight:700; color:var(--teal-deep); text-align:center; line-height:1.15; margin-bottom:10px;}
+  .subline{font-size:16px; color:var(--ink-soft); text-align:center; max-width:520px; line-height:1.5; margin-bottom:44px;}
+  .qr-frame{background:#fff; border-radius:24px; padding:28px; box-shadow:0 10px 30px rgba(16,48,43,0.12); margin-bottom:36px;}
+  .qr-frame img{width:300px; height:300px; display:block;}
+  .prop-name{font-size:22px; font-weight:700; color:var(--teal-deep); text-align:center; margin-bottom:6px;}
+  .prop-zone{font-size:14px; color:var(--ink-soft); text-align:center; margin-bottom:40px;}
+  .steps{display:flex; gap:28px; margin-top:auto; padding-top:16px;}
+  .step{display:flex; flex-direction:column; align-items:center; text-align:center; width:150px;}
+  .step-num{width:30px; height:30px; border-radius:50%; background:var(--teal-deep); color:#fff; font-weight:700; font-size:14px;
+    display:flex; align-items:center; justify-content:center; margin-bottom:8px; font-family:'Fraunces', Georgia, serif;}
+  .step-txt{font-size:12.5px; color:var(--ink-soft); line-height:1.4;}
+  .footer{margin-top:32px; font-size:11.5px; color:var(--ink-soft); letter-spacing:.02em;}
+
+  .state-msg{max-width:500px; margin:80px auto; text-align:center; color:var(--ink-soft); font-size:14px;}
+
+  @media print{
+    body{background:#fff;}
+    .toolbar, .no-print{display:none !important;}
+    .poster{box-shadow:none; margin:0;}
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar no-print">
+  <a class="back-link" href="contul-meu.html">← Înapoi la proprietățile mele</a>
+  <button class="print-btn" id="btn-print">Printează / Descarcă PDF</button>
+</div>
+
+<div id="state-loading" class="state-msg">Se încarcă afișul...</div>
+<div id="state-error" class="state-msg" style="display:none;">Nu am găsit această proprietate. Verifică linkul sau revino din „Proprietățile mele”.</div>
+
+<div class="poster" id="poster" style="display:none;">
+  <div class="logo-row">
+    <span class="logo-dot"></span>
+    <span class="logo-word">lokals</span>
+  </div>
+  <div class="eyebrow">Ghidul tău de oaspeți</div>
+  <div class="headline serif">Bun venit!<br>Scanează și află tot ce-ți trebuie</div>
+  <div class="subline">Ora de check-in, codul de acces, recomandările gazdei și afacerile locale de încredere din zonă — totul într-un singur loc, pe telefonul tău.</div>
+  <div class="qr-frame">
+    <img id="qr-img" src="" alt="Cod QR către ghidul de oaspeți">
+  </div>
+  <div class="prop-name serif" id="prop-name"></div>
+  <div class="prop-zone" id="prop-zone"></div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-txt">Deschide camera telefonului</div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-txt">Îndreaptă-o spre codul QR</div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-txt">Apasă pe linkul care apare</div>
+    </div>
+  </div>
+  <div class="footer">Afiș generat automat din panoul tău Lokals · A4</div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
+const SUPABASE_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
+
+function zonaLabel(z) {
+  const map = { 'rasnov': 'Râșnov', 'sacele-brasov': 'Săcele-Brașov' };
+  return map[(z || '').trim()] || (z || '');
+}
+
+async function init() {
+  const slug = new URLSearchParams(window.location.search).get('slug');
+  if (!slug) {
+    document.getElementById('state-loading').style.display = 'none';
+    document.getElementById('state-error').style.display = '';
+    return;
+  }
+
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/operatori?slug=eq.${encodeURIComponent(slug)}&select=nume_afacere,nume_afisat,zona,adresa,slug&limit=1`, {
+    headers: { apikey: SUPABASE_KEY },
+  });
+  const rows = await res.json();
+  const row = rows && rows[0];
+
+  document.getElementById('state-loading').style.display = 'none';
+  if (!row) {
+    document.getElementById('state-error').style.display = '';
+    return;
+  }
+
+  const nume = row.nume_afisat || row.nume_afacere || 'Cazarea ta';
+  const guideUrl = `https://lokals.ro/ghid-oaspeti.html?apt=${encodeURIComponent(row.slug)}`;
+
+  document.getElementById('prop-name').textContent = nume;
+  document.getElementById('prop-zone').textContent = `${zonaLabel(row.zona)} · lokals.ro`;
+  document.getElementById('qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=0&data=${encodeURIComponent(guideUrl)}`;
+  document.title = `Afiș QR — ${nume}`;
+
+  document.getElementById('poster').style.display = '';
+}
+
+document.getElementById('btn-print').addEventListener('click', () => window.print());
+
+init();
+</script>
+
+</body>
+</html>
