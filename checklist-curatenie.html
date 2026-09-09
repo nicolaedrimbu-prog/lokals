@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checklist de curățenie — Lokals</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Poppins:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root{
+    --teal-deep:#10302B; --teal:#1A4A42; --gold:#C98A2C; --gold-soft:#E8CE9E;
+    --cream:#F7F2E8; --ink:#181E1B; --ink-soft:#5B6459; --line:#DCD5C6; --brick:#9C4536; --brick-soft:#F1E3DF;
+    --green-soft:#E3ECE4;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--cream); font-family:'Inter', system-ui, sans-serif; color:var(--ink);}
+  a{color:var(--teal-deep);}
+  .serif{font-family:'Fraunces', Georgia, serif;}
+  .wrap{max-width:430px; margin:0 auto; padding:18px 16px 60px;}
+
+  .top-bar{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;}
+  .logo-mini{display:flex; align-items:center; gap:6px;}
+  .logo-dot{width:16px; height:16px; border-radius:50%; background:var(--gold); position:relative;}
+  .logo-dot::after{content:''; position:absolute; inset:4px; border-radius:50%; background:var(--teal-deep);}
+  .logo-word{font-family:'Poppins', sans-serif; font-weight:700; color:var(--teal-deep); font-size:14px;}
+  .lang-switch{display:flex; background:#fff; border:1.5px solid var(--line); border-radius:999px; padding:3px;}
+  .lang-btn{border:none; background:none; font-family:inherit; font-size:12px; font-weight:700; padding:6px 14px; border-radius:999px; color:var(--ink-soft); cursor:pointer;}
+  .lang-btn.active{background:var(--teal-deep); color:#fff;}
+
+  .head-card{background:var(--teal-deep); color:#fff; border-radius:16px; padding:18px; margin-bottom:14px;}
+  .head-title{font-size:17px; font-weight:700; margin-bottom:3px;}
+  .head-sub{font-size:12.5px; color:#C8CFC2; margin-bottom:14px;}
+  .head-fields{display:grid; grid-template-columns:repeat(2,1fr); gap:8px;}
+  .name-input{width:100%; margin-top:4px; background:rgba(255,255,255,0.12); border:1.5px solid rgba(255,255,255,0.3); border-radius:9px;
+    padding:9px 11px; font-size:13px; font-family:inherit; color:#fff;}
+  .name-input::placeholder{color:#C8CFC2;}
+  .head-field-label{font-size:9.5px; color:#9FB0A6; text-transform:uppercase; letter-spacing:.03em; margin-bottom:3px;}
+  .head-field-val{font-size:12.5px; font-weight:700;}
+
+  .card{background:#fff; border-radius:16px; box-shadow:0 3px 12px rgba(16,48,43,0.06); padding:16px; margin-bottom:12px;}
+  .area-title{font-size:13.5px; font-weight:700; color:var(--teal-deep); margin-bottom:10px; display:flex; align-items:center; gap:8px;}
+  .area-num{width:20px; height:20px; border-radius:50%; background:var(--green-soft); color:var(--teal-deep); font-size:11px; font-weight:700;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0; font-family:'Fraunces',Georgia,serif;}
+  .task-row{display:flex; align-items:flex-start; gap:10px; padding:7px 0; cursor:pointer;}
+  .checkbox{width:18px; height:18px; border-radius:5px; border:1.6px solid var(--line); flex-shrink:0; margin-top:1px; position:relative; background:#fff;}
+  .checkbox.checked{background:var(--teal-deep); border-color:var(--teal-deep);}
+  .checkbox.checked::after{content:''; position:absolute; left:5px; top:1px; width:5px; height:9px; border:2px solid #fff; border-top:none; border-left:none; transform:rotate(40deg);}
+  .task-text{font-size:12.5px; color:var(--ink); line-height:1.45;}
+
+  .rules-box{background:var(--cream); border-radius:12px; padding:13px 14px; font-size:11.5px; color:var(--ink-soft); line-height:1.55; margin-bottom:14px;}
+  .rules-title{font-size:11px; font-weight:700; color:var(--teal-deep); text-transform:uppercase; letter-spacing:.03em; margin-bottom:6px;}
+
+  .supply-hint{font-size:12px; color:var(--ink-soft); line-height:1.5; margin-bottom:10px;}
+  .supply-row{display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid var(--line); cursor:pointer;}
+  .supply-row:last-child{border-bottom:none;}
+  .supply-name{font-size:12.5px; color:var(--ink); flex:1;}
+
+  .issue-hint{font-size:12px; color:var(--ink-soft); line-height:1.5; margin-bottom:10px;}
+  .issue-box{width:100%; border:1.5px solid var(--line); border-radius:10px; padding:11px 12px; font-size:12.5px; font-family:inherit;
+    color:var(--ink); resize:none; min-height:74px;}
+
+  .submit-btn{display:flex; align-items:center; justify-content:center; gap:8px; width:100%; background:#25A160; color:#fff; border:none;
+    font-size:14.5px; font-weight:700; padding:14px; border-radius:12px; cursor:pointer; font-family:inherit; margin-top:6px;}
+  .submit-btn:disabled{opacity:.6; cursor:default;}
+
+  .success-card{background:#fff; border-radius:18px; padding:34px 26px; text-align:center; box-shadow:0 4px 16px rgba(16,48,43,0.07);}
+  .success-icon{width:52px; height:52px; border-radius:50%; background:var(--green-soft); display:flex; align-items:center; justify-content:center; margin:0 auto 16px;}
+  .success-title{font-size:17px; font-weight:700; color:var(--teal-deep); margin-bottom:8px;}
+  .success-sub{font-size:13px; color:var(--ink-soft); line-height:1.55;}
+
+  .center-msg{text-align:center; padding:60px 16px; color:var(--ink-soft); font-size:14px; line-height:1.6;}
+  .center-msg .serif{font-size:19px; font-weight:700; color:var(--teal-deep); margin-bottom:8px; display:block;}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="top-bar">
+    <div class="logo-mini"><span class="logo-dot"></span><span class="logo-word">lokals</span></div>
+    <div class="lang-switch" id="lang-switch">
+      <button class="lang-btn" data-lang="ro" type="button">RO</button>
+      <button class="lang-btn" data-lang="en" type="button">EN</button>
+    </div>
+  </div>
+
+  <div id="state-loading" class="center-msg">Se încarcă...</div>
+
+  <div id="state-notfound" class="center-msg" style="display:none;">
+    <span class="serif">Link invalid</span>
+    Acest link de checklist nu mai este valid. Cere proprietarului un link nou.
+  </div>
+
+  <div id="state-done-already" class="center-msg" style="display:none;">
+    <span class="serif">Checklist deja trimis</span>
+    <span id="done-already-text"></span>
+  </div>
+
+  <div id="state-form" style="display:none;"></div>
+
+  <div id="state-success" style="display:none;">
+    <div class="success-card">
+      <div class="success-icon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1A4A42" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5l10 -10"/></svg>
+      </div>
+      <div class="success-title serif" id="success-title"></div>
+      <div class="success-sub" id="success-sub"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
+const SUPABASE_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const DEFAULT_CONSUMABLES = [
+  { ro:'Hârtie igienică', en:'Toilet paper' },
+  { ro:'Săpun lichid', en:'Liquid soap' },
+  { ro:'Gel de duș', en:'Shower gel' },
+  { ro:'Cafea', en:'Coffee' },
+  { ro:'Ceai', en:'Tea' },
+  { ro:'Zahăr', en:'Sugar' },
+  { ro:'Burete de vase (nou)', en:'Dish sponge (new)' },
+  { ro:'Pungi de gunoi', en:'Garbage bags' },
+  { ro:'Detergent de vase', en:'Dish soap' },
+];
+function consumableLabel(nume, lang) {
+  const hit = DEFAULT_CONSUMABLES.find(c => c.ro === nume);
+  return hit ? hit[lang] : nume;
+}
+
+const AREAS = [
+  { ro:'Sosire', en:'Arrival', tasks:[
+    { ro:'Deschide ferestrele pentru aerisire.', en:'Open windows for ventilation.' },
+    { ro:'Inspectează rapid apartamentul; fotografiază eventualele deteriorări sau obiecte uitate.', en:'Quickly inspect the apartment; take photos of any damages or forgotten items.' },
+  ]},
+  { ro:'Dormitor & Living', en:'Bedroom & Living Room', tasks:[
+    { ro:'Aspiră și șterge praful (inclusiv sub pat și canapea).', en:'Vacuum and dust (including under the bed and sofa).' },
+    { ro:'Schimbă lenjeria de pat (întinsă perfect, fără cute).', en:'Change bed linens (perfectly stretched, no wrinkles).' },
+    { ro:'Verifică televizorul, telecomenzile și routerul Wi-Fi.', en:'Check TV, remote controls, and Wi-Fi router.' },
+    { ro:'Aranjează pernele decorative și pătura pe canapea.', en:'Arrange decorative pillows and blanket on the sofa.' },
+  ]},
+  { ro:'Baie', en:'Bathroom', tasks:[
+    { ro:'Dezinfectează toaleta, lavoarul și cabina de duș/cada (fără pete de calcar).', en:'Disinfect toilet, sink, and shower/tub (no watermarks/limescale).' },
+    { ro:'Curăță oglinda fără dungi.', en:'Clean the mirror without streaks.' },
+    { ro:'Completează stocul: min. 2 role hârtie igienică, săpun lichid, gel de duș.', en:'Restock: min. 2 toilet paper rolls, liquid soap, shower gel.' },
+    { ro:'Pune prosoape curate: 2 prosoape de baie, 2 prosoape de mâini, 1 covoraș de baie.', en:'Place clean towels: 2 bath towels, 2 hand towels, 1 bath mat.' },
+  ]},
+  { ro:'Bucătărie', en:'Kitchen', tasks:[
+    { ro:'Spală, usucă și pune la loc toate vasele și tacâmurile.', en:'Wash, dry, and put away all dishes and cutlery.' },
+    { ro:'Curăță frigiderul, cuptorul și espressorul, în interior și exterior.', en:'Clean the inside and outside of the fridge, oven, and espresso machine.' },
+    { ro:'Schimbă buretele de vase (unul NOU) și cârpa de bucătărie.', en:'Change the dish sponge (put a NEW one) and a clean cloth.' },
+    { ro:'Completează kitul de bun-venit: cafea, ceai, zahăr.', en:'Restock the welcome kit: coffee, tea, sugar.' },
+  ]},
+  { ro:'Hol & Balcon', en:'Hallway & Balcony', tasks:[
+    { ro:'Curăță gresia de la intrare și suportul de pantofi.', en:'Clean the entrance floor tiles and shoe rack.' },
+    { ro:'Șterge masa și scaunele de pe balcon; spală scrumiera.', en:'Wipe the balcony table and chairs; wash the ashtray.' },
+  ]},
+  { ro:'Finalizare', en:'Finalization', tasks:[
+    { ro:'Setează termostatul la 21–22°C.', en:'Set the thermostat to 21–22°C.' },
+    { ro:'Fă 3 fotografii (Dormitor, Baie, Bucătărie) și trimite-le în grup.', en:'Take 3 photos (Bedroom, Bathroom, Kitchen) and send them to the group.' },
+    { ro:'Închide ferestrele și încuie ușa.', en:'Close windows and lock the door.' },
+  ]},
+];
+
+const STRINGS = {
+  ro: {
+    subtitleFallback:'Checklist de curățenie',
+    dateLabel:'Data', staffLabel:'Numele tău', staffPlaceholder:'Scrie-ți numele...', aptLabel:'Proprietate',
+    rulesTitle:'Reguli de bază',
+    ruleColorLabel:'Cod culori microfibră', colorRed:'Roșu', colorBlue:'Albastru', colorGreen:'Verde',
+    areaBathroom:'Baie', areaDust:'Praf/Sticlă', areaKitchen:'Bucătărie',
+    textileLabel:'Textile', textileTemp:'spălare obligatorie la 60°C',
+    consumTitle:'Consumabile', consumSub:'Bifează un articol dacă stocul e scăzut sau insuficient — proprietarul este notificat automat.',
+    issueTitle:'Ai găsit o problemă?', issueSub:'Obiecte defecte, deteriorate sau care nu funcționează — descrie aici, proprietarul e notificat imediat.',
+    issuePlaceholder:'Ex: robinetul de la baie picură...',
+    submitBtn:'Trimite raportul de curățenie',
+    doneTitle:'Trimis!', doneNotePrefix:'Raportul completat de', doneNoteSuffix:'a ajuns la proprietar în timp real, împreună cu consumabilele semnalate și problema descrisă.',
+    staffFallback:'personalul de curățenie',
+    needName:'Scrie-ți numele înainte să trimiți raportul.',
+    alreadyDone:'Acest checklist a fost deja completat de',
+    notfoundTitle:'Link invalid',
+  },
+  en: {
+    subtitleFallback:'Cleaning Checklist',
+    dateLabel:'Date', staffLabel:'Your name', staffPlaceholder:'Type your name...', aptLabel:'Property',
+    rulesTitle:'Basic Rules',
+    ruleColorLabel:'Microfiber color code', colorRed:'Red', colorBlue:'Blue', colorGreen:'Green',
+    areaBathroom:'Bathroom', areaDust:'Dust/Glass', areaKitchen:'Kitchen',
+    textileLabel:'Textiles', textileTemp:'mandatory washing at 60°C',
+    consumTitle:'Supplies', consumSub:'Check an item if the stock is low or insufficient — the owner is notified automatically.',
+    issueTitle:'Found a problem?', issueSub:'Broken, damaged, or non-working items — describe it here, the owner is notified right away.',
+    issuePlaceholder:'E.g. the bathroom faucet is dripping...',
+    submitBtn:'Submit cleaning report',
+    doneTitle:'Sent!', doneNotePrefix:'The report completed by', doneNoteSuffix:'reached the owner in real time, along with the flagged supplies and the issue you described.',
+    staffFallback:'the cleaning staff',
+    needName:'Type your name before submitting the report.',
+    alreadyDone:'This checklist was already completed by',
+    notfoundTitle:'Invalid link',
+  },
+};
+
+function escapeHtml(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function fmtDate(d){
+  return new Date(d).toLocaleDateString('ro-RO', { day:'2-digit', month:'2-digit' });
+}
+
+let lang = 'ro';
+let staffName = '';
+let checkedTasks = {}; // "areaIdx-taskIdx" -> bool
+let checkedConsumables = {}; // consumable id -> bool
+let session = null;
+let operator = null;
+let consumabile = [];
+
+function showState(id){
+  ['state-loading','state-notfound','state-done-already','state-form','state-success'].forEach(s => {
+    document.getElementById(s).style.display = (s === id) ? '' : 'none';
+  });
+}
+
+document.getElementById('lang-switch').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-lang]');
+  if (!btn) return;
+  lang = btn.dataset.lang;
+  renderLangButtons();
+  renderForm();
+});
+function renderLangButtons(){
+  document.querySelectorAll('#lang-switch [data-lang]').forEach(b => {
+    b.classList.toggle('active', b.dataset.lang === lang);
+  });
+}
+
+function renderForm(){
+  const t = STRINGS[lang];
+  const numeAfisat = (operator.nume_afisat || operator.nume_afacere || t.aptLabel);
+  const areasHtml = AREAS.map((area, ai) => `
+    <div class="card">
+      <div class="area-title"><span class="area-num">${ai + 1}</span>${escapeHtml(area[lang])}</div>
+      ${area.tasks.map((task, ti) => {
+        const key = ai + '-' + ti;
+        const checked = !!checkedTasks[key];
+        return `<div class="task-row" data-task="${key}">
+          <span class="checkbox ${checked ? 'checked' : ''}"></span>
+          <span class="task-text">${escapeHtml(task[lang])}</span>
+        </div>`;
+      }).join('')}
+    </div>
+  `).join('');
+
+  const consumHtml = consumabile.map(item => {
+    const checked = !!checkedConsumables[item.id];
+    return `<div class="supply-row" data-consum="${item.id}">
+      <span class="checkbox ${checked ? 'checked' : ''}"></span>
+      <span class="supply-name">${escapeHtml(consumableLabel(item.nume, lang))}</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('state-form').innerHTML = `
+    <div class="head-card">
+      <div class="head-title">${escapeHtml(t.subtitleFallback)}</div>
+      <div class="head-sub">${escapeHtml(numeAfisat)}</div>
+      <div class="head-fields">
+        <div><div class="head-field-label">${escapeHtml(t.dateLabel)}</div><div class="head-field-val">${fmtDate(new Date())}</div></div>
+        <div><div class="head-field-label">${escapeHtml(t.aptLabel)}</div><div class="head-field-val">${escapeHtml(operator.zona || '')}</div></div>
+      </div>
+      <div style="margin-top:12px;">
+        <div class="head-field-label">${escapeHtml(t.staffLabel)}</div>
+        <input class="name-input" id="staff-name-input" type="text" placeholder="${escapeHtml(t.staffPlaceholder)}" value="${escapeHtml(staffName)}">
+      </div>
+    </div>
+
+    ${areasHtml}
+
+    <div class="rules-box">
+      <div class="rules-title">${escapeHtml(t.rulesTitle)}</div>
+      <div>${escapeHtml(t.ruleColorLabel)}: <span style="color:#9C4536; font-weight:700;">${escapeHtml(t.colorRed)}</span> = ${escapeHtml(t.areaBathroom)} · <span style="color:#1A4A42; font-weight:700;">${escapeHtml(t.colorBlue)}</span> = ${escapeHtml(t.areaDust)} · <span style="color:#2F8F5B; font-weight:700;">${escapeHtml(t.colorGreen)}</span> = ${escapeHtml(t.areaKitchen)}</div>
+      <div style="margin-top:4px;">${escapeHtml(t.textileLabel)}: <span style="font-weight:700;">${escapeHtml(t.textileTemp)}</span></div>
+    </div>
+
+    <div class="card">
+      <div class="area-title">${escapeHtml(t.consumTitle)}</div>
+      <div class="supply-hint">${escapeHtml(t.consumSub)}</div>
+      ${consumHtml || `<div class="supply-hint">—</div>`}
+    </div>
+
+    <div class="card">
+      <div class="area-title">${escapeHtml(t.issueTitle)}</div>
+      <div class="issue-hint">${escapeHtml(t.issueSub)}</div>
+      <textarea class="issue-box" id="issue-box" placeholder="${escapeHtml(t.issuePlaceholder)}">${escapeHtml(document.getElementById('issue-box') ? document.getElementById('issue-box').value : '')}</textarea>
+    </div>
+
+    <button class="submit-btn" type="button" id="submit-btn">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5l10 -10"/></svg>
+      ${escapeHtml(t.submitBtn)}
+    </button>
+  `;
+
+  document.getElementById('staff-name-input').addEventListener('input', (e) => { staffName = e.target.value; });
+  document.querySelectorAll('#state-form [data-task]').forEach(row => {
+    row.addEventListener('click', () => {
+      const key = row.dataset.task;
+      checkedTasks[key] = !checkedTasks[key];
+      row.querySelector('.checkbox').classList.toggle('checked', checkedTasks[key]);
+    });
+  });
+  document.querySelectorAll('#state-form [data-consum]').forEach(row => {
+    row.addEventListener('click', () => {
+      const id = row.dataset.consum;
+      checkedConsumables[id] = !checkedConsumables[id];
+      row.querySelector('.checkbox').classList.toggle('checked', checkedConsumables[id]);
+    });
+  });
+  document.getElementById('submit-btn').addEventListener('click', submitReport);
+}
+
+async function submitReport(){
+  const t = STRINGS[lang];
+  const name = (staffName || '').trim();
+  if (!name) {
+    alert(t.needName);
+    return;
+  }
+  const issueText = (document.getElementById('issue-box').value || '').trim();
+  const stocScazut = consumabile.filter(item => checkedConsumables[item.id]).map(item => item.nume);
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+
+  const { error } = await supabaseClient.from('curatenie_sesiuni').update({
+    status: 'finalizat',
+    staff_name: name,
+    stoc_scazut: stocScazut,
+    probleme: issueText || null,
+    completed_at: new Date().toISOString(),
+  }).eq('id', session.id);
+
+  btn.disabled = false;
+  if (error) {
+    console.error(error);
+    alert('Nu am putut trimite raportul. Încearcă din nou.');
+    return;
+  }
+
+  document.getElementById('success-title').textContent = t.doneTitle;
+  document.getElementById('success-sub').textContent = `${t.doneNotePrefix} ${name} ${t.doneNoteSuffix}`;
+  showState('state-success');
+}
+
+async function init(){
+  const token = new URLSearchParams(window.location.search).get('token');
+  if (!token) { showState('state-notfound'); return; }
+
+  const { data: sessions, error } = await supabaseClient.from('curatenie_sesiuni').select('*').eq('token', token).limit(1);
+  if (error || !sessions || !sessions.length) { showState('state-notfound'); return; }
+  session = sessions[0];
+
+  const { data: ops } = await supabaseClient.from('operatori').select('*').eq('id', session.operator_id).limit(1);
+  operator = (ops && ops[0]) || {};
+
+  if (session.status === 'finalizat') {
+    document.getElementById('done-already-text').textContent = `${STRINGS[lang].alreadyDone} ${session.staff_name || ''}.`;
+    showState('state-done-already');
+    return;
+  }
+
+  let { data: cons } = await supabaseClient.from('curatenie_consumabile').select('*').eq('operator_id', session.operator_id).order('ordine', { ascending: true });
+  if (!cons || !cons.length) {
+    const seed = DEFAULT_CONSUMABLES.map((c, i) => ({ operator_id: session.operator_id, nume: c.ro, implicit: true, ordine: i }));
+    const { data: inserted } = await supabaseClient.from('curatenie_consumabile').insert(seed).select('*');
+    cons = inserted || [];
+  }
+  consumabile = cons;
+
+  renderLangButtons();
+  renderForm();
+  showState('state-form');
+}
+
+init();
+</script>
+
+</body>
+</html>

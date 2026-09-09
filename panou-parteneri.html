@@ -107,6 +107,18 @@
   .switch .track::before{content:''; position:absolute; width:16px; height:16px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.15s; box-shadow:0 1px 2px rgba(0,0,0,.2);}
   .switch input:checked + .track{background:var(--green);}
   .switch input:checked + .track::before{transform:translateX(16px);}
+  .switch input:disabled + .track{opacity:.6; cursor:default;}
+
+  .addon-box{margin-top:14px; padding-top:14px; border-top:1px dashed var(--line);}
+  .addon-row{display:flex; align-items:center; gap:14px; padding:12px 14px; background:var(--cream); border-radius:12px;}
+  .addon-icon{width:34px; height:34px; border-radius:9px; background:var(--gold-soft); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .addon-info{flex:1; min-width:0;}
+  .addon-title{font-size:13.5px; font-weight:700; color:var(--ink);}
+  .addon-sub{font-size:11.5px; color:var(--ink-soft); margin-top:1px;}
+  .addon-status{font-size:10px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; padding:3px 9px; border-radius:999px; flex-shrink:0;}
+  .addon-status.on{background:var(--green-soft); color:var(--green);}
+  .addon-status.off{background:#EFE9DB; color:#8F6222;}
+  .addon-note{font-size:11.5px; color:var(--ink-soft); margin-top:8px; line-height:1.5;}
   .switch input:disabled + .track{opacity:.55; cursor:default;}
 </style>
 </head>
@@ -446,6 +458,31 @@ function renderList(){
       handleSave(form);
     });
   });
+  listEl.querySelectorAll('[data-curatenie-toggle]').forEach(input => {
+    input.addEventListener('change', async (e) => {
+      const id = e.target.getAttribute('data-curatenie-toggle');
+      const curatenie_activ = e.target.checked;
+      e.target.disabled = true;
+      const { error } = await supabaseClient.from('operatori').update({ curatenie_activ }).eq('id', id);
+      e.target.disabled = false;
+      if (error) {
+        console.error(error);
+        e.target.checked = !curatenie_activ;
+        alert('Nu am putut salva schimbarea — încearcă din nou.');
+        return;
+      }
+      const row = ROWS.find(r => r.source === 'operatori' && String(r.id) === String(id));
+      if (row) row.raw.curatenie_activ = curatenie_activ;
+      renderList();
+      const rowId = 'operatori-' + id;
+      const details = document.getElementById('details-' + rowId);
+      if (details) {
+        details.classList.add('open');
+        const toggleBtn = document.querySelector(`[data-toggle="${rowId}"]`);
+        if (toggleBtn) toggleBtn.textContent = 'Ascunde detalii';
+      }
+    });
+  });
 }
 
 function rowHtml(r){
@@ -543,7 +580,24 @@ function detailsHtml(r){
   `).join('');
 
   const extraHtml = r.source === 'operatori'
-    ? `<div style="margin:6px 0 12px; color:var(--ink-soft);">Cont confirmat: ${raw.cont_confirmat ? 'Da' : 'Nu'}</div>`
+    ? `<div style="margin:6px 0 12px; color:var(--ink-soft);">Cont confirmat: ${raw.cont_confirmat ? 'Da' : 'Nu'}</div>
+       <div class="addon-box">
+         <div class="addon-row">
+           <div class="addon-icon">
+             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8F6222" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l3 3l-1.5 1.5a2 2 0 0 0 3 3l1.5 -1.5l3 3l-1.5 1.5a2 2 0 1 0 3 3l6 -6a2 2 0 0 0 -3 -3l-1.5 1.5l-3 -3l1.5 -1.5a2 2 0 0 0 -3 -3z"/></svg>
+           </div>
+           <div class="addon-info">
+             <div class="addon-title">Modul Curățenie &amp; Mentenanță</div>
+             <div class="addon-sub">Add-on plătit — activare manuală per proprietate</div>
+           </div>
+           <span class="addon-status ${raw.curatenie_activ ? 'on' : 'off'}">${raw.curatenie_activ ? 'Activ' : 'Inactiv'}</span>
+           <label class="switch">
+             <input type="checkbox" data-curatenie-toggle="${escapeHtml(r.id)}" ${raw.curatenie_activ ? 'checked' : ''}>
+             <span class="track"></span>
+           </label>
+         </div>
+         <div class="addon-note">Doar tu poți activa sau dezactiva acest modul de aici — proprietarul nu-l poate porni singur din contul lui.</div>
+       </div>`
     : '';
 
   return `
