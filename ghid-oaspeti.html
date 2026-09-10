@@ -628,8 +628,42 @@ const FAC_ICONS = {
 
 function fmt(s){ return (s || '').trim(); }
 
+// ---------- Traducere automată a textelor introduse manual de gazde ----------
+// Etichetele fixe ale interfeței (I18N) sunt deja traduse static. Dar tot ce scrie
+// gazda cu mâna ei — reguli casei, instrucțiuni check-in/check-out, note servicii
+// hotel, contacte de urgență, indicații de parcare — nu avea nicio traducere: turistul
+// vedea exact ce scrisese gazda în română, chiar și pe varianta EN a ghidului.
+// tr(s) întoarce traducerea din cache dacă a fost deja cerută pentru limba curentă,
+// altfel textul original (RO), ca să nu rămână niciodată un gol pe ecran.
+let translatedTexts = {}; // { "text original": "traducere" } — doar pentru limba curentă
+const TRANSLATE_EDGE_URL = `${SUPABASE_URL}/functions/v1/translate-text`;
+
+function tr(s){
+  const clean = fmt(s);
+  if (!clean || currentLang === 'ro') return clean;
+  return translatedTexts[clean] || clean;
+}
+
+async function translateBatch(texts, target){
+  const uniq = Array.from(new Set(texts.map(t => fmt(t)).filter(Boolean)));
+  const missing = uniq.filter(t => !(t in translatedTexts));
+  if (!missing.length) return;
+  try {
+    const res = await fetch(TRANSLATE_EDGE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
+      body: JSON.stringify({ texts: missing, target }),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    Object.assign(translatedTexts, data.translations || {});
+  } catch (e) {
+    console.error('Traducerea automată a eșuat — rămânem pe textul original.', e);
+  }
+}
+
 // ---------- Randare secțiune "Informații cazare" — vizibilă fără autentificare ----------
-function renderFacilitati() {
+async function renderFacilitati() {
   const wrap = document.getElementById('facilitati-wrap');
   if (!currentOperator) { wrap.style.display = 'none'; return; }
 
@@ -649,10 +683,25 @@ function renderFacilitati() {
 
   wrap.style.display = '';
 
+  // Colectăm toate textele libere scrise de gazdă (nu coduri, nu numere de telefon,
+  // nu ore) și le traducem dintr-o singură cerere, înainte să construim secțiunile —
+  // ca să nu clipească pagina de la RO la EN pe măsură ce vin traducerile una câte una.
+  if (currentLang === 'en') {
+    const reguliListaRaw = Array.isArray(reguli.lista) ? reguli.lista.filter(Boolean) : [];
+    const urgenteListaRaw = Array.isArray(urgente.lista) ? urgente.lista.filter(Boolean) : [];
+    const toTranslate = [
+      checkin.instructiuni, checkout.instructiuni, reguli.extra,
+      hotel.nota_servicii, hotel.room_service, hotel.mesaj_management,
+      receptie.contact_urgenta, loc.parcare,
+      ...reguliListaRaw, ...urgenteListaRaw,
+    ].filter(Boolean);
+    await translateBatch(toTranslate, 'en');
+  }
+
   const mesajEl = document.getElementById('facilitati-mesaj');
   if (isHotel && hotel.mesaj_management) {
     mesajEl.style.display = 'block';
-    mesajEl.textContent = `“${hotel.mesaj_management}”`;
+    mesajEl.textContent = `“${tr(hotel.mesaj_management)}”`;
   } else {
     mesajEl.style.display = 'none';
   }
@@ -675,11 +724,11 @@ function renderFacilitati() {
       const unitLabel = isHotel ? t.camera : t.apartament;
       body += `<div class="ci-row"><div class="ci-label">${unitLabel}</div><div class="ci-value">${fmt(checkin.unitate)}</div></div>`;
     }
-    if (checkin.instructiuni) body += `<div class="ci-row"><div class="ci-label">${t.noteSuplimentare}</div><div class="ci-value ci-note note-bullet">${fmt(checkin.instructiuni)}</div></div>`;
+    if (checkin.instructiuni) body += `<div class="ci-row"><div class="ci-label">${t.noteSuplimentare}</div><div class="ci-value ci-note note-bullet">${tr(checkin.instructiuni)}</div></div>`;
     if (receptie.program || receptie.contact_urgenta) {
       body += `<div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--line);"><b>${t.receptie}</b>`;
       if (receptie.program) body += `<div class="fac-row" style="margin-top:6px;">${t.program}: ${fmt(receptie.program)}</div>`;
-      if (receptie.contact_urgenta) body += `<div class="fac-row">${t.urgentaReceptie}: ${fmt(receptie.contact_urgenta)}</div>`;
+      if (receptie.contact_urgenta) body += `<div class="fac-row">${t.urgentaReceptie}: ${tr(receptie.contact_urgenta)}</div>`;
       body += `</div>`;
     }
     sections.push({ key: 'checkin', title: t.checkin, body });
@@ -689,7 +738,7 @@ function renderFacilitati() {
   if (checkout.ora || checkout.instructiuni) {
     let body = '';
     if (checkout.ora) body += `<div class="ci-row"><div class="stat-value">${fmt(checkout.ora)}</div></div>`;
-    if (checkout.instructiuni) body += `<div class="fac-row note-bullet">${fmt(checkout.instructiuni)}</div>`;
+    if (checkout.instructiuni) body += `<div class="fac-row note-bullet">${tr(checkout.instructiuni)}</div>`;
     sections.push({ key: 'checkout', title: t.checkout, body });
   }
 
@@ -697,7 +746,7 @@ function renderFacilitati() {
   // format vechi (comutatoare fumat/animale/liniste + extra) pastrat pentru cazarile neactualizate inca.
   const reguliLista = ghidUnlocked('reguli_casa') && Array.isArray(reguli.lista) ? reguli.lista.filter(Boolean) : null;
   if (reguliLista && reguliLista.length) {
-    const body = `<ul class="rules-list">${reguliLista.map(r => `<li>${fmt(r)}</li>`).join('')}</ul>`;
+    const body = `<ul class="rules-list">${reguliLista.map(r => `<li>${tr(r)}</li>`).join('')}</ul>`;
     sections.push({ key: 'reguli', title: t.reguli, body });
   } else if (ghidUnlocked('reguli_casa') && !reguliLista && (reguli.fumat !== undefined || reguli.animale !== undefined || reguli.liniste !== undefined || reguli.extra)) {
     const items = [];
@@ -705,7 +754,7 @@ function renderFacilitati() {
     items.push(reguli.animale ? t.animale : t.animaleNu);
     if (reguli.liniste !== false) items.push(t.liniste);
     let body = `<ul class="rules-list">${items.map(i => `<li>${i}</li>`).join('')}</ul>`;
-    if (reguli.extra) body += `<div class="fac-row note-bullet" style="margin-top:8px;">${fmt(reguli.extra)}</div>`;
+    if (reguli.extra) body += `<div class="fac-row note-bullet" style="margin-top:8px;">${tr(reguli.extra)}</div>`;
     sections.push({ key: 'reguli', title: t.reguli, body });
   }
 
@@ -741,13 +790,13 @@ function renderFacilitati() {
       });
       body += `</tbody></table></div>`;
     }
-    if (hotel.nota_servicii) body += `<div class="fac-row note-bullet" style="margin-bottom:12px;">${fmt(hotel.nota_servicii)}</div>`;
+    if (hotel.nota_servicii) body += `<div class="fac-row note-bullet" style="margin-bottom:12px;">${tr(hotel.nota_servicii)}</div>`;
     if (minibarImgs.length) {
       body += `<div class="fac-minibar-label">${t.minibar}</div><div class="fac-minibar-imgs">` +
         minibarImgs.map(url => `<a href="${url}" target="_blank" rel="noopener"><img src="${url}" alt="${t.minibar} — ${t.minibarPoza}" loading="lazy"></a>`).join('') +
         `</div>`;
     }
-    if (hotel.room_service) body += `<div class="fac-row note-bullet"><b>${t.roomService}:</b>&nbsp;${fmt(hotel.room_service)}</div>`;
+    if (hotel.room_service) body += `<div class="fac-row note-bullet"><b>${t.roomService}:</b>&nbsp;${tr(hotel.room_service)}</div>`;
     sections.push({ key: 'servicii', title: t.servicii, body, hotelBadge: true });
   }
 
@@ -760,7 +809,7 @@ function renderFacilitati() {
       body += `<a class="fac-pill" href="https://wa.me/${formatPhoneRo(currentOperator.telefon)}" target="_blank" rel="noopener">${FAC_ICONS.whatsapp} ${t.whatsapp}</a>`;
     }
     if (contacteLista.length) {
-      body += `<div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">${contacteLista.map(c => `<div class="fac-row" style="margin-bottom:0;">${fmt(c)}</div>`).join('')}</div>`;
+      body += `<div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">${contacteLista.map(c => `<div class="fac-row" style="margin-bottom:0;">${tr(c)}</div>`).join('')}</div>`;
     }
     body += `<div class="fac-row" style="margin-top:10px;"><b>${t.politie}:</b>&nbsp;112</div>`;
     sections.push({ key: 'contact', title: t.contact, body });
@@ -878,7 +927,7 @@ function renderLocatieCard(op, loc, t) {
   const parcareEl = document.getElementById('locatie-parcare');
   if (loc.parcare) {
     document.getElementById('locatie-parcare-label').textContent = t.parcare + ':';
-    document.getElementById('locatie-parcare-text').textContent = fmt(loc.parcare);
+    document.getElementById('locatie-parcare-text').textContent = tr(loc.parcare);
     parcareEl.style.display = 'flex';
   } else {
     parcareEl.style.display = 'none';
@@ -1068,7 +1117,7 @@ function renderFilters(){
   });
 }
 
-function setLang(lang){
+async function setLang(lang){
   currentLang = lang;
   document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
   const t = I18N[lang];
@@ -1084,7 +1133,7 @@ function setLang(lang){
   document.getElementById('code-label').textContent = t.codeLabel;
   document.getElementById('code-sub').textContent = t.codeSub;
   document.getElementById('code-btn-text').textContent = t.codeBtn;
-  renderFacilitati();
+  await renderFacilitati();
   renderFilters();
   render(currentFilter);
 }
