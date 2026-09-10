@@ -44,10 +44,86 @@
 
   <div id="state-loading" style="padding:40px 0; text-align:center; color:var(--ink-soft); font-size:14px;">Se încarcă...</div>
 
-  <div id="state-noauth" style="display:none; text-align:center; padding:40px 0;">
-    <p class="serif" style="font-size:20px; font-weight:700; color:var(--teal-deep);">Trebuie să te autentifici</p>
-    <p style="color:var(--ink-soft); font-size:14px; margin:8px 0 18px;">Ca să activezi Essential, trebuie să știm pentru care cazare a ta.</p>
-    <a href="cont.html" style="display:inline-block; background:var(--teal-deep); color:#fff; padding:12px 22px; border-radius:999px; font-size:14px; font-weight:700; text-decoration:none;">Autentifică-te</a>
+  <div id="state-noauth" style="display:none;">
+
+    <div class="serif" style="font-size:24px; font-weight:700; color:var(--teal-deep); text-align:center; margin:0 0 8px;">Vezi cât ai plăti cu Essential</div>
+    <div style="font-size:13.5px; color:var(--ink-soft); text-align:center; line-height:1.55; margin-bottom:20px;">Ghidul de bază rămâne mereu gratuit. Alege tipul cazării ca să vezi prețul exact — fără cont, fără angajament.</div>
+
+    <div style="display:flex; gap:8px; margin-bottom:16px;">
+      <div class="apt-chip active" id="sim-tip-apartament">Apartament</div>
+      <div class="apt-chip" id="sim-tip-hotel">Hotel</div>
+    </div>
+
+    <div id="sim-apt-buckets" style="display:flex; gap:8px; margin-bottom:20px;">
+      <div class="apt-chip active" data-bucket="0">1–4 apt.</div>
+      <div class="apt-chip" data-bucket="1">5–9 apt.</div>
+      <div class="apt-chip" data-bucket="2">10+ apt.</div>
+    </div>
+
+    <div id="sim-hotel-rooms" style="display:none; margin-bottom:20px;">
+      <label for="sim-camere-input" style="display:block; font-size:12.5px; font-weight:600; color:var(--ink-soft); margin-bottom:6px; text-align:center;">Număr de camere</label>
+      <input type="number" id="sim-camere-input" value="20" min="1" style="width:100%; border:1.5px solid var(--line); border-radius:11px; padding:10px; font-size:14px; font-family:inherit; text-align:center; background:#fff;">
+    </div>
+
+    <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:8px;">
+      <div style="display:flex; background:#fff; border:1.5px solid var(--line); border-radius:999px; padding:4px;">
+        <button type="button" id="sim-btn-cycle-lunar" style="border:none; font-family:inherit; font-size:12.5px; font-weight:700; padding:8px 16px; border-radius:999px; cursor:pointer;">Lunar</button>
+        <button type="button" id="sim-btn-cycle-anual" style="border:none; font-family:inherit; font-size:12.5px; font-weight:700; padding:8px 16px; border-radius:999px; cursor:pointer;">Anual</button>
+      </div>
+    </div>
+    <div style="text-align:center; margin-bottom:24px;">
+      <span style="display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:.03em; color:var(--green); background:var(--green-soft); padding:3px 10px; border-radius:999px;">Anual — economisești ~20%</span>
+    </div>
+
+    <!-- Card Gratuit -->
+    <div style="background:#fff; border:1.5px solid var(--line); border-radius:18px; padding:22px 20px; margin-bottom:16px;">
+      <div style="font-size:11px; font-weight:700; letter-spacing:.05em; color:var(--ink-soft); text-transform:uppercase; margin-bottom:6px;">Gratuit</div>
+      <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:2px;">
+        <span class="serif" style="font-size:30px; font-weight:700; color:var(--teal-deep);">0 €</span>
+        <span style="font-size:13px; color:var(--ink-soft);">pentru totdeauna</span>
+      </div>
+      <div style="font-size:12.5px; color:var(--ink-soft); margin-bottom:16px;">Nivelul de bază, fără limită de timp sau de proprietăți.</div>
+
+      <div style="border-top:1px solid var(--line); padding-top:14px;">
+        <div class="feat-row"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span style="font-size:13px; line-height:1.45;">Ghid de oaspeți complet — recomandări locale curatoriate, RO/EN</span></div>
+        <div class="feat-row"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span style="font-size:13px; line-height:1.45;">Cod QR generat instant + poster printabil</span></div>
+        <div class="feat-row"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span style="font-size:13px; line-height:1.45;">Contact de bază — buton WhatsApp</span></div>
+        <div class="feat-row"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span style="font-size:13px; line-height:1.45;">Director afaceri locale + sistem de vouchere, nelimitat</span></div>
+        <div class="feat-row"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span style="font-size:13px; line-height:1.45;">Feedback privat de sejur de la oaspeți</span></div>
+        <div class="feat-row"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span style="font-size:13px; line-height:1.45;">Proprietăți nelimitate, fără termen limită</span></div>
+      </div>
+
+      <div class="plan-btn" style="background:transparent; border:1.5px solid var(--line); color:var(--teal-deep); margin-top:18px;">Inclus mereu</div>
+    </div>
+
+    <!-- Card Essential (simulare) -->
+    <div style="background:#fff; border:1.5px solid var(--gold); border-radius:18px; padding:22px 20px; position:relative; box-shadow:0 8px 24px rgba(16,48,43,0.10);">
+      <span style="position:absolute; top:-11px; left:20px; background:var(--gold); color:#fff; font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; padding:4px 11px; border-radius:999px;">Recomandat</span>
+
+      <div style="font-size:11px; font-weight:700; letter-spacing:.05em; color:#8F6222; text-transform:uppercase; margin-bottom:6px; margin-top:4px;">Essential</div>
+      <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:2px;">
+        <span class="serif" id="sim-essential-price" style="font-size:30px; font-weight:700; color:var(--teal-deep);">—</span>
+        <span style="font-size:13px; color:var(--ink-soft);" id="sim-essential-suffix"></span>
+      </div>
+      <div style="font-size:12px; color:var(--green); font-weight:600; min-height:16px; margin-bottom:6px;" id="sim-essential-annual-note"></div>
+      <div style="font-size:12px; color:#8F6222; font-weight:600; min-height:16px; margin-bottom:6px;" id="sim-essential-promo-note"></div>
+      <div id="sim-essential-basis" style="font-size:12.5px; color:var(--ink-soft); margin-bottom:16px;"></div>
+      <div style="font-size:11px; color:var(--ink-soft); margin-bottom:16px;">Toate prețurile afișate sunt fără TVA.</div>
+
+      <div style="border-top:1px solid var(--line); padding-top:14px;">
+        <div style="font-size:12.5px; font-weight:700; color:var(--ink); margin-bottom:8px;">Tot ce e în Gratuit, plus:</div>
+        <div class="feat-row"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span style="font-size:13px; line-height:1.45;">Reguli ale casei configurabile (nu doar poster static)</span></div>
+        <div class="feat-row"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span style="font-size:13px; line-height:1.45;">Parolă WiFi + instrucțiuni de conectare</span></div>
+        <div class="feat-row"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span style="font-size:13px; line-height:1.45;">Contact / recepție extins, dincolo de WhatsApp</span></div>
+        <div class="feat-row"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span style="font-size:13px; line-height:1.45;">Servicii hotel — restaurant, bar, SPA, fitness, minibar</span></div>
+        <div class="feat-row"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span style="font-size:13px; line-height:1.45;">Modul curățenie &amp; mentenanță pentru echipa ta</span></div>
+      </div>
+
+      <a href="cont.html" class="plan-btn" style="background:var(--teal-deep); color:#fff; margin-top:18px; display:flex;">Autentifică-te ca să activezi</a>
+    </div>
+
+    <div style="text-align:center; font-size:11.5px; color:var(--ink-soft); margin-top:18px; line-height:1.5;">Ai deja cont? <a href="cont.html">Autentifică-te</a> — sau <a href="inregistrare-hotelier.html">înregistrează o cazare nouă</a> ca să activezi Essential pentru ea.</div>
+
   </div>
 
   <div id="state-nomatch" style="display:none; text-align:center; padding:40px 0;">
@@ -236,6 +312,90 @@ function updateCycleButtons() {
 document.getElementById('btn-cycle-lunar').addEventListener('click', () => { cycle = 'lunar'; updateCycleButtons(); renderPricingCard(currentRow); });
 document.getElementById('btn-cycle-anual').addEventListener('click', () => { cycle = 'anual'; updateCycleButtons(); renderPricingCard(currentRow); });
 
+// ---------- Simulator public (fără cont) — preturi.html, secțiunea state-noauth ----------
+// Un prospect care nu are încă cont/cazare poate totuși vedea exact cât ar plăti,
+// alegând manual treapta de portofoliu (1-4 / 5-9 / 10+ apt.) sau nr. de camere pentru hotel.
+// Preturile si pragurile sunt EXACT cele reale (APT_TIERS/hotelPrice*) — nu e o versiune simplificată.
+let simTip = 'apartament';
+let simBucketIdx = 0;
+let simCamere = 20;
+let simCycle = 'lunar';
+
+function renderSimCard() {
+  const priceEl = document.getElementById('sim-essential-price');
+  const suffixEl = document.getElementById('sim-essential-suffix');
+  const noteEl = document.getElementById('sim-essential-annual-note');
+  const promoEl = document.getElementById('sim-essential-promo-note');
+  const basisEl = document.getElementById('sim-essential-basis');
+
+  if (simTip === 'hotel') {
+    const nrCamere = Math.max(1, parseInt(simCamere, 10) || 1);
+    if (simCycle === 'lunar') {
+      priceEl.textContent = `${eur(hotelPricePromo(nrCamere))} €`;
+      suffixEl.textContent = '/lună, primele 3 luni';
+      promoEl.textContent = `apoi ${eur(hotelPriceStandard(nrCamere))} €/lună, fără TVA`;
+      noteEl.textContent = '';
+    } else {
+      const anual = hotelPriceAnual(nrCamere);
+      priceEl.textContent = `${eur(anual)} €`;
+      suffixEl.textContent = '/lună, facturat anual';
+      noteEl.textContent = `${eur(anual * 12)} €/an · economisești ~20%`;
+      promoEl.textContent = '';
+    }
+    basisEl.textContent = `Calculat pentru ${nrCamere} camere — 1 €/cameră/lună (minim 20 €, plafon maxim 100 €/lună).`;
+  } else {
+    const tier = APT_TIERS[simBucketIdx];
+    const bucketLabel = ['1–4 apartamente', '5–9 apartamente', '10+ apartamente'][simBucketIdx];
+    if (simCycle === 'lunar') {
+      priceEl.textContent = `${eur(tier.promo)} €`;
+      suffixEl.textContent = '/lună, primele 3 luni';
+      promoEl.textContent = `apoi ${eur(tier.standard)} €/lună, fără TVA`;
+      noteEl.textContent = '';
+    } else {
+      priceEl.textContent = `${eur(tier.anual)} €`;
+      suffixEl.textContent = '/lună, facturat anual';
+      noteEl.textContent = `${eur(tier.anual * 12)} €/an · economisești ~20%`;
+      promoEl.textContent = '';
+    }
+    basisEl.textContent = `Preț pentru un portofoliu de ${bucketLabel} — scade automat la portofolii mai mari.`;
+  }
+}
+
+function setSimTip(tip) {
+  simTip = tip;
+  document.getElementById('sim-tip-apartament').classList.toggle('active', tip === 'apartament');
+  document.getElementById('sim-tip-hotel').classList.toggle('active', tip === 'hotel');
+  document.getElementById('sim-apt-buckets').style.display = tip === 'apartament' ? 'flex' : 'none';
+  document.getElementById('sim-hotel-rooms').style.display = tip === 'hotel' ? 'block' : 'none';
+  renderSimCard();
+}
+document.getElementById('sim-tip-apartament').addEventListener('click', () => setSimTip('apartament'));
+document.getElementById('sim-tip-hotel').addEventListener('click', () => setSimTip('hotel'));
+
+document.querySelectorAll('#sim-apt-buckets .apt-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    simBucketIdx = parseInt(chip.dataset.bucket, 10);
+    document.querySelectorAll('#sim-apt-buckets .apt-chip').forEach(c => c.classList.toggle('active', c === chip));
+    renderSimCard();
+  });
+});
+
+document.getElementById('sim-camere-input').addEventListener('input', (e) => {
+  simCamere = e.target.value;
+  renderSimCard();
+});
+
+function updateSimCycleButtons() {
+  const lunarBtn = document.getElementById('sim-btn-cycle-lunar');
+  const anualBtn = document.getElementById('sim-btn-cycle-anual');
+  lunarBtn.style.background = simCycle === 'lunar' ? 'var(--teal-deep)' : 'transparent';
+  lunarBtn.style.color = simCycle === 'lunar' ? '#fff' : 'var(--ink-soft)';
+  anualBtn.style.background = simCycle === 'anual' ? 'var(--teal-deep)' : 'transparent';
+  anualBtn.style.color = simCycle === 'anual' ? '#fff' : 'var(--ink-soft)';
+}
+document.getElementById('sim-btn-cycle-lunar').addEventListener('click', () => { simCycle = 'lunar'; updateSimCycleButtons(); renderSimCard(); });
+document.getElementById('sim-btn-cycle-anual').addEventListener('click', () => { simCycle = 'anual'; updateSimCycleButtons(); renderSimCard(); });
+
 function displayName(user) {
   const meta = user.user_metadata || {};
   if (meta.prenume) {
@@ -337,6 +497,8 @@ async function loadCazari(email) {
 async function init() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session || !session.user) {
+    updateSimCycleButtons();
+    renderSimCard();
     showState('state-noauth');
     return;
   }
