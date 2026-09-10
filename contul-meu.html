@@ -10,6 +10,7 @@
   :root{
     --teal-deep:#10302B; --teal:#1A4A42; --gold:#C98A2C; --gold-soft:#E8CE9E;
     --cream:#F7F2E8; --ink:#181E1B; --ink-soft:#5B6459; --line:#DCD5C6;
+    --pop-bg:#F6F0E2; --pop-line:#E4D9BC;
   }
   *{box-sizing:border-box;}
   body{margin:0; background:var(--cream); font-family:'Inter', system-ui, sans-serif; color:var(--ink);}
@@ -32,23 +33,28 @@
   .add-btn{display:flex; align-items:center; justify-content:center; gap:8px; width:100%; border:1.5px dashed var(--line); background:transparent; color:var(--teal-deep); font-size:13px; font-weight:700; padding:14px; border-radius:14px; margin-top:6px; text-decoration:none; box-sizing:border-box;}
   .empty-msg{font-size:13px; color:var(--ink-soft); padding:6px 0 4px;}
   /* ===== Bara de acțiuni pentru cazări (hotel/apartament) ===== */
-  .card-actions{display:flex; flex-wrap:wrap; gap:8px; padding:12px 16px 14px; border-top:1px solid var(--line); position:relative;}
+  .card-actions{display:flex; flex-wrap:wrap; gap:8px; padding:12px 16px 14px; border-top:1px solid var(--line);}
   .action-btn{flex:1 1 calc(50% - 4px); min-width:110px; display:flex; align-items:center; justify-content:center; gap:6px; border:1.5px solid var(--line); background:#fff;
     color:var(--teal-deep); font-size:12px; font-weight:600; font-family:inherit; padding:9px 8px; border-radius:10px; text-decoration:none; cursor:pointer;}
   .action-btn:hover{border-color:var(--teal-deep); background:var(--cream);}
   .action-btn svg{flex-shrink:0;}
-  .share-popover{position:absolute; bottom:calc(100% + 6px); left:16px; right:16px; background:#fff; border:1px solid var(--line); border-radius:12px;
-    box-shadow:0 8px 22px rgba(16,48,43,0.14); padding:8px; display:none; z-index:5; max-width:280px;}
+  .action-btn.active{border-color:var(--teal-deep); background:var(--teal-deep); color:#fff;}
+  .share-wrap{position:relative; flex:1 1 calc(50% - 4px); min-width:110px;}
+  .share-wrap .action-btn{width:100%;}
+  .share-popover{position:absolute; top:calc(100% + 8px); right:0; width:248px; background:var(--pop-bg); border:1px solid var(--pop-line);
+    border-radius:14px; box-shadow:0 10px 28px rgba(16,48,43,0.18); padding:8px; display:none; z-index:5;}
   .share-popover.open{display:block;}
-  .share-opt{display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:8px; font-size:13px; font-weight:600; color:var(--ink); text-decoration:none;
+  .share-popover::after{content:''; position:absolute; bottom:100%; right:18px; width:12px; height:12px; background:var(--pop-bg);
+    border-left:1px solid var(--pop-line); border-top:1px solid var(--pop-line); transform:translateY(6px) rotate(45deg); border-radius:3px 0 0 0;}
+  .share-opt{display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:9px; font-size:13px; font-weight:600; color:var(--ink); text-decoration:none;
     width:100%; box-sizing:border-box; border:none; background:none; cursor:pointer; font-family:inherit; text-align:left;}
-  .share-opt:hover{background:var(--cream);}
+  .share-opt:hover{background:rgba(255,255,255,0.65);}
   .share-opt svg{flex-shrink:0;}
   .share-opt-sub{font-size:11px; color:var(--ink-soft); font-weight:400; display:block; margin-top:1px;}
   .share-back{display:flex; align-items:center; gap:5px; border:none; background:none; color:var(--ink-soft); font-size:12px; font-weight:600;
-    font-family:inherit; cursor:pointer; padding:6px 6px 8px;}
+    font-family:inherit; cursor:pointer; padding:6px 6px 8px; width:100%;}
   .share-back:hover{color:var(--teal-deep);}
-  .share-group-title{font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--gold); padding:6px 10px 4px;}
+  .share-group-title{font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#8F6222; padding:2px 10px 6px;}
   .fb-badge{position:absolute; top:-6px; right:-6px; background:var(--gold); color:#fff; font-size:10px; font-weight:700; line-height:1; min-width:17px; height:17px; border-radius:999px; display:flex; align-items:center; justify-content:center; padding:0 4px; box-shadow:0 0 0 2px #fff;}
 </style>
 </head>
@@ -172,24 +178,26 @@ function renderCazari(rows, unreadCounts) {
       </a>
       <div class="card-actions">
         <button class="action-btn" type="button" data-action="qr" data-slug="${row.slug}">${QR_ICON} Afiș QR</button>
-        <button class="action-btn" type="button" data-action="share" data-slug="${row.slug}" data-nume="${nume.replace(/"/g, '&quot;')}">${SHARE_ICON} Distribuie</button>
+        <div class="share-wrap">
+          <button class="action-btn" type="button" data-action="share" data-slug="${row.slug}" data-nume="${nume.replace(/"/g, '&quot;')}">${SHARE_ICON} Distribuie</button>
+          <div class="share-popover" data-popover-for="${row.slug}" data-step="1">
+            <div class="share-step1">
+              <button class="share-opt" type="button" data-choose="link">${GUIDE_ICON} <span>Ghidul online<span class="share-opt-sub">Link către pagina live</span></span></button>
+              <button class="share-opt" type="button" data-choose="pdf">${PDF_ICON} <span>Ghid PDF<span class="share-opt-sub">Variantă offline, printabilă</span></span></button>
+            </div>
+            <div class="share-step2" style="display:none;">
+              <button class="share-back" type="button" data-back>${BACK_ICON} Înapoi</button>
+              <div class="share-group-title" data-step2-title></div>
+              <a class="share-opt" data-share-link="email" href="#">${EMAIL_ICON} Trimite pe Email</a>
+              <a class="share-opt" data-share-link="whatsapp" href="#" target="_blank" rel="noopener">${WHATSAPP_ICON} Trimite pe WhatsApp</a>
+              <a class="share-opt" data-share-link="save" href="#" target="_blank" rel="noopener" data-save-opt>${SAVE_ICON} <span data-save-label></span></a>
+              <button class="share-opt" type="button" data-copy>${COPY_ICON} Copiază linkul</button>
+            </div>
+          </div>
+        </div>
         <a class="action-btn" href="${guideUrl(row.slug)}" target="_blank" rel="noopener">${GUIDE_ICON} Vezi ghidul</a>
         <a class="action-btn" href="curatenie-mentenanta.html?slug=${encodeURIComponent(row.slug)}">${CLEAN_ICON} Curățenie</a>
         <a class="action-btn" style="position:relative;" href="feedback-oaspeti.html?slug=${encodeURIComponent(row.slug)}">${FEEDBACK_ICON} Feedback${unread ? `<span class="fb-badge">${unread}</span>` : ''}</a>
-        <div class="share-popover" data-popover-for="${row.slug}" data-step="1">
-          <div class="share-step1">
-            <button class="share-opt" type="button" data-choose="link">${GUIDE_ICON} <span>Ghidul online<span class="share-opt-sub">Link către pagina live</span></span></button>
-            <button class="share-opt" type="button" data-choose="pdf">${PDF_ICON} <span>Ghid PDF<span class="share-opt-sub">Variantă offline, printabilă</span></span></button>
-          </div>
-          <div class="share-step2" style="display:none;">
-            <button class="share-back" type="button" data-back>${BACK_ICON} Înapoi</button>
-            <div class="share-group-title" data-step2-title></div>
-            <a class="share-opt" data-share-link="email" href="#">${EMAIL_ICON} Trimite pe Email</a>
-            <a class="share-opt" data-share-link="whatsapp" href="#" target="_blank" rel="noopener">${WHATSAPP_ICON} Trimite pe WhatsApp</a>
-            <a class="share-opt" data-share-link="save" href="#" target="_blank" rel="noopener" data-save-opt>${SAVE_ICON} <span data-save-label></span></a>
-            <button class="share-opt" type="button" data-copy>${COPY_ICON} Copiază linkul</button>
-          </div>
-        </div>
       </div>
     `;
     wrap.appendChild(card);
@@ -207,7 +215,12 @@ function resetPopoverStep(popover) {
 }
 
 function closeAllPopovers() {
-  document.querySelectorAll('.share-popover.open').forEach(p => { p.classList.remove('open'); resetPopoverStep(p); });
+  document.querySelectorAll('.share-popover.open').forEach(p => {
+    p.classList.remove('open');
+    resetPopoverStep(p);
+    const wrap = p.closest('.share-wrap');
+    if (wrap) wrap.querySelector('.action-btn').classList.remove('active');
+  });
 }
 
 function showShareStep2(popover, type, slug, nume) {
@@ -288,6 +301,7 @@ document.getElementById('list-cazari').addEventListener('click', (e) => {
     if (alreadyOpen) return;
     popover.dataset.nume = btn.dataset.nume || 'cazarea ta';
     popover.classList.add('open');
+    btn.classList.add('active');
   }
 });
 
