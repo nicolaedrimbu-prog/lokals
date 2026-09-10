@@ -483,6 +483,50 @@ function renderList(){
       }
     });
   });
+  listEl.querySelectorAll('[data-tier-toggle]').forEach(input => {
+    input.addEventListener('change', async (e) => {
+      const id = e.target.getAttribute('data-tier-toggle');
+      const essential = e.target.checked;
+      const payload = essential
+        ? { tier: 'essential', tier_ciclu: 'lunar', tier_activat_la: new Date().toISOString() }
+        : { tier: 'gratuit', tier_ciclu: null, tier_activat_la: null };
+      e.target.disabled = true;
+      const { error } = await supabaseClient.from('operatori').update(payload).eq('id', id);
+      e.target.disabled = false;
+      if (error) {
+        console.error(error);
+        e.target.checked = !essential;
+        alert('Nu am putut salva schimbarea — încearcă din nou.');
+        return;
+      }
+      const row = ROWS.find(r => r.source === 'operatori' && String(r.id) === String(id));
+      if (row) Object.assign(row.raw, payload);
+      renderList();
+      const rowId = 'operatori-' + id;
+      const details = document.getElementById('details-' + rowId);
+      if (details) {
+        details.classList.add('open');
+        const toggleBtn = document.querySelector(`[data-toggle="${rowId}"]`);
+        if (toggleBtn) toggleBtn.textContent = 'Ascunde detalii';
+      }
+    });
+  });
+  listEl.querySelectorAll('[data-tier-cycle]').forEach(select => {
+    select.addEventListener('change', async (e) => {
+      const id = e.target.getAttribute('data-tier-cycle');
+      const tier_ciclu = e.target.value;
+      e.target.disabled = true;
+      const { error } = await supabaseClient.from('operatori').update({ tier_ciclu }).eq('id', id);
+      e.target.disabled = false;
+      if (error) {
+        console.error(error);
+        alert('Nu am putut salva schimbarea — încearcă din nou.');
+        return;
+      }
+      const row = ROWS.find(r => r.source === 'operatori' && String(r.id) === String(id));
+      if (row) row.raw.tier_ciclu = tier_ciclu;
+    });
+  });
 }
 
 function rowHtml(r){
@@ -597,6 +641,30 @@ function detailsHtml(r){
            </label>
          </div>
          <div class="addon-note">Doar tu poți activa sau dezactiva acest modul de aici — proprietarul nu-l poate porni singur din contul lui.</div>
+       </div>
+       <div class="addon-box" style="margin-top:10px;">
+         <div class="addon-row">
+           <div class="addon-icon">
+             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8F6222" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.5 5.5L20 9l-4 4l1 6l-5-3l-5 3l1-6l-4-4l5.5-.5z"/></svg>
+           </div>
+           <div class="addon-info">
+             <div class="addon-title">Plan Essential</div>
+             <div class="addon-sub">Activare manuală — plată/facturare în afara platformei</div>
+           </div>
+           <span class="addon-status ${raw.tier === 'essential' ? 'on' : 'off'}">${raw.tier === 'essential' ? 'Essential' : 'Gratuit'}</span>
+           <label class="switch">
+             <input type="checkbox" data-tier-toggle="${escapeHtml(r.id)}" ${raw.tier === 'essential' ? 'checked' : ''}>
+             <span class="track"></span>
+           </label>
+         </div>
+         <div class="addon-note" id="tier-cycle-note-${rowId}">
+           ${raw.tier === 'essential'
+             ? `Ciclu de facturare: <select data-tier-cycle="${escapeHtml(r.id)}" style="margin:0 4px;">
+                  <option value="lunar" ${raw.tier_ciclu === 'anual' ? '' : 'selected'}>Lunar</option>
+                  <option value="anual" ${raw.tier_ciclu === 'anual' ? 'selected' : ''}>Anual</option>
+                </select> · activat ${raw.tier_activat_la ? new Date(raw.tier_activat_la).toLocaleDateString('ro-RO') : '—'}`
+             : 'Activează pentru a trece proprietatea pe planul Essential — folosește asta după ce ai confirmat plata manual (transfer, BT ePOS etc).'}
+         </div>
        </div>`
     : '';
 
