@@ -63,6 +63,11 @@
 
   <div id="state-form" style="display:none;">
 
+    <a href="contul-meu.html" style="display:inline-flex; align-items:center; gap:5px; font-size:12.5px; font-weight:600; color:var(--ink-soft); text-decoration:none; margin-bottom:14px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+      Înapoi la proprietățile mele
+    </a>
+
     <div class="serif" style="font-size:24px; font-weight:700; color:var(--teal-deep); text-align:center; margin:0 0 8px;">Facturare</div>
     <div style="font-size:13.5px; color:var(--ink-soft); text-align:center; line-height:1.55; margin-bottom:20px;">Planul curent și starea contului pentru cazarea ta.</div>
 
@@ -78,7 +83,9 @@
         <div class="row"><span class="row-label">Cazare</span><span class="row-value" id="detail-nume">—</span></div>
         <div class="row" id="row-ciclu" style="display:none;"><span class="row-label">Ciclu de facturare</span><span class="row-value" id="detail-ciclu">—</span></div>
         <div class="row" id="row-activat" style="display:none;"><span class="row-label">Activat la</span><span class="row-value" id="detail-activat">—</span></div>
+        <div class="row" id="row-pret" style="display:none;"><span class="row-label" id="detail-pret-label">Preț curent</span><span class="row-value" id="detail-pret">—</span></div>
       </div>
+      <div id="plan-vat-note" style="display:none; font-size:11px; color:var(--ink-soft); margin-top:2px;">Preț fără TVA.</div>
 
       <div id="plan-cta-free" style="display:none; margin-top:18px;">
         <p style="font-size:12.5px; color:var(--ink-soft); line-height:1.5; margin:0 0 12px;">Ești pe planul Gratuit. Poți trece la Essential pentru personalizare completă a ghidului.</p>
@@ -111,6 +118,43 @@ let currentSession = null;
 let cazari = [];
 let currentRow = null;
 let pendingRequest = null;
+
+// ---------- Calcul preț — aceleași formule ca în preturi.html (vezi foaia "Pricing" din
+// lokals-matrice-comparativa-v2.xlsx) — folosite aici doar ca să arătăm ce plătește gazda ACUM. ----------
+const APT_TIERS = [
+  { max: 4, standard: 4.99, promo: 3.49, anual: 3.99 },
+  { max: 9, standard: 3.99, promo: 2.99, anual: 3.19 },
+  { max: Infinity, standard: 2.99, promo: 1.99, anual: 2.39 },
+];
+function aptTierFor(count) { return APT_TIERS.find(t => count <= t.max); }
+function hotelPriceStandard(nrCamere) { return Math.min(Math.max(nrCamere * 1.00, 20), 100); }
+function hotelPriceAnual(nrCamere) { return Math.min(Math.max(nrCamere * 0.80, 16), 80); }
+function hotelPricePromo(nrCamere) { return Math.min(Math.max(nrCamere * 0.79, 15), 100); }
+function eur(n) { return n.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function portfolioSize(row) { return cazari.filter(r => r.tip === 'apartament' && r.grup_id === row.grup_id).length || 1; }
+
+// Fereastra promo ține exact 3 luni de la activare — după aceea tariful trece automat la standard.
+function inPromoWindow(activatLa) {
+  if (!activatLa) return false;
+  const activat = new Date(activatLa);
+  const promoExpira = new Date(activat);
+  promoExpira.setMonth(promoExpira.getMonth() + 3);
+  return new Date() < promoExpira;
+}
+
+function currentPriceFor(row) {
+  const promo = row.tier_ciclu !== 'anual' && inPromoWindow(row.tier_activat_la);
+  if (row.tip === 'hotel') {
+    const nrCamere = row.nr_camere || 1;
+    if (row.tier_ciclu === 'anual') return { pret: hotelPriceAnual(nrCamere), suffix: '/lună, facturat anual' };
+    if (promo) return { pret: hotelPricePromo(nrCamere), suffix: '/lună, preț promo (primele 3 luni)' };
+    return { pret: hotelPriceStandard(nrCamere), suffix: '/lună' };
+  }
+  const tier = aptTierFor(portfolioSize(row));
+  if (row.tier_ciclu === 'anual') return { pret: tier.anual, suffix: '/lună, facturat anual' };
+  if (promo) return { pret: tier.promo, suffix: '/lună, preț promo (primele 3 luni)' };
+  return { pret: tier.standard, suffix: '/lună' };
+}
 
 function displayName(user) {
   const meta = user.user_metadata || {};
@@ -173,6 +217,8 @@ function renderPlanDetails() {
   const ctaFree = document.getElementById('plan-cta-free');
   const ctaPending = document.getElementById('plan-cta-pending');
   const ctaEssential = document.getElementById('plan-cta-essential');
+  const rowPret = document.getElementById('row-pret');
+  const vatNote = document.getElementById('plan-vat-note');
 
   nume.textContent = currentRow.nume_afisat || currentRow.nume_afacere || '—';
 
@@ -181,6 +227,8 @@ function renderPlanDetails() {
   ctaEssential.style.display = 'none';
   rowCiclu.style.display = 'none';
   rowActivat.style.display = 'none';
+  rowPret.style.display = 'none';
+  vatNote.style.display = 'none';
 
   if (currentRow.tier === 'essential') {
     badge.textContent = 'Essential';
@@ -191,6 +239,11 @@ function renderPlanDetails() {
       rowActivat.style.display = 'flex';
       document.getElementById('detail-activat').textContent = formatDate(currentRow.tier_activat_la);
     }
+    const { pret, suffix } = currentPriceFor(currentRow);
+    rowPret.style.display = 'flex';
+    document.getElementById('detail-pret-label').textContent = suffix.includes('promo') ? 'Preț promo curent' : 'Preț curent';
+    document.getElementById('detail-pret').textContent = `${eur(pret)} €${suffix}`;
+    vatNote.style.display = 'block';
     ctaEssential.style.display = 'block';
   } else {
     badge.textContent = 'Gratuit';

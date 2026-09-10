@@ -103,8 +103,9 @@
   .demo-open-block .demo-open-cta{display:inline-flex; align-items:center; gap:6px; font-size:14px; font-weight:700; color:var(--teal-deep);}
   .how-section{background:var(--teal-deep); border-radius:24px; padding:44px 32px; margin-bottom:20px;}
   .how-section h2{color:#fff; text-align:center; font-size:24px; margin:0 0 32px;}
-  .how-grid{display:grid; grid-template-columns:repeat(3, 1fr); gap:24px;}
-  @media (max-width:720px){ .how-grid{grid-template-columns:1fr;} }
+  .how-grid{display:grid; grid-template-columns:repeat(4, 1fr); gap:24px;}
+  @media (max-width:900px){ .how-grid{grid-template-columns:repeat(2, 1fr);} }
+  @media (max-width:520px){ .how-grid{grid-template-columns:1fr;} }
   .how-step{text-align:center;}
   .how-num{width:36px; height:36px; border-radius:50%; background:var(--gold); color:#fff; font-weight:700;
     display:flex; align-items:center; justify-content:center; margin:0 auto 14px; font-size:15px;}
@@ -263,6 +264,38 @@
       <span class="demo-open-cta">Deschideți ghidul complet în browser →</span>
     </a>
   </div>
+  <div class="proof-section" id="plan-demo-section">
+    <div class="eyebrow">Gratuit vs Essential</div>
+    <h2 class="serif">Cum arată ghidul, pe fiecare plan</h2>
+    <p>Alegeți tipul de cazare, apoi comparați ce vede oaspetele pe planul Gratuit față de Essential.</p>
+    <div class="region-bar" style="margin-bottom:10px;">
+      <button type="button" class="region-chip active" id="plan-type-apartament" data-type="apartament">Apartament</button>
+      <button type="button" class="region-chip" id="plan-type-hotel" data-type="hotel">Hotel</button>
+    </div>
+    <div class="region-bar" id="plan-tier-bar">
+      <button type="button" class="region-chip active" id="plan-tier-gratuit" data-tier="gratuit">Free</button>
+      <button type="button" class="region-chip" id="plan-tier-essential" data-tier="essential">Essential</button>
+    </div>
+    <div class="demo-devices" style="margin-top:18px;">
+      <div class="demo-laptop">
+        <div class="demo-laptop-chrome">
+          <div class="demo-laptop-dots"><span></span><span></span><span></span></div>
+          <div class="demo-laptop-address"><span class="lock">🔒</span><span class="url" id="plan-demo-url-text">lokals.ro/ghid-oaspeti.html?apt=demo-apartament-gratuit</span></div>
+        </div>
+        <div class="demo-laptop-screen">
+          <div class="demo-laptop-scale">
+            <iframe id="plan-demo-iframe" src="/ghid-oaspeti.html?apt=demo-apartament-gratuit" loading="lazy" title="Exemplu ghid de oaspeți — comparație Gratuit/Essential"></iframe>
+          </div>
+        </div>
+        <div class="demo-laptop-base"></div>
+      </div>
+    </div>
+    <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:22px;">
+      <a class="path-btn" id="plan-cta-free" href="/ghid-oaspeti.html?apt=demo-apartament-gratuit" target="_blank" style="background:#fff; border:1.5px solid var(--teal-deep); color:var(--teal-deep);">Vezi varianta Free →</a>
+      <a class="path-btn" id="plan-cta-essential" href="/ghid-oaspeti.html?apt=demo-apartament-essential" target="_blank" style="background:var(--gold,#C98A2C); border-color:var(--gold,#C98A2C); color:#fff;">Vezi varianta Essential →</a>
+    </div>
+    <p style="text-align:center; font-size:11.5px; color:var(--ink-soft); margin-top:12px;">Vrei să activezi Essential pentru cazarea ta? <a href="/preturi.html" style="color:var(--teal-deep); font-weight:600;">Vezi prețurile</a> (fără TVA).</p>
+  </div>
   <div class="how-section">
     <h2>Cum funcționează</h2>
     <div class="how-grid">
@@ -281,6 +314,11 @@
         <h3>Oaspeții vă găsesc</h3>
         <p>Vizibili direct în ghidul folosit deja de oaspeți reali, cazați în zonă.</p>
       </div>
+      <div class="how-step">
+        <div class="how-num">4</div>
+        <h3>Personalizați cu Essential (opțional)</h3>
+        <p>Reguli ale casei, WiFi, contact extins, servicii hotel — de la câțiva euro pe lună, oricând, fără obligație. <a href="/preturi.html" style="color:var(--gold); font-weight:600;">Vezi prețurile →</a></p>
+      </div>
     </div>
   </div>
   <div class="faq-section">
@@ -290,7 +328,11 @@
       <h3>Pentru hotelieri &amp; proprietari de apartamente</h3>
       <details class="faq-item">
         <summary>Ce este Lokals și cât costă?</summary>
-        <p>Un ghid digital de recomandări locale — activități, restaurante, cultură, wellness — accesat de oaspeți direct din cameră, printr-un cod QR. Participarea e complet gratuită, fără abonament, cost ascuns sau obligație de continuare.</p>
+        <p>Un ghid digital de recomandări locale — activități, restaurante, cultură, wellness — accesat de oaspeți direct din cameră, printr-un cod QR. Ghidul de bază rămâne permanent gratuit și nelimitat, fără cost ascuns sau obligație de continuare. Există și un plan opțional, Essential, care adaugă personalizarea completă a unității (reguli ale casei, WiFi, contact extins, servicii hotel) — de la câțiva euro pe lună, fără TVA, activabil oricând.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Ce aduce în plus planul Essential?</summary>
+        <p>Planul Gratuit rămâne complet și nelimitat — ghid de recomandări locale, cod QR, poster printabil, director de afaceri partenere. Essential adaugă personalizarea specifică unității voastre: reguli ale casei configurabile (nu doar textul static din poster), parolă WiFi cu instrucțiuni, date de contact/recepție extinse și, pentru hoteluri/pensiuni, programul de restaurant/bar/SPA/fitness plus prețurile la minibar. Puteți activa sau renunța oricând, fără obligație de continuare — <a href="/preturi.html">vezi prețurile</a>.</p>
       </details>
       <details class="faq-item">
         <summary>Cât durează înscrierea și ce se întâmplă după ce trimit formularul?</summary>
@@ -758,6 +800,38 @@ async function loadRegionBar(){
   }
 }
 loadRegionBar();
+
+// ---------- Demo Gratuit vs Essential (secțiunea "Cum arată ghidul, pe fiecare plan") ----------
+const PLAN_DEMO_SLUGS = {
+  apartament: { gratuit: 'demo-apartament-gratuit', essential: 'demo-apartament-essential' },
+  hotel: { gratuit: 'demo-hotel-gratuit', essential: 'demo-hotel-essential' },
+};
+let planDemoType = 'apartament';
+let planDemoTier = 'gratuit';
+
+function renderPlanDemo() {
+  const slug = PLAN_DEMO_SLUGS[planDemoType][planDemoTier];
+  const url = `/ghid-oaspeti.html?apt=${encodeURIComponent(slug)}`;
+  const iframe = document.getElementById('plan-demo-iframe');
+  if (iframe && iframe.src.indexOf(url) === -1) iframe.src = url;
+  document.getElementById('plan-demo-url-text').textContent = `lokals.ro/ghid-oaspeti.html?apt=${slug}`;
+
+  document.getElementById('plan-type-apartament').classList.toggle('active', planDemoType === 'apartament');
+  document.getElementById('plan-type-hotel').classList.toggle('active', planDemoType === 'hotel');
+  document.getElementById('plan-tier-gratuit').classList.toggle('active', planDemoTier === 'gratuit');
+  document.getElementById('plan-tier-essential').classList.toggle('active', planDemoTier === 'essential');
+
+  const freeSlug = PLAN_DEMO_SLUGS[planDemoType].gratuit;
+  const essentialSlug = PLAN_DEMO_SLUGS[planDemoType].essential;
+  document.getElementById('plan-cta-free').href = `/ghid-oaspeti.html?apt=${encodeURIComponent(freeSlug)}`;
+  document.getElementById('plan-cta-essential').href = `/ghid-oaspeti.html?apt=${encodeURIComponent(essentialSlug)}`;
+}
+
+document.getElementById('plan-type-apartament').addEventListener('click', () => { planDemoType = 'apartament'; renderPlanDemo(); });
+document.getElementById('plan-type-hotel').addEventListener('click', () => { planDemoType = 'hotel'; renderPlanDemo(); });
+document.getElementById('plan-tier-gratuit').addEventListener('click', () => { planDemoTier = 'gratuit'; renderPlanDemo(); });
+document.getElementById('plan-tier-essential').addEventListener('click', () => { planDemoTier = 'essential'; renderPlanDemo(); });
+renderPlanDemo();
 </script>
 </body>
 </html>

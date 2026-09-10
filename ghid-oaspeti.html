@@ -8,6 +8,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="lokals-features.js"></script>
 <style>
   :root{
     --bg:#EAE3D3; --surface:#FBF8F1; --ink:#20291F; --ink-soft:#5B6459;
@@ -280,7 +281,7 @@ const ZONA_LABELS = {
 // ilustrează cum arată secțiunea de check-in unui oaspete real, fără să expună vreo dată reală.
 // Un oaspete real vede mereu propriul cod, generat unic pentru sejurul lui (butonul "Generează codul meu").
 const DEMO_OPERATOR_TEMPLATE = {
-  id: 'demo', tip: 'apartament', telefon: '40751090407',
+  id: 'demo', tip: 'apartament', telefon: '40751090407', tier: 'essential',
   adresa: 'Centrul Râșnov, Brașov (adresă exemplu)',
   foto_url: '/demo-poza-pensiune.jpg',
   facilitati_cazare: {
@@ -297,6 +298,7 @@ const DEMO_OPERATOR_TEMPLATE = {
 let currentApt = APT_NAMES[apt];
 let currentZona = currentApt ? currentApt.zona : 'rasnov'; // implicit Râșnov, pt link-uri vechi
 let currentOperator = null; // randul complet din operatori, cand exista (foto, facilitati_cazare, tip)
+let featuresMap = {}; // cheie -> {tier_minim}, din tabela features — sursa unica pentru ce e Essential
 
 // ---------- Supabase (coduri beneficii + operatori auto-inscrisi) ----------
 const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
@@ -691,13 +693,13 @@ function renderFacilitati() {
     sections.push({ key: 'checkout', title: t.checkout, body });
   }
 
-  // Regulile casei — format nou: pana la 10 reguli libere, cu bullet points (reguli.lista);
+  // Regulile casei — Essential — format nou: pana la 10 reguli libere, cu bullet points (reguli.lista);
   // format vechi (comutatoare fumat/animale/liniste + extra) pastrat pentru cazarile neactualizate inca.
-  const reguliLista = Array.isArray(reguli.lista) ? reguli.lista.filter(Boolean) : null;
+  const reguliLista = ghidUnlocked('reguli_casa') && Array.isArray(reguli.lista) ? reguli.lista.filter(Boolean) : null;
   if (reguliLista && reguliLista.length) {
     const body = `<ul class="rules-list">${reguliLista.map(r => `<li>${fmt(r)}</li>`).join('')}</ul>`;
     sections.push({ key: 'reguli', title: t.reguli, body });
-  } else if (!reguliLista && (reguli.fumat !== undefined || reguli.animale !== undefined || reguli.liniste !== undefined || reguli.extra)) {
+  } else if (ghidUnlocked('reguli_casa') && !reguliLista && (reguli.fumat !== undefined || reguli.animale !== undefined || reguli.liniste !== undefined || reguli.extra)) {
     const items = [];
     if (reguli.fumat !== false) items.push(t.fumat);
     items.push(reguli.animale ? t.animale : t.animaleNu);
@@ -707,8 +709,8 @@ function renderFacilitati() {
     sections.push({ key: 'reguli', title: t.reguli, body });
   }
 
-  // WiFi
-  if (wifi.ssid) {
+  // WiFi — Essential
+  if (ghidUnlocked('wifi') && wifi.ssid) {
     const wifiPayload = `WIFI:T:WPA;S:${(wifi.ssid || '').replace(/([\\;,:"])/g, '\\$1')};P:${(wifi.parola || '').replace(/([\\;,:"])/g, '\\$1')};;`;
     let body = `<div class="fac-row"><b>SSID:</b>&nbsp;${fmt(wifi.ssid)}</div>`;
     if (wifi.parola) body += `<div class="fac-row"><b>${currentLang === 'en' ? 'Password' : 'Parolă'}:</b>&nbsp;${fmt(wifi.parola)}</div>`;
@@ -725,7 +727,7 @@ function renderFacilitati() {
     { label: t.micDejun, program: hotel.mic_dejun_program, locatie: hotel.mic_dejun_locatie, telefon: hotel.mic_dejun_telefon },
   ].filter(r => r.program || r.locatie || r.telefon);
   const minibarImgs = [hotel.minibar_foto1_url, hotel.minibar_foto2_url].filter(Boolean);
-  if (isHotel && (serviciiRows.length || minibarImgs.length || hotel.nota_servicii || hotel.room_service)) {
+  if (ghidUnlocked('servicii_hotel') && isHotel && (serviciiRows.length || minibarImgs.length || hotel.nota_servicii || hotel.room_service)) {
     let body = '';
     if (serviciiRows.length) {
       body += `<div class="fac-table-wrap"><table class="fac-table"><thead><tr>
@@ -751,7 +753,7 @@ function renderFacilitati() {
 
   // Contact & urgențe — format nou: pana la 5 contacte libere (urgente.lista); formatul vechi
   // (camp unic "spital") ramane afisat pentru cazarile neactualizate inca.
-  const contacteLista = Array.isArray(urgente.lista) ? urgente.lista.filter(Boolean) : (urgente.spital ? [urgente.spital] : []);
+  const contacteLista = ghidUnlocked('contact_extins') && Array.isArray(urgente.lista) ? urgente.lista.filter(Boolean) : (ghidUnlocked('contact_extins') && urgente.spital ? [urgente.spital] : []);
   if (currentOperator.telefon || contacteLista.length) {
     let body = '';
     if (currentOperator.telefon && f.whatsapp_activ !== false) {
@@ -1088,9 +1090,25 @@ function setLang(lang){
 }
 
 async function init() {
-  await resolveOperator();
+  await Promise.all([resolveOperator(), loadFeaturesMap()]);
   setLang('ro');
   loadPlaces();
+}
+
+async function loadFeaturesMap() {
+  try {
+    featuresMap = await LokalsFeatures.load(SUPABASE_URL, SUPABASE_ANON_KEY);
+  } catch (e) { featuresMap = {}; }
+}
+
+// Sectiunile din ghid care sunt disponibile doar gazdelor pe Essential — verificat live,
+// din tabela features + tier-ul cazarii, niciodata dupa ce date exista in DB (asa se rezolva
+// si cazul unei gazde care a fost Essential si a coborat la Gratuit: sectiunea dispare din
+// ghidul oaspetelui chiar daca datele vechi au ramas in facilitati_cazare).
+function ghidUnlocked(cheie) {
+  if (!currentOperator) return true;
+  const tier = currentOperator.tier || 'gratuit';
+  return LokalsFeatures.unlocked(featuresMap, tier, cheie);
 }
 init();
 </script>
