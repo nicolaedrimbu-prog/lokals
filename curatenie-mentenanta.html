@@ -73,6 +73,7 @@
   .lock-title{font-size:16px; font-weight:700; color:var(--teal-deep); margin-bottom:6px;}
   .lock-sub{font-size:13px; color:var(--ink-soft); line-height:1.55; margin-bottom:18px;}
   .lock-btn{display:inline-block; background:var(--teal-deep); color:#fff; font-size:13.5px; font-weight:700; padding:11px 22px; border-radius:999px; cursor:pointer; border:none; font-family:inherit; text-decoration:none;}
+  .lock-btn-secondary{display:block; margin-top:12px; font-size:12px; color:var(--ink-soft); text-decoration:underline;}
 </style>
 </head>
 <body>
@@ -288,7 +289,9 @@ function historyCardHtml(){
 }
 
 function renderDash(){
-  const locked = !operator.curatenie_activ;
+  // Deblocat automat pentru gazdele pe Essential (modulul face parte din pachet) — sau manual,
+  // via comutatorul curatenie_activ din panoul de admin, pentru excepții/conturi grandfathered.
+  const locked = !(operator.curatenie_activ || operator.tier === 'essential');
 
   document.getElementById('dash-content').innerHTML = `
     <div style="opacity:${locked ? '0.35' : '1'}; filter:${locked ? 'blur(3px)' : 'none'}; pointer-events:${locked ? 'none' : 'auto'};">
@@ -317,9 +320,10 @@ function renderDash(){
           <div class="lock-icon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8F6222" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11v-4a4 4 0 0 1 8 0v4"/></svg>
           </div>
-          <div class="lock-title serif">Modul disponibil ca add-on</div>
-          <div class="lock-sub">Curățenie &amp; Mentenanță se activează separat pentru contul tău — coordonezi firma de curățenie, consumabilele și problemele de mentenanță direct din Lokals.</div>
-          <a class="lock-btn" href="mailto:nico@lokals.ro?subject=${subject}&body=${body}">Cere activarea modulului</a>
+          <div class="lock-title serif">Doar în Essential</div>
+          <div class="lock-sub">Curățenie &amp; Mentenanță face parte din planul Essential — coordonezi firma de curățenie, consumabilele și problemele de mentenanță direct din Lokals.</div>
+          <a class="lock-btn" href="preturi.html?slug=${encodeURIComponent(operator.slug || '')}">Deblochează cu Essential →</a>
+          <a class="lock-btn-secondary" href="mailto:nico@lokals.ro?subject=${subject}&body=${body}">sau cere activarea manuală</a>
         </div>
       </div>`;
   } else {
@@ -351,7 +355,7 @@ async function init() {
   sessions = sesRes.data || [];
   consumabile = consRes.data || [];
 
-  if (!consumabile.length && operator.curatenie_activ) {
+  if (!consumabile.length && (operator.curatenie_activ || operator.tier === 'essential')) {
     const seed = DEFAULT_ITEMS.map((nume, i) => ({ operator_id: operator.id, nume, implicit: true, ordine: i }));
     const { data: inserted } = await supabaseClient.from('curatenie_consumabile').insert(seed).select('*');
     consumabile = inserted || [];
