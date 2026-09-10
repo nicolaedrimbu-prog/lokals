@@ -183,14 +183,26 @@ function candidatToPlace(row) {
   };
 }
 
+// O cerere care rămâne agățată (blocată de o rețea/firewall care nu răspunde deloc, în loc să dea eroare)
+// ar bloca pagina la nesfârșit pe "Se încarcă..." fără fetchWithTimeout — fetch() nu are timeout implicit.
+async function fetchWithTimeout(url, options, ms) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms || 9000);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function sbFetch(path) {
-  return fetch(`${SUPABASE_URL}/rest/v1/${path}`, { headers: { apikey: SUPABASE_KEY } });
+  return fetchWithTimeout(`${SUPABASE_URL}/rest/v1/${path}`, { headers: { apikey: SUPABASE_KEY } }, 9000);
 }
 
 async function loadPlaces(zona) {
   let sheetPlaces = [];
   try {
-    const res = await fetch(SHEET_CSV_URL);
+    const res = await fetchWithTimeout(SHEET_CSV_URL, {}, 7000);
     const csvText = await res.text();
     const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
     sheetPlaces = parsed.data.map(r => rowToPlace(r, zona)).filter(Boolean);
@@ -280,6 +292,11 @@ function showLoadError(){
   document.getElementById('state-error').style.display = '';
 }
 
+// Plasă de siguranță: dacă orice altceva rămâne agățat mai mult de 20s, arătăm eroarea
+// în loc să lăsăm pagina blocată la nesfârșit pe "Se încarcă...".
+let initDone = false;
+setTimeout(() => { if (!initDone) showLoadError(); }, 20000);
+
 async function init() {
   try {
     const slug = new URLSearchParams(window.location.search).get('slug');
@@ -307,8 +324,10 @@ async function init() {
 
     document.getElementById('state-loading').style.display = 'none';
     document.getElementById('page').style.display = '';
+    initDone = true;
   } catch (e) {
     console.error(e);
+    initDone = true;
     showLoadError();
   }
 }
