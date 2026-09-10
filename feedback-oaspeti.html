@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feedback oaspeți — Lokals</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Poppins:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root{
+    --teal-deep:#10302B; --teal:#1A4A42; --gold:#C98A2C; --gold-soft:#E8CE9E;
+    --cream:#F7F2E8; --ink:#181E1B; --ink-soft:#5B6459; --line:#DCD5C6; --brick:#9C4536; --brick-soft:#F1E3DF;
+    --green-soft:#E3ECE4;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--cream); font-family:'Inter', system-ui, sans-serif; color:var(--ink);}
+  a{color:var(--teal-deep);}
+  .serif{font-family:'Fraunces', Georgia, serif;}
+  main{max-width:640px; margin:0 auto; padding:22px 16px 60px;}
+  .back-link{font-size:12.5px; font-weight:600; color:var(--ink-soft); text-decoration:none; display:inline-block; margin-bottom:14px;}
+  .page-head{margin-bottom:16px;}
+  .page-title{font-size:22px; font-weight:700; color:var(--teal-deep);}
+  .page-sub{font-size:13px; color:var(--ink-soft); margin-top:3px;}
+
+  .filters{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;}
+  .filter-chip{border:1.5px solid var(--line); background:#fff; color:var(--ink-soft); font-size:12.5px; font-weight:600; padding:7px 14px;
+    border-radius:999px; cursor:pointer; font-family:inherit;}
+  .filter-chip.active{background:var(--teal-deep); border-color:var(--teal-deep); color:#fff;}
+
+  .fb-card{background:#fff; border-radius:16px; box-shadow:0 4px 16px rgba(16,48,43,0.07); padding:16px 18px; margin-bottom:12px;}
+  .fb-card.unread{box-shadow:0 4px 16px rgba(16,48,43,0.07), inset 3px 0 0 var(--gold);}
+  .fb-top{display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:9px;}
+  .fb-stars{color:var(--gold); font-size:14px; letter-spacing:1px;}
+  .fb-type{font-size:10px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; padding:3px 9px; border-radius:999px; white-space:nowrap;}
+  .fb-type.parere{background:var(--green-soft); color:var(--teal-deep);}
+  .fb-type.problema{background:var(--brick-soft); color:var(--brick);}
+  .fb-type.sugestie{background:var(--gold-soft); color:#8F6222;}
+  .fb-msg{font-size:13.5px; color:var(--ink); line-height:1.55; margin-bottom:10px; white-space:pre-wrap;}
+  .fb-bottom{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .fb-meta{font-size:11.5px; color:var(--ink-soft);}
+  .fb-read-btn{font-size:11px; font-weight:700; padding:6px 12px; border-radius:999px; border:1.5px solid var(--line); background:#fff;
+    color:var(--teal-deep); cursor:pointer; font-family:inherit; white-space:nowrap;}
+  .fb-read-btn.is-read{border-color:transparent; background:var(--green-soft); color:var(--teal-deep);}
+  .empty-note{font-size:13px; color:var(--ink-soft); text-align:center; padding:30px 0;}
+</style>
+</head>
+<body>
+
+<div style="background:var(--teal-deep); padding:16px 18px; display:flex; align-items:center; justify-content:space-between;">
+  <a href="index.html" style="display:flex; align-items:center; gap:8px; text-decoration:none;">
+    <span style="width:22px; height:22px; border-radius:50%; background:var(--gold); position:relative; display:inline-block;">
+      <span style="position:absolute; inset:6px; border-radius:50%; background:var(--teal-deep);"></span>
+    </span>
+    <span style="font-family:'Poppins', sans-serif; font-weight:700; color:#fff; font-size:17px;">lokals</span>
+  </a>
+  <div style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.08); padding:6px 12px; border-radius:999px;">
+    <span id="header-auth-name" style="font-size:12px; font-weight:600; color:#fff;"></span>
+    <span id="header-logout-btn" style="font-size:10.5px; color:var(--gold-soft); border-left:1px solid rgba(255,255,255,0.25); padding-left:8px; cursor:pointer;">Ieși din cont</span>
+  </div>
+</div>
+
+<main>
+  <div id="state-loading" style="padding:40px 0; text-align:center; color:var(--ink-soft); font-size:14px;">Se încarcă...</div>
+
+  <div id="state-noauth" style="display:none; text-align:center; padding:40px 0;">
+    <p class="serif" style="font-size:20px; font-weight:700; color:var(--teal-deep);">Trebuie să te autentifici</p>
+    <a href="cont.html" style="display:inline-block; background:var(--teal-deep); color:#fff; padding:12px 22px; border-radius:999px; font-size:14px; font-weight:700; text-decoration:none;">Autentifică-te</a>
+  </div>
+
+  <div id="state-nomatch" style="display:none; text-align:center; padding:40px 0;">
+    <p class="serif" style="font-size:20px; font-weight:700; color:var(--teal-deep);">Nu am găsit nicio cazare pe acest cont</p>
+  </div>
+
+  <div id="state-form" style="display:none;">
+    <a class="back-link" href="contul-meu.html">← Înapoi la proprietățile mele</a>
+
+    <div class="page-head">
+      <div class="page-title serif">Feedback oaspeți</div>
+      <div class="page-sub" id="page-sub"></div>
+    </div>
+
+    <div class="filters" id="filters">
+      <button class="filter-chip active" type="button" data-filter="toate">Toate</button>
+      <button class="filter-chip" type="button" data-filter="necitite">Necitite</button>
+      <button class="filter-chip" type="button" data-filter="parere">Păreri</button>
+      <button class="filter-chip" type="button" data-filter="problema">Probleme</button>
+      <button class="filter-chip" type="button" data-filter="sugestie">Sugestii</button>
+    </div>
+
+    <div id="fb-list"></div>
+  </div>
+</main>
+
+<script>
+const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
+const SUPABASE_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const TIP_LABELS = { parere: 'Părere generală', problema: 'Problemă semnalată', sugestie: 'Sugestie' };
+
+let operator = null;
+let feedback = [];
+let filter = 'toate';
+
+function escapeHtml(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function displayName(user) {
+  const meta = user.user_metadata || {};
+  if (meta.prenume) {
+    const initial = meta.nume ? meta.nume.trim().charAt(0).toUpperCase() + '.' : '';
+    return `${meta.prenume} ${initial}`.trim();
+  }
+  return user.email;
+}
+function showState(id) {
+  ['state-loading', 'state-noauth', 'state-nomatch', 'state-form'].forEach(s => {
+    document.getElementById(s).style.display = (s === id) ? '' : 'none';
+  });
+}
+function fmtDateTime(d){
+  return new Date(d).toLocaleString('ro-RO', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+function starsHtml(rating){
+  if (!rating) return '';
+  return '★'.repeat(rating) + '☆'.repeat(5 - rating);
+}
+
+async function toggleRead(id){
+  const item = feedback.find(f => String(f.id) === String(id));
+  if (!item) return;
+  const nextVal = !item.citit;
+  const { error } = await supabaseClient.from('ghid_feedback').update({ citit: nextVal }).eq('id', id);
+  if (error) { console.error(error); alert('Nu am putut actualiza starea acestui feedback.'); return; }
+  item.citit = nextVal;
+  renderList();
+}
+
+function renderList(){
+  let rows = feedback;
+  if (filter === 'necitite') rows = rows.filter(f => !f.citit);
+  else if (filter === 'parere' || filter === 'problema' || filter === 'sugestie') rows = rows.filter(f => f.tip === filter);
+
+  const wrap = document.getElementById('fb-list');
+  if (!rows.length) {
+    wrap.innerHTML = `<div class="empty-note">Niciun feedback ${filter === 'toate' ? 'primit încă' : 'în această categorie'}.</div>`;
+    return;
+  }
+
+  wrap.innerHTML = rows.map(f => `
+    <div class="fb-card ${f.citit ? '' : 'unread'}">
+      <div class="fb-top">
+        <div class="fb-stars">${starsHtml(f.rating)}</div>
+        <span class="fb-type ${f.tip}">${TIP_LABELS[f.tip] || f.tip}</span>
+      </div>
+      <div class="fb-msg">${escapeHtml(f.mesaj)}</div>
+      <div class="fb-bottom">
+        <span class="fb-meta">${escapeHtml(f.nume_oaspete || 'Anonim')} · ${fmtDateTime(f.created_at)}</span>
+        <button class="fb-read-btn ${f.citit ? 'is-read' : ''}" type="button" data-toggle="${f.id}">${f.citit ? 'Citit ✓' : 'Marchează citit'}</button>
+      </div>
+    </div>
+  `).join('');
+
+  wrap.querySelectorAll('[data-toggle]').forEach(btn => {
+    btn.addEventListener('click', () => toggleRead(btn.dataset.toggle));
+  });
+}
+
+document.getElementById('filters').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-filter]');
+  if (!btn) return;
+  filter = btn.dataset.filter;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.toggle('active', c === btn));
+  renderList();
+});
+
+async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session || !session.user) { showState('state-noauth'); return; }
+  document.getElementById('header-auth-name').textContent = displayName(session.user);
+
+  const requestedSlug = new URLSearchParams(window.location.search).get('slug');
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/operatori?email=eq.${encodeURIComponent(session.user.email)}&select=*`, { headers: { apikey: SUPABASE_KEY } });
+  const cazari = await res.json();
+  if (!cazari.length) { showState('state-nomatch'); return; }
+  operator = (requestedSlug && cazari.find(r => r.slug === requestedSlug)) || cazari[0];
+
+  document.getElementById('page-sub').textContent = operator.nume_afisat || operator.nume_afacere || '';
+
+  const { data } = await supabaseClient.from('ghid_feedback').select('*').eq('operator_id', operator.id).order('created_at', { ascending: false });
+  feedback = data || [];
+
+  renderList();
+  showState('state-form');
+}
+
+document.getElementById('header-logout-btn').addEventListener('click', async () => {
+  await supabaseClient.auth.signOut();
+  window.location.href = 'index.html';
+});
+
+init();
+</script>
+
+</body>
+</html>

@@ -120,6 +120,16 @@
   /* Orice text liber completat de proprietar (note, recomandari, mesaje) -- acelasi principiu de bullet */
   .note-bullet{position:relative; padding-left:16px;}
   .note-bullet::before{content:'•'; position:absolute; left:0; color:var(--amber-deep); font-weight:700;}
+
+  /* ===== Feedback despre sejur (privat, către gazdă) ===== */
+  .sf-stars{display:flex; gap:6px; margin-bottom:14px;}
+  .sf-star{background:none; border:none; cursor:pointer; padding:0; font-size:28px; line-height:1; color:var(--line); font-family:inherit;}
+  .sf-star.filled{color:var(--amber);}
+  .sf-types{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;}
+  .sf-type-chip{border:1px solid var(--line); background:var(--bg); color:var(--ink); border-radius:999px; padding:7px 14px; font-size:12.5px; cursor:pointer; font-family:inherit;}
+  .sf-type-chip.active{background:var(--spruce-deep); color:#fff; border-color:var(--spruce-deep);}
+  #stay-fb-text, #stay-fb-name{width:100%; box-sizing:border-box; border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-family:'Inter', sans-serif; font-size:13px; color:var(--ink); resize:vertical; margin-bottom:10px;}
+  #stay-fb-success{display:none; text-align:center; padding:8px 0;}
 </style>
 </head>
 <body>
@@ -217,6 +227,27 @@
         padding:9px 18px; font-size:13px; font-weight:500; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
       <span id="feedback-btn-text">Trimite pe WhatsApp</span>
     </button>
+  </div>
+
+  <div class="box" id="stay-fb-box" style="margin-top:14px;">
+    <p id="stay-fb-label" style="margin:0 0 4px; font-weight:600; color:var(--ink);">Cum a fost sejurul tău?</p>
+    <p id="stay-fb-sub" style="margin:0 0 14px; font-size:12px; color:var(--ink-soft);">Feedback-ul e privat — îl vede doar gazda ta, nu apare public.</p>
+
+    <div id="stay-fb-form">
+      <div class="sf-stars" id="stay-fb-stars"></div>
+      <div class="sf-types" id="stay-fb-types"></div>
+      <textarea id="stay-fb-text" rows="3"></textarea>
+      <input id="stay-fb-name" type="text">
+      <button id="stay-fb-submit" onclick="submitStayFeedback()"
+        style="background:var(--spruce-deep); color:#fff; border:none; border-radius:999px;
+          padding:9px 18px; font-size:13px; font-weight:500; cursor:pointer;">
+        <span id="stay-fb-submit-text">Trimite feedback</span>
+      </button>
+    </div>
+
+    <div id="stay-fb-success">
+      <p id="stay-fb-success-text" style="margin:0; font-weight:600; color:var(--spruce-deep);">Mulțumim! Am trimis feedback-ul gazdei tale.</p>
+    </div>
   </div>
 </footer>
 
@@ -396,6 +427,77 @@ function sendFeedback(){
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
 }
 
+// ---------- Feedback despre sejur (privat, către gazdă) ----------
+let stayFbRating = 0;
+let stayFbType = 'parere';
+let stayFbSubmitted = false;
+
+function renderStayFeedbackBox(){
+  const t = I18N[currentLang];
+  document.getElementById('stay-fb-label').textContent = t.stayFbLabel;
+  document.getElementById('stay-fb-sub').textContent = t.stayFbSub;
+  document.getElementById('stay-fb-name').placeholder = t.stayFbNamePlaceholder;
+  document.getElementById('stay-fb-submit-text').textContent = t.stayFbSubmitBtn;
+  document.getElementById('stay-fb-success-text').textContent = t.stayFbSuccess;
+
+  const starsWrap = document.getElementById('stay-fb-stars');
+  starsWrap.innerHTML = [1, 2, 3, 4, 5].map(n =>
+    `<button type="button" class="sf-star ${n <= stayFbRating ? 'filled' : ''}" data-star="${n}">★</button>`
+  ).join('');
+  starsWrap.querySelectorAll('[data-star]').forEach(btn => {
+    btn.onclick = () => { stayFbRating = Number(btn.dataset.star); renderStayFeedbackBox(); };
+  });
+
+  const typesWrap = document.getElementById('stay-fb-types');
+  typesWrap.innerHTML = t.stayFbTypes.map(tp =>
+    `<button type="button" class="sf-type-chip ${tp.id === stayFbType ? 'active' : ''}" data-type="${tp.id}">${tp.label}</button>`
+  ).join('');
+  typesWrap.querySelectorAll('[data-type]').forEach(btn => {
+    btn.onclick = () => { stayFbType = btn.dataset.type; renderStayFeedbackBox(); };
+  });
+
+  const activeType = t.stayFbTypes.find(tp => tp.id === stayFbType);
+  document.getElementById('stay-fb-text').placeholder = activeType ? activeType.placeholder : '';
+
+  // Pe sloturile "demo-*" nu există un operator real în baza de date, deci nu avem un
+  // operator_id la care să atașăm feedback-ul — ascundem formularul pe acele sloturi.
+  const isDemoSlot = !currentOperator || currentOperator.id === 'demo';
+  document.getElementById('stay-fb-box').style.display = isDemoSlot ? 'none' : '';
+  document.getElementById('stay-fb-form').style.display = stayFbSubmitted ? 'none' : '';
+  document.getElementById('stay-fb-success').style.display = stayFbSubmitted ? 'block' : 'none';
+}
+
+async function submitStayFeedback(){
+  if (!currentOperator || currentOperator.id === 'demo') return;
+  const mesaj = document.getElementById('stay-fb-text').value.trim();
+  if (!mesaj) {
+    document.getElementById('stay-fb-text').focus();
+    return;
+  }
+  const nume = document.getElementById('stay-fb-name').value.trim();
+  const btn = document.getElementById('stay-fb-submit');
+  btn.disabled = true;
+  try {
+    const res = await sbFetch('ghid_feedback', {
+      method: 'POST',
+      body: JSON.stringify({
+        operator_id: currentOperator.id,
+        rating: stayFbRating || null,
+        tip: stayFbType,
+        mesaj,
+        nume_oaspete: nume || null,
+      }),
+    });
+    if (!res.ok) throw new Error('request failed');
+    stayFbSubmitted = true;
+    renderStayFeedbackBox();
+  } catch (e) {
+    alert(currentLang === 'en' ? "We couldn't send your feedback. Please try again." : 'Nu am putut trimite feedback-ul. Încearcă din nou.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 // ---------- Categorii ----------
 const CATS = {
   aventura:  { label: "Aventură",     label_en: "Adventure",   color: "#3C5B44" },
@@ -421,6 +523,16 @@ const I18N = {
     feedbackPlaceholder: "Scrie aici sugestia ta — o citim și actualizăm ghidul.",
     feedbackBtn: "Trimite pe WhatsApp",
     feedbackMsg: (apt, text) => `Salut! Sunt oaspete la "${apt}" și am o sugestie pentru ghid: ${text}`,
+    stayFbLabel: "Cum a fost sejurul tău?",
+    stayFbSub: "Feedback-ul e privat — îl vede doar gazda ta, nu apare public.",
+    stayFbTypes: [
+      { id: 'parere', label: 'Părere generală', placeholder: 'Spune-ne cum a fost sejurul tău...' },
+      { id: 'problema', label: 'Am o problemă', placeholder: 'Descrie pe scurt problema întâmpinată...' },
+      { id: 'sugestie', label: 'O sugestie', placeholder: 'Ce am putea îmbunătăți...' },
+    ],
+    stayFbNamePlaceholder: "Numele tău (opțional)",
+    stayFbSubmitBtn: "Trimite feedback",
+    stayFbSuccess: "Mulțumim! Am trimis feedback-ul gazdei tale.",
     loadError: "Nu am putut încărca recomandările chiar acum. Încearcă să reîmprospătezi pagina.",
     soonBeneficii: "🎁 Beneficii în curând",
     soonCadou: "🎁 Cadou în curând",
@@ -461,6 +573,16 @@ const I18N = {
     feedbackPlaceholder: "Write your suggestion here — we'll read it and update the guide.",
     feedbackBtn: "Send on WhatsApp",
     feedbackMsg: (apt, text) => `Hi! I'm a guest at "${apt}" and I have a suggestion for the guide: ${text}`,
+    stayFbLabel: "How was your stay?",
+    stayFbSub: "Your feedback is private — only your host sees it, it's never public.",
+    stayFbTypes: [
+      { id: 'parere', label: 'General feedback', placeholder: 'Tell us how your stay went...' },
+      { id: 'problema', label: 'I have a problem', placeholder: 'Briefly describe the issue...' },
+      { id: 'sugestie', label: 'A suggestion', placeholder: 'What could we improve...' },
+    ],
+    stayFbNamePlaceholder: "Your name (optional)",
+    stayFbSubmitBtn: "Send feedback",
+    stayFbSuccess: "Thank you! Your feedback has been sent to your host.",
     loadError: "We couldn't load the recommendations right now. Try refreshing the page.",
     soonBeneficii: "🎁 Perks coming soon",
     soonCadou: "🎁 Gift coming soon",
@@ -917,6 +1039,7 @@ function setLang(lang){
   document.getElementById('code-label').textContent = t.codeLabel;
   document.getElementById('code-sub').textContent = t.codeSub;
   document.getElementById('code-btn-text').textContent = t.codeBtn;
+  renderStayFeedbackBox();
   renderFacilitati();
   renderFilters();
   render(currentFilter);

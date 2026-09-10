@@ -43,6 +43,7 @@
   .share-opt{display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:8px; font-size:13px; font-weight:600; color:var(--ink); text-decoration:none;}
   .share-opt:hover{background:var(--cream);}
   .share-opt svg{flex-shrink:0;}
+  .fb-badge{position:absolute; top:-6px; right:-6px; background:var(--gold); color:#fff; font-size:10px; font-weight:700; line-height:1; min-width:17px; height:17px; border-radius:999px; display:flex; align-items:center; justify-content:center; padding:0 4px; box-shadow:0 0 0 2px #fff;}
 </style>
 </head>
 <body>
@@ -133,12 +134,15 @@ const GUIDE_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" 
 const WHATSAPP_ICON = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#25A160" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l1.65 -3.8a9 9 0 1 1 3.4 3.4l-5.05 1.4"/><path d="M9 10a.5 .5 0 0 0 1 0v-1a.5 .5 0 0 0 -1 0v1a5 5 0 0 0 5 5h1a.5 .5 0 0 0 0 -1h-1a.5 .5 0 0 0 0 1"/></svg>';
 const EMAIL_ICON = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9 -6"/></svg>';
 const CLEAN_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l3 3l-1.5 1.5a2 2 0 0 0 3 3l1.5 -1.5l3 3l-1.5 1.5a2 2 0 1 0 3 3l6 -6a2 2 0 0 0 -3 -3l-1.5 1.5l-3 -3l1.5 -1.5a2 2 0 0 0 -3 -3z"/></svg>';
+const PDF_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"/><path d="M9 17v-4"/><path d="M9 13h1.5a1.5 1.5 0 0 1 0 3h-1.5"/><path d="M12.5 17v-4h1.5"/></svg>';
+const FEEDBACK_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-13a3 3 0 0 1 3 -3h10a3 3 0 0 1 3 3v6a3 3 0 0 1 -3 3h-9l-4 4z"/></svg>';
 
 function guideUrl(slug) {
   return `https://lokals.ro/ghid-oaspeti.html?apt=${encodeURIComponent(slug)}`;
 }
 
-function renderCazari(rows) {
+function renderCazari(rows, unreadCounts) {
+  unreadCounts = unreadCounts || {};
   const wrap = document.getElementById('list-cazari');
   wrap.innerHTML = '';
   rows.forEach(row => {
@@ -146,6 +150,7 @@ function renderCazari(rows) {
     card.className = 'card';
     const thumb = row.foto_url ? `<img src="${row.foto_url}" alt="">` : CAZARE_ICON;
     const nume = row.nume_afisat || row.nume_afacere;
+    const unread = unreadCounts[row.id] || 0;
     card.innerHTML = `
       <a class="card-main" href="setari-cazare.html?slug=${encodeURIComponent(row.slug)}">
         <div class="card-thumb">${thumb}</div>
@@ -161,9 +166,11 @@ function renderCazari(rows) {
         <button class="action-btn" type="button" data-action="share" data-slug="${row.slug}" data-nume="${nume.replace(/"/g, '&quot;')}">${SHARE_ICON} Distribuie</button>
         <a class="action-btn" href="${guideUrl(row.slug)}" target="_blank" rel="noopener">${GUIDE_ICON} Vezi ghidul</a>
         <a class="action-btn" href="curatenie-mentenanta.html?slug=${encodeURIComponent(row.slug)}">${CLEAN_ICON} Curățenie</a>
+        <a class="action-btn" style="position:relative;" href="feedback-oaspeti.html?slug=${encodeURIComponent(row.slug)}">${FEEDBACK_ICON} Feedback${unread ? `<span class="fb-badge">${unread}</span>` : ''}</a>
         <div class="share-popover" data-popover-for="${row.slug}">
           <a class="share-opt" data-share-link="whatsapp" href="#" target="_blank" rel="noopener">${WHATSAPP_ICON} WhatsApp</a>
           <a class="share-opt" data-share-link="email" href="#">${EMAIL_ICON} Email</a>
+          <a class="share-opt" href="export-ghid-pdf.html?slug=${encodeURIComponent(row.slug)}" target="_blank" rel="noopener">${PDF_ICON} Descarcă ghidul PDF</a>
         </div>
       </div>
     `;
@@ -256,7 +263,16 @@ async function init() {
 
   if (cazari.length) {
     document.getElementById('section-cazari').style.display = '';
-    renderCazari(cazari);
+    let unreadCounts = {};
+    try {
+      const ids = cazari.map(r => r.id).join(',');
+      const fbRes = await fetch(`${SUPABASE_URL}/rest/v1/ghid_feedback?operator_id=in.(${ids})&citit=eq.false&select=operator_id`, { headers: { apikey: SUPABASE_KEY } });
+      if (fbRes.ok) {
+        const fbRows = await fbRes.json();
+        fbRows.forEach(r => { unreadCounts[r.operator_id] = (unreadCounts[r.operator_id] || 0) + 1; });
+      }
+    } catch (e) { /* badge-ul de feedback e un extra — lista de cazări rămâne utilă chiar dacă nu s-a putut încărca */ }
+    renderCazari(cazari, unreadCounts);
   }
   if (afaceri.length) {
     document.getElementById('section-afaceri').style.display = '';
