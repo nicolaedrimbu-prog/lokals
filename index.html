@@ -556,7 +556,10 @@ document.getElementById('header-logout-btn').addEventListener('click', async fun
 
 // Butoanele "Înscrie-te gratuit" din cele două secțiuni: dacă ești deja autentificat,
 // mergi direct la formular (platforma te recunoaște); altfel, deschide popup-ul de alegere
-document.querySelectorAll('.path-btn').forEach(btn => {
+// Doar butoanele care chiar au data-signup-href (cele două "Înscrie-te gratuit") intră în acest
+// flux — altfel orice alt link stilizat ca .path-btn (ex. butoanele Free/Essential din secțiunea
+// de comparație a planurilor) și-ar pierde href-ul real, suprascris cu null.
+document.querySelectorAll('.path-btn[data-signup-href]').forEach(btn => {
   btn.addEventListener('click', async function () {
     const href = this.getAttribute('data-signup-href');
     const email = await getCurrentEmail();
