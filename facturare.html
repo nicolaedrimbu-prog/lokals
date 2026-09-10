@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facturare — Lokals</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Poppins:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root{
+    --teal-deep:#10302B; --teal:#1A4A42; --gold:#C98A2C; --gold-soft:#E8CE9E;
+    --cream:#F7F2E8; --ink:#181E1B; --ink-soft:#5B6459; --line:#DCD5C6;
+    --green:#3C6B3F; --green-soft:#E4EFE2; --brick:#9C4536;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--cream); font-family:'Inter', system-ui, sans-serif; color:var(--ink);}
+  a{color:var(--teal-deep);} a:hover{color:var(--gold);}
+  .serif{font-family:'Fraunces', Georgia, serif;}
+  main{max-width:600px; margin:0 auto; padding:26px 18px 60px;}
+  .card{background:#fff; border:1.5px solid var(--line); border-radius:18px; padding:22px 20px; margin-bottom:16px;}
+  .apt-chip{flex:1; border:1.5px solid var(--line); background:#fff; border-radius:11px; padding:10px; text-align:center; font-size:12.5px; font-weight:600; color:var(--ink-soft); cursor:pointer;}
+  .apt-chip.active{border-color:var(--teal-deep); background:var(--cream); font-weight:700; color:var(--teal-deep);}
+  .btn{display:flex; align-items:center; justify-content:center; width:100%; padding:13px; border-radius:999px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; text-decoration:none; border:none;}
+  .badge{display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; letter-spacing:.03em; padding:4px 12px; border-radius:999px;}
+  .badge-gratuit{color:var(--ink-soft); background:var(--line);}
+  .badge-essential{color:#8F6222; background:var(--gold-soft);}
+  .row{display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--line); font-size:13.5px;}
+  .row:last-child{border-bottom:none;}
+  .row-label{color:var(--ink-soft);}
+  .row-value{font-weight:600;}
+</style>
+</head>
+<body>
+
+<div style="background:var(--teal-deep); padding:16px 18px; display:flex; align-items:center; justify-content:space-between;">
+  <a href="index.html" style="display:flex; align-items:center; gap:8px; text-decoration:none;">
+    <span style="width:22px; height:22px; border-radius:50%; background:var(--gold); position:relative; display:inline-block;">
+      <span style="position:absolute; inset:6px; border-radius:50%; background:var(--teal-deep);"></span>
+    </span>
+    <span style="font-family:'Poppins', sans-serif; font-weight:700; color:#fff; font-size:17px;">lokals</span>
+  </a>
+  <div id="header-auth" style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.08); padding:6px 12px; border-radius:999px;">
+    <span id="header-auth-name" style="font-size:12px; font-weight:600; color:#fff;"></span>
+    <span id="header-logout-btn" style="font-size:10.5px; color:var(--gold-soft); border-left:1px solid rgba(255,255,255,0.25); padding-left:8px; cursor:pointer;">Ieși din cont</span>
+  </div>
+</div>
+
+<main>
+
+  <div id="state-loading" style="padding:40px 0; text-align:center; color:var(--ink-soft); font-size:14px;">Se încarcă...</div>
+
+  <div id="state-noauth" style="display:none; text-align:center; padding:40px 0;">
+    <p class="serif" style="font-size:20px; font-weight:700; color:var(--teal-deep);">Trebuie să te autentifici</p>
+    <p style="color:var(--ink-soft); font-size:14px; margin:8px 0 18px;">Ca să vezi facturarea, trebuie să știm pentru care cazare a ta.</p>
+    <a href="cont.html" style="display:inline-block; background:var(--teal-deep); color:#fff; padding:12px 22px; border-radius:999px; font-size:14px; font-weight:700; text-decoration:none;">Autentifică-te</a>
+  </div>
+
+  <div id="state-nomatch" style="display:none; text-align:center; padding:40px 0;">
+    <p class="serif" style="font-size:20px; font-weight:700; color:var(--teal-deep);">Nu am găsit nicio cazare pe acest cont</p>
+    <p style="color:var(--ink-soft); font-size:14px; margin:8px 0 18px;">Înregistrează întâi o cazare, ca să poți vedea facturarea ei.</p>
+    <a href="inregistrare-hotelier.html" style="display:inline-block; background:var(--teal-deep); color:#fff; padding:12px 22px; border-radius:999px; font-size:14px; font-weight:700; text-decoration:none;">Înregistrează o cazare</a>
+  </div>
+
+  <div id="state-form" style="display:none;">
+
+    <div class="serif" style="font-size:24px; font-weight:700; color:var(--teal-deep); text-align:center; margin:0 0 8px;">Facturare</div>
+    <div style="font-size:13.5px; color:var(--ink-soft); text-align:center; line-height:1.55; margin-bottom:20px;">Planul curent și starea contului pentru cazarea ta.</div>
+
+    <div id="apt-selector" style="display:flex; gap:8px; margin-bottom:20px;"></div>
+
+    <div class="card">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+        <div style="font-size:11px; font-weight:700; letter-spacing:.05em; color:var(--ink-soft); text-transform:uppercase;">Plan curent</div>
+        <span id="plan-badge" class="badge badge-gratuit">Gratuit</span>
+      </div>
+
+      <div id="plan-details">
+        <div class="row"><span class="row-label">Cazare</span><span class="row-value" id="detail-nume">—</span></div>
+        <div class="row" id="row-ciclu" style="display:none;"><span class="row-label">Ciclu de facturare</span><span class="row-value" id="detail-ciclu">—</span></div>
+        <div class="row" id="row-activat" style="display:none;"><span class="row-label">Activat la</span><span class="row-value" id="detail-activat">—</span></div>
+      </div>
+
+      <div id="plan-cta-free" style="display:none; margin-top:18px;">
+        <p style="font-size:12.5px; color:var(--ink-soft); line-height:1.5; margin:0 0 12px;">Ești pe planul Gratuit. Poți trece la Essential pentru personalizare completă a ghidului.</p>
+        <a href="preturi.html" class="btn" style="background:var(--teal-deep); color:#fff;">Vezi planul Essential</a>
+      </div>
+
+      <div id="plan-cta-pending" style="display:none; margin-top:18px; text-align:center;">
+        <p style="font-size:12.5px; color:var(--ink-soft); line-height:1.5; margin:0;">Cererea ta de activare Essential e în așteptare — te contactăm în curând ca să stabilim plata.</p>
+      </div>
+
+      <div id="plan-cta-essential" style="display:none; margin-top:18px; text-align:center;">
+        <p style="font-size:12.5px; color:var(--green); font-weight:600; line-height:1.5; margin:0;">✓ Essential activ pentru această cazare.</p>
+      </div>
+    </div>
+
+    <div class="card" style="background:transparent; border:1.5px dashed var(--line);">
+      <div style="font-size:12.5px; color:var(--ink-soft); line-height:1.55;">Plata online cu cardul urmează să fie activată. Până atunci, activarea și facturarea planului Essential se fac manual, prin contactul nostru direct cu tine.</div>
+    </div>
+
+  </div>
+
+</main>
+
+<script>
+const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
+const SUPABASE_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentSession = null;
+let cazari = [];
+let currentRow = null;
+let pendingRequest = null;
+
+function displayName(user) {
+  const meta = user.user_metadata || {};
+  if (meta.prenume) {
+    const initial = meta.nume ? meta.nume.trim().charAt(0).toUpperCase() + '.' : '';
+    return `${meta.prenume} ${initial}`.trim();
+  }
+  return user.email;
+}
+
+function showState(id) {
+  ['state-loading', 'state-noauth', 'state-nomatch', 'state-form'].forEach(s => {
+    document.getElementById(s).style.display = (s === id) ? '' : 'none';
+  });
+}
+
+function renderAptSelector() {
+  const sel = document.getElementById('apt-selector');
+  sel.innerHTML = '';
+  if (cazari.length <= 1) return;
+  cazari.forEach(row => {
+    const chip = document.createElement('div');
+    chip.className = 'apt-chip' + (row.id === currentRow.id ? ' active' : '');
+    chip.textContent = row.nume_afisat || row.nume_afacere;
+    chip.addEventListener('click', async () => {
+      currentRow = row;
+      renderAptSelector();
+      await refreshPendingRequest();
+      renderPlanDetails();
+    });
+    sel.appendChild(chip);
+  });
+}
+
+async function refreshPendingRequest() {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/cereri_upgrade?operator_id=eq.${currentRow.id}&status=eq.in_asteptare&select=id&order=created_at.desc&limit=1`, {
+    headers: { apikey: SUPABASE_KEY },
+  });
+  const rows = await res.json();
+  pendingRequest = rows[0] || null;
+}
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function cicluLabel(ciclu) {
+  if (ciclu === 'anual') return 'Anual';
+  if (ciclu === 'lunar') return 'Lunar';
+  return '—';
+}
+
+function renderPlanDetails() {
+  const badge = document.getElementById('plan-badge');
+  const nume = document.getElementById('detail-nume');
+  const rowCiclu = document.getElementById('row-ciclu');
+  const rowActivat = document.getElementById('row-activat');
+  const ctaFree = document.getElementById('plan-cta-free');
+  const ctaPending = document.getElementById('plan-cta-pending');
+  const ctaEssential = document.getElementById('plan-cta-essential');
+
+  nume.textContent = currentRow.nume_afisat || currentRow.nume_afacere || '—';
+
+  ctaFree.style.display = 'none';
+  ctaPending.style.display = 'none';
+  ctaEssential.style.display = 'none';
+  rowCiclu.style.display = 'none';
+  rowActivat.style.display = 'none';
+
+  if (currentRow.tier === 'essential') {
+    badge.textContent = 'Essential';
+    badge.className = 'badge badge-essential';
+    rowCiclu.style.display = 'flex';
+    document.getElementById('detail-ciclu').textContent = cicluLabel(currentRow.tier_ciclu);
+    if (currentRow.tier_activat_la) {
+      rowActivat.style.display = 'flex';
+      document.getElementById('detail-activat').textContent = formatDate(currentRow.tier_activat_la);
+    }
+    ctaEssential.style.display = 'block';
+  } else {
+    badge.textContent = 'Gratuit';
+    badge.className = 'badge badge-gratuit';
+    if (pendingRequest) {
+      ctaPending.style.display = 'block';
+    } else {
+      ctaFree.style.display = 'block';
+    }
+  }
+}
+
+async function loadCazari(email) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/operatori?email=eq.${encodeURIComponent(email)}&select=*`, {
+    headers: { apikey: SUPABASE_KEY }
+  });
+  cazari = await res.json();
+}
+
+async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session || !session.user) {
+    showState('state-noauth');
+    return;
+  }
+  currentSession = session;
+  document.getElementById('header-auth-name').textContent = displayName(session.user);
+
+  await loadCazari(session.user.email);
+  if (!cazari.length) {
+    showState('state-nomatch');
+    return;
+  }
+  const requestedSlug = new URLSearchParams(window.location.search).get('slug');
+  currentRow = (requestedSlug && cazari.find(r => r.slug === requestedSlug)) || cazari[0];
+  renderAptSelector();
+  await refreshPendingRequest();
+  renderPlanDetails();
+  showState('state-form');
+}
+
+document.getElementById('header-logout-btn').addEventListener('click', async () => {
+  await supabaseClient.auth.signOut();
+  window.location.href = 'index.html';
+});
+
+init();
+</script>
+</body>
+</html>

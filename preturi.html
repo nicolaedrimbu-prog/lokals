@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prețuri — Lokals</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Poppins:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root{
+    --teal-deep:#10302B; --teal:#1A4A42; --gold:#C98A2C; --gold-soft:#E8CE9E;
+    --cream:#F7F2E8; --ink:#181E1B; --ink-soft:#5B6459; --line:#DCD5C6;
+    --green:#3C6B3F; --green-soft:#E4EFE2;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--cream); font-family:'Inter', system-ui, sans-serif; color:var(--ink);}
+  a{color:var(--teal-deep);} a:hover{color:var(--gold);}
+  .serif{font-family:'Fraunces', Georgia, serif;}
+  main{max-width:600px; margin:0 auto; padding:26px 18px 60px;}
+  .feat-row{display:flex; align-items:flex-start; gap:10px; padding:7px 0;}
+  .feat-row svg{flex-shrink:0; margin-top:1px;}
+  .plan-btn{display:flex; align-items:center; justify-content:center; width:100%; padding:13px; border-radius:999px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; text-decoration:none; border:none;}
+  .plan-btn:disabled{opacity:0.6; cursor:default;}
+  .apt-chip{flex:1; border:1.5px solid var(--line); background:#fff; border-radius:11px; padding:10px; text-align:center; font-size:12.5px; font-weight:600; color:var(--ink-soft); cursor:pointer;}
+  .apt-chip.active{border-color:var(--teal-deep); background:var(--cream); font-weight:700; color:var(--teal-deep);}
+</style>
+</head>
+<body>
+
+<div style="background:var(--teal-deep); padding:16px 18px; display:flex; align-items:center; justify-content:space-between;">
+  <a href="index.html" style="display:flex; align-items:center; gap:8px; text-decoration:none;">
+    <span style="width:22px; height:22px; border-radius:50%; background:var(--gold); position:relative; display:inline-block;">
+      <span style="position:absolute; inset:6px; border-radius:50%; background:var(--teal-deep);"></span>
+    </span>
+    <span style="font-family:'Poppins', sans-serif; font-weight:700; color:#fff; font-size:17px;">lokals</span>
+  </a>
+  <div id="header-auth" style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.08); padding:6px 12px; border-radius:999px;">
+    <span id="header-auth-name" style="font-size:12px; font-weight:600; color:#fff;"></span>
+    <span id="header-logout-btn" style="font-size:10.5px; color:var(--gold-soft); border-left:1px solid rgba(255,255,255,0.25); padding-left:8px; cursor:pointer;">Ieși din cont</span>
+  </div>
+</div>
+
+<main>
+
+  <div id="state-loading" style="padding:40px 0; text-align:center; color:var(--ink-soft); font-size:14px;">Se încarcă...</div>
+
+  <div id="state-noauth" style="display:none; text-align:center; padding:40px 0;">
+    <p class="serif" style="font-size:20px; font-weight:700; color:var(--teal-deep);">Trebuie să te autentifici</p>
+    <p style="color:var(--ink-soft); font-size:14px; margin:8px 0 18px;">Ca să activezi Essential, trebuie să știm pentru care cazare a ta.</p>
+    <a href="cont.html" style="display:inline-block; background:var(--teal-deep); color:#fff; padding:12px 22px; border-radius:999px; font-size:14px; font-weight:700; text-decoration:none;">Autentifică-te</a>
+  </div>
+
+  <div id="state-nomatch" style="display:none; text-align:center; padding:40px 0;">
+    <p class="serif" style="font-size:20px; font-weight:700; color:var(--teal-deep);">Nu am găsit nicio cazare pe acest cont</p>
+    <p style="color:var(--ink-soft); font-size:14px; margin:8px 0 18px;">Înregistrează întâi o cazare, ca să poți alege un plan pentru ea.</p>
+    <a href="inregistrare-hotelier.html" style="display:inline-block; background:var(--teal-deep); color:#fff; padding:12px 22px; border-radius:999px; font-size:14px; font-weight:700; text-decoration:none;">Înregistrează o cazare</a>
+  </div>
+
+  <div id="state-form" style="display:none;">
+
+    <div class="serif" style="font-size:24px; font-weight:700; color:var(--teal-deep); text-align:center; margin:0 0 8px;">Alege planul potrivit pentru gazda ta</div>
+    <div style="font-size:13.5px; color:var(--ink-soft); text-align:center; line-height:1.55; margin-bottom:20px;">Ghidul de bază rămâne mereu gratuit. Essential adaugă personalizarea completă a unității.</div>
+
+    <div id="apt-selector" style="display:flex; gap:8px; margin-bottom:20px;"></div>
+
+    <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:8px;">
+      <div style="display:flex; background:#fff; border:1.5px solid var(--line); border-radius:999px; padding:4px;">
+        <button type="button" id="btn-cycle-lunar" style="border:none; font-family:inherit; font-size:12.5px; font-weight:700; padding:8px 16px; border-radius:999px; cursor:pointer;">Lunar</button>
+        <button type="button" id="btn-cycle-anual" style="border:none; font-family:inherit; font-size:12.5px; font-weight:700; padding:8px 16px; border-radius:999px; cursor:pointer;">Anual</button>
+      </div>
+    </div>
+    <div style="text-align:center; margin-bottom:24px;">
+      <span style="display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:.03em; color:var(--green); background:var(--green-soft); padding:3px 10px; border-radius:999px;">Anual — economisești ~20%</span>
+    </div>
+
+    <!-- Card Gratuit -->
+    <div style="background:#fff; border:1.5px solid var(--line); border-radius:18px; padding:22px 20px; margin-bottom:16px;">
+      <div style="font-size:11px; font-weight:700; letter-spacing:.05em; color:var(--ink-soft); text-transform:uppercase; margin-bottom:6px;">Gratuit</div>
+      <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:2px;">
+        <span class="serif" style="font-size:30px; font-weight:700; color:var(--teal-deep);">0 €</span>
+        <span style="font-size:13px; color:var(--ink-soft);">pentru totdeauna</span>
+      </div>
+      <div style="font-size:12.5px; color:var(--ink-soft); margin-bottom:16px;">Nivelul de bază, fără limită de timp sau de proprietăți.</div>
+
+      <div style="border-top:1px solid var(--line); padding-top:14px;">
+        <div class="feat-row"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span style="font-size:13px; line-height:1.45;">Ghid de oaspeți complet — recomandări locale curatoriate, RO/EN</span></div>
+        <div class="feat-row"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span style="font-size:13px; line-height:1.45;">Cod QR generat instant + poster printabil</span></div>
+        <div class="feat-row"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span style="font-size:13px; line-height:1.45;">Contact de bază — buton WhatsApp</span></div>
+        <div class="feat-row"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span style="font-size:13px; line-height:1.45;">Director afaceri locale + sistem de vouchere, nelimitat</span></div>
+        <div class="feat-row"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span style="font-size:13px; line-height:1.45;">Feedback privat de sejur de la oaspeți</span></div>
+        <div class="feat-row"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span style="font-size:13px; line-height:1.45;">Proprietăți nelimitate, fără termen limită</span></div>
+      </div>
+
+      <div id="free-plan-status" class="plan-btn" style="background:transparent; border:1.5px solid var(--line); color:var(--teal-deep); margin-top:18px;">Plan curent</div>
+    </div>
+
+    <!-- Card Essential -->
+    <div style="background:#fff; border:1.5px solid var(--gold); border-radius:18px; padding:22px 20px; position:relative; box-shadow:0 8px 24px rgba(16,48,43,0.10);">
+      <span style="position:absolute; top:-11px; left:20px; background:var(--gold); color:#fff; font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; padding:4px 11px; border-radius:999px;">Recomandat</span>
+
+      <div style="font-size:11px; font-weight:700; letter-spacing:.05em; color:#8F6222; text-transform:uppercase; margin-bottom:6px; margin-top:4px;">Essential</div>
+      <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:2px;">
+        <span class="serif" id="essential-price" style="font-size:30px; font-weight:700; color:var(--teal-deep);">—</span>
+        <span style="font-size:13px; color:var(--ink-soft);" id="essential-suffix"></span>
+      </div>
+      <div style="font-size:12px; color:var(--green); font-weight:600; min-height:16px; margin-bottom:6px;" id="essential-annual-note"></div>
+      <div id="essential-basis" style="font-size:12.5px; color:var(--ink-soft); margin-bottom:16px;"></div>
+
+      <div style="border-top:1px solid var(--line); padding-top:14px;">
+        <div style="font-size:12.5px; font-weight:700; color:var(--ink); margin-bottom:8px;">Tot ce e în Gratuit, plus:</div>
+        <div class="feat-row"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span style="font-size:13px; line-height:1.45;">Reguli ale casei configurabile (nu doar poster static)</span></div>
+        <div class="feat-row"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span style="font-size:13px; line-height:1.45;">Parolă WiFi + instrucțiuni de conectare</span></div>
+        <div class="feat-row"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span style="font-size:13px; line-height:1.45;">Contact / recepție extins, dincolo de WhatsApp</span></div>
+        <div class="feat-row"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span style="font-size:13px; line-height:1.45;">Servicii hotel — restaurant, bar, SPA, fitness, minibar</span></div>
+      </div>
+
+      <button type="button" id="btn-request-upgrade" class="plan-btn" style="background:var(--teal-deep); color:#fff; margin-top:18px;">Cere activare Essential</button>
+      <div id="essential-status" style="display:none; font-size:12.5px; color:var(--ink-soft); text-align:center; margin-top:18px; line-height:1.5;"></div>
+    </div>
+
+    <div style="text-align:center; font-size:11.5px; color:var(--ink-soft); margin-top:18px; line-height:1.5;">Activarea Essential se face manual, în scurt timp după cerere — te contactăm ca să stabilim plata. Poți reveni oricând la Gratuit.</div>
+
+  </div>
+
+</main>
+
+<script>
+const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
+const SUPABASE_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentSession = null;
+let cazari = [];
+let currentRow = null;
+let cycle = 'lunar';
+let pendingRequest = null; // ultima cerere in_asteptare pentru cazarea curenta, daca exista
+
+// ---------- Calcul pret — model degresiv (vezi documentul de monetizare) ----------
+const APT_TIERS = [
+  { max: 4, standard: 4.99, promo: 3.49, anual: 3.99 },
+  { max: 9, standard: 3.99, promo: 2.99, anual: 3.19 },
+  { max: Infinity, standard: 2.99, promo: 1.99, anual: 2.39 },
+];
+function aptTierFor(count) {
+  return APT_TIERS.find(t => count <= t.max);
+}
+function hotelPriceStandard(nrCamere) {
+  return Math.min(Math.max(nrCamere * 1.00, 20), 100);
+}
+function hotelPriceAnual(nrCamere) {
+  return Math.min(Math.max(nrCamere * 0.80, 16), 80);
+}
+function eur(n) {
+  return n.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function portfolioSize(row) {
+  return cazari.filter(r => r.tip === 'apartament' && r.grup_id === row.grup_id).length || 1;
+}
+
+function renderPricingCard(row) {
+  const priceEl = document.getElementById('essential-price');
+  const suffixEl = document.getElementById('essential-suffix');
+  const noteEl = document.getElementById('essential-annual-note');
+  const basisEl = document.getElementById('essential-basis');
+
+  if (row.tip === 'hotel') {
+    const nrCamere = row.nr_camere || 1;
+    if (cycle === 'lunar') {
+      priceEl.textContent = `${eur(hotelPriceStandard(nrCamere))} €`;
+      suffixEl.textContent = '/lună';
+      noteEl.textContent = '';
+    } else {
+      const anual = hotelPriceAnual(nrCamere);
+      priceEl.textContent = `${eur(anual)} €`;
+      suffixEl.textContent = '/lună, facturat anual';
+      noteEl.textContent = `${eur(anual * 12)} €/an · economisești ~20%`;
+    }
+    basisEl.textContent = `Calculat pentru ${nrCamere} camere — 1 €/cameră/lună (minim 20 €, plafon 100 €/lună).`;
+  } else {
+    const count = portfolioSize(row);
+    const tier = aptTierFor(count);
+    if (cycle === 'lunar') {
+      priceEl.textContent = `${eur(tier.standard)} €`;
+      suffixEl.textContent = '/lună';
+      noteEl.textContent = '';
+    } else {
+      priceEl.textContent = `${eur(tier.anual)} €`;
+      suffixEl.textContent = '/lună, facturat anual';
+      noteEl.textContent = `${eur(tier.anual * 12)} €/an · economisești ~20%`;
+    }
+    basisEl.textContent = `Preț pentru un portofoliu de ${count} apartament${count === 1 ? '' : 'e'} — scade automat la portofolii mai mari.`;
+  }
+}
+
+function updateCycleButtons() {
+  const lunarBtn = document.getElementById('btn-cycle-lunar');
+  const anualBtn = document.getElementById('btn-cycle-anual');
+  lunarBtn.style.background = cycle === 'lunar' ? 'var(--teal-deep)' : 'transparent';
+  lunarBtn.style.color = cycle === 'lunar' ? '#fff' : 'var(--ink-soft)';
+  anualBtn.style.background = cycle === 'anual' ? 'var(--teal-deep)' : 'transparent';
+  anualBtn.style.color = cycle === 'anual' ? '#fff' : 'var(--ink-soft)';
+}
+
+document.getElementById('btn-cycle-lunar').addEventListener('click', () => { cycle = 'lunar'; updateCycleButtons(); renderPricingCard(currentRow); });
+document.getElementById('btn-cycle-anual').addEventListener('click', () => { cycle = 'anual'; updateCycleButtons(); renderPricingCard(currentRow); });
+
+function displayName(user) {
+  const meta = user.user_metadata || {};
+  if (meta.prenume) {
+    const initial = meta.nume ? meta.nume.trim().charAt(0).toUpperCase() + '.' : '';
+    return `${meta.prenume} ${initial}`.trim();
+  }
+  return user.email;
+}
+
+function showState(id) {
+  ['state-loading', 'state-noauth', 'state-nomatch', 'state-form'].forEach(s => {
+    document.getElementById(s).style.display = (s === id) ? '' : 'none';
+  });
+}
+
+function renderAptSelector() {
+  const sel = document.getElementById('apt-selector');
+  sel.innerHTML = '';
+  if (cazari.length <= 1) return;
+  cazari.forEach(row => {
+    const chip = document.createElement('div');
+    chip.className = 'apt-chip' + (row.id === currentRow.id ? ' active' : '');
+    chip.textContent = row.nume_afisat || row.nume_afacere;
+    chip.addEventListener('click', async () => {
+      currentRow = row;
+      renderAptSelector();
+      await refreshPendingRequest();
+      renderEssentialCta();
+      renderPricingCard(currentRow);
+    });
+    sel.appendChild(chip);
+  });
+}
+
+async function refreshPendingRequest() {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/cereri_upgrade?operator_id=eq.${currentRow.id}&status=eq.in_asteptare&select=id&order=created_at.desc&limit=1`, {
+    headers: { apikey: SUPABASE_KEY },
+  });
+  const rows = await res.json();
+  pendingRequest = rows[0] || null;
+}
+
+function renderEssentialCta() {
+  const btn = document.getElementById('btn-request-upgrade');
+  const status = document.getElementById('essential-status');
+  if (currentRow.tier === 'essential') {
+    btn.style.display = 'none';
+    status.style.display = 'block';
+    status.innerHTML = `✓ Essential activ pentru această cazare. <a href="facturare.html">Vezi facturarea</a>`;
+  } else if (pendingRequest) {
+    btn.style.display = 'none';
+    status.style.display = 'block';
+    status.textContent = 'Cererea ta e în așteptare — te contactăm în curând ca să activăm Essential.';
+  } else {
+    btn.style.display = '';
+    btn.disabled = false;
+    btn.textContent = 'Cere activare Essential';
+    status.style.display = 'none';
+  }
+}
+
+document.getElementById('btn-request-upgrade').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-request-upgrade');
+  btn.disabled = true;
+  btn.textContent = 'Se trimite...';
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/cereri_upgrade`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_KEY,
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation',
+      },
+      body: JSON.stringify({
+        operator_id: currentRow.id,
+        email: currentSession.user.email,
+        pachet: 'essential',
+        ciclu: cycle,
+      }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    await refreshPendingRequest();
+    renderEssentialCta();
+  } catch (e) {
+    console.error(e);
+    btn.disabled = false;
+    btn.textContent = 'Cere activare Essential';
+    alert('Nu am putut trimite cererea chiar acum. Încearcă din nou în câteva secunde.');
+  }
+});
+
+async function loadCazari(email) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/operatori?email=eq.${encodeURIComponent(email)}&select=*`, {
+    headers: { apikey: SUPABASE_KEY }
+  });
+  cazari = await res.json();
+}
+
+async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session || !session.user) {
+    showState('state-noauth');
+    return;
+  }
+  currentSession = session;
+  document.getElementById('header-auth-name').textContent = displayName(session.user);
+
+  await loadCazari(session.user.email);
+  if (!cazari.length) {
+    showState('state-nomatch');
+    return;
+  }
+  const requestedSlug = new URLSearchParams(window.location.search).get('slug');
+  currentRow = (requestedSlug && cazari.find(r => r.slug === requestedSlug)) || cazari[0];
+  renderAptSelector();
+  updateCycleButtons();
+  await refreshPendingRequest();
+  renderEssentialCta();
+  renderPricingCard(currentRow);
+  showState('state-form');
+}
+
+document.getElementById('header-logout-btn').addEventListener('click', async () => {
+  await supabaseClient.auth.signOut();
+  window.location.href = 'index.html';
+});
+
+init();
+</script>
+</body>
+</html>

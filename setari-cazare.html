@@ -6,6 +6,7 @@
 <title>Setări cazare — Lokal</title>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Poppins:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="lokals-features.js"></script>
 <style>
   :root{
     --teal-deep:#10302B; --teal:#1A4A42; --gold:#C98A2C; --gold-soft:#E8CE9E;
@@ -34,6 +35,8 @@
   .three-col > div{flex:1 1 110px; min-width:0;}
   .upload-label{border:1.5px dashed var(--line); border-radius:11px; padding:10px 12px; text-align:center; font-size:12.5px; font-weight:600; color:var(--teal-deep); background:#FBF9F4; display:block; cursor:pointer;}
   .minibar-preview{width:56px; height:56px; border-radius:10px; flex-shrink:0; background:linear-gradient(135deg, var(--teal-deep), var(--teal)); background-size:cover; background-position:center;}
+  .plan-badge{font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-soft); background:#F0EDE3; padding:4px 11px; border-radius:999px; text-decoration:none; flex-shrink:0;}
+  .plan-badge.plan-badge-essential{color:#8F6222; background:var(--gold-soft);}
   .sub{font-size:11.5px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.04em; margin:14px 0 8px;}
   .sub:first-of-type{margin-top:0;}
   .switch-label{display:flex; align-items:center; gap:10px; cursor:pointer; font-size:13px; font-weight:600;}
@@ -129,7 +132,10 @@
   <div id="state-form" style="display:none;">
 
     <a href="contul-meu.html" style="display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color:var(--ink-soft); text-decoration:none; margin-bottom:14px;">← Proprietățile mele</a>
-    <div style="font-size:11px; font-weight:700; letter-spacing:.05em; color:var(--gold); text-transform:uppercase; margin-bottom:6px;">Cont hotelier</div>
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px;">
+      <div style="font-size:11px; font-weight:700; letter-spacing:.05em; color:var(--gold); text-transform:uppercase;">Cont hotelier</div>
+      <a href="facturare.html" id="plan-badge" class="plan-badge">Gratuit</a>
+    </div>
     <div class="serif" style="font-size:23px; font-weight:700; color:var(--teal-deep); margin:0 0 6px;">Setări cazare</div>
     <div style="font-size:13px; color:var(--ink-soft); line-height:1.55; margin-bottom:18px;">Aceste informații apar în ghidul turistic al oaspeților tăi, chiar înainte de check-in.</div>
 
@@ -243,7 +249,7 @@
     </div>
 
     <!-- Regulile casei -->
-    <div class="card">
+    <div class="card" id="card-reguli">
       <div class="card-head">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6"/><path d="M9 16h6"/><path d="M9 8h1"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
         <div class="card-title">Regulile casei</div>
@@ -253,7 +259,7 @@
     </div>
 
     <!-- WiFi -->
-    <div class="card">
+    <div class="card" id="card-wifi">
       <div class="card-head">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18l.01 0"/><path d="M9.172 15.172a4 4 0 0 1 5.656 0"/><path d="M6.343 12.343a8 8 0 0 1 11.314 0"/><path d="M3.515 9.515c4.686 -4.687 12.284 -4.687 17 0"/></svg>
         <div class="card-title">Rețea WiFi</div>
@@ -362,8 +368,10 @@
         <span style="font-size:13px; font-weight:600;">Arată buton WhatsApp în ghid</span>
         <label class="switch-label"><input type="checkbox" id="f-whatsapp-activ" checked><span class="switch-track"><span class="switch-knob"></span></span></label>
       </div>
-      <div class="hint" style="margin-bottom:12px;">Contacte suplimentare (spital, farmacie, service urgențe etc.) — câmpurile goale nu apar în ghid. Poliția (112) apare mereu automat.</div>
-      <div id="contacte-lista"></div>
+      <div id="subcard-contact-extins">
+        <div class="hint" style="margin-bottom:12px;">Contacte suplimentare (spital, farmacie, service urgențe etc.) — câmpurile goale nu apar în ghid. Poliția (112) apare mereu automat.</div>
+        <div id="contacte-lista"></div>
+      </div>
     </div>
 
     <button class="primary" id="btn-save">Salvează setările</button>
@@ -744,6 +752,35 @@ function fillForm(row) {
   document.getElementById('link-turist').textContent = `lokals.ro/ghid-oaspeti.html?apt=${row.slug}`;
 
   renderPreview();
+  applyFeatureGating(row);
+}
+
+// ---------- Gating pe plan (Gratuit / Essential) ----------
+// Sursa de adevar e tabela `features` (vezi lokals-features.js) — aici doar mapam
+// cardurile din formular la cheile din acel registru.
+const GATED_CARDS = [
+  { id: 'card-reguli', cheie: 'reguli_casa', mesaj: 'Reguli ale casei configurabile, nu doar textul static din poster.' },
+  { id: 'card-wifi', cheie: 'wifi', mesaj: 'Parolă WiFi și instrucțiuni de conectare, afișate direct în ghid.' },
+  { id: 'subcard-contact-extins', cheie: 'contact_extins', mesaj: 'Contacte de urgență suplimentare, dincolo de butonul WhatsApp.' },
+  { id: 'card-hotel', cheie: 'servicii_hotel', mesaj: 'Restaurant, bar, SPA, fitness, minibar și mențiuni pentru oaspeți.' },
+];
+
+async function applyFeatureGating(row) {
+  const features = await LokalsFeatures.load(SUPABASE_URL, SUPABASE_KEY);
+  const badge = document.getElementById('plan-badge');
+  if (badge) {
+    badge.textContent = row.tier === 'essential' ? 'Essential' : 'Gratuit';
+    badge.className = 'plan-badge' + (row.tier === 'essential' ? ' plan-badge-essential' : '');
+  }
+  GATED_CARDS.forEach(({ id, cheie, mesaj }) => {
+    const el = document.getElementById(id);
+    if (!el) return; // ex. card-hotel e ascuns complet la apartamente
+    LokalsFeatures.unlockCard(el);
+    if (el.style.display === 'none') return; // nu bloca un card deja ascuns (card-hotel la apartamente)
+    if (!LokalsFeatures.unlocked(features, row.tier, cheie)) {
+      LokalsFeatures.lockCard(el, { mesaj });
+    }
+  });
 }
 
 function renderAptSelector() {
