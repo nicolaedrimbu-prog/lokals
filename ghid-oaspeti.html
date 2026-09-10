@@ -120,6 +120,19 @@
   /* Orice text liber completat de proprietar (note, recomandari, mesaje) -- acelasi principiu de bullet */
   .note-bullet{position:relative; padding-left:16px;}
   .note-bullet::before{content:'•'; position:absolute; left:0; color:var(--amber-deep); font-weight:700;}
+  /* Servicii hotel — tabel Serviciu / Orar / Locație / Telefon */
+  .fac-table-wrap{overflow-x:auto; margin-bottom:12px; -webkit-overflow-scrolling:touch;}
+  .fac-table{border-collapse:collapse; width:100%; min-width:420px; font-size:12.5px;}
+  .fac-table th{text-align:left; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-soft); padding:0 10px 7px 0; border-bottom:1px solid var(--line); white-space:nowrap;}
+  .fac-table td{padding:8px 10px 8px 0; border-bottom:1px solid var(--line); color:var(--ink); vertical-align:top;}
+  .fac-table tr:last-child td{border-bottom:none;}
+  .fac-table td:first-child{font-weight:700; white-space:nowrap;}
+  .fac-table td.fac-td-empty{color:var(--ink-soft);}
+  /* Minibar — poze cu lista de prețuri */
+  .fac-minibar-label{font-size:11px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.03em; margin:0 0 8px;}
+  .fac-minibar-imgs{display:flex; gap:10px; margin-bottom:12px; flex-wrap:wrap;}
+  .fac-minibar-imgs a{display:block; width:96px; height:96px; border-radius:10px; overflow:hidden; border:1px solid var(--line); flex-shrink:0;}
+  .fac-minibar-imgs img{width:100%; height:100%; object-fit:cover; display:block;}
 
   /* ===== Feedback despre sejur (privat, către gazdă) ===== */
   .sf-stars{display:flex; gap:6px; margin-bottom:14px;}
@@ -535,6 +548,8 @@ const I18N = {
       animaleNu: "Fără animale de companie", liniste: "Liniște după ora 22:00",
       restaurant: "Restaurant", bar: "Bar", spa: "SPA", fitness: "Fitness",
       micDejun: "Mic dejun", roomService: "Room service",
+      tabelServiciu: "Serviciu", tabelOrar: "Orar", tabelLocatie: "Locație", tabelTelefon: "Telefon",
+      minibar: "Minibar", minibarPoza: "Poză preț",
       wifiConnect: "Scanează pentru conectare automată",
     },
   },
@@ -585,6 +600,8 @@ const I18N = {
       animaleNu: "No pets", liniste: "Quiet hours after 22:00",
       restaurant: "Restaurant", bar: "Bar", spa: "Spa", fitness: "Fitness",
       micDejun: "Breakfast", roomService: "Room service",
+      tabelServiciu: "Service", tabelOrar: "Hours", tabelLocatie: "Location", tabelTelefon: "Phone",
+      minibar: "Minibar", minibarPoza: "Price list photo",
       wifiConnect: "Scan to connect automatically",
     },
   },
@@ -699,14 +716,35 @@ function renderFacilitati() {
     sections.push({ key: 'wifi', title: t.wifi, body, wifiPayload, wifiId: `fac-wifi-qr-${currentOperator.id}` });
   }
 
-  // Servicii hotel
-  if (isHotel && (hotel.restaurant_program || hotel.bar_program || hotel.spa_program || hotel.fitness_program || hotel.mic_dejun_program || hotel.room_service)) {
+  // Servicii hotel — tabel Serviciu/Orar/Locație/Telefon, apoi mențiuni, minibar, room service
+  const serviciiRows = [
+    { label: t.restaurant, program: hotel.restaurant_program, locatie: hotel.restaurant_locatie, telefon: hotel.restaurant_telefon },
+    { label: t.bar, program: hotel.bar_program, locatie: hotel.bar_locatie, telefon: hotel.bar_telefon },
+    { label: t.spa, program: hotel.spa_program, locatie: hotel.spa_locatie, telefon: hotel.spa_telefon },
+    { label: t.fitness, program: hotel.fitness_program, locatie: hotel.fitness_locatie, telefon: hotel.fitness_telefon },
+    { label: t.micDejun, program: hotel.mic_dejun_program, locatie: hotel.mic_dejun_locatie, telefon: hotel.mic_dejun_telefon },
+  ].filter(r => r.program || r.locatie || r.telefon);
+  const minibarImgs = [hotel.minibar_foto1_url, hotel.minibar_foto2_url].filter(Boolean);
+  if (isHotel && (serviciiRows.length || minibarImgs.length || hotel.nota_servicii || hotel.room_service)) {
     let body = '';
-    if (hotel.restaurant_program || hotel.restaurant_locatie) body += `<div class="fac-row"><b>${t.restaurant}:</b>&nbsp;${[fmt(hotel.restaurant_program), fmt(hotel.restaurant_locatie)].filter(Boolean).join(' · ')}</div>`;
-    if (hotel.bar_program) body += `<div class="fac-row"><b>${t.bar}:</b>&nbsp;${fmt(hotel.bar_program)}</div>`;
-    if (hotel.spa_program) body += `<div class="fac-row"><b>${t.spa}:</b>&nbsp;${fmt(hotel.spa_program)}</div>`;
-    if (hotel.fitness_program || hotel.fitness_locatie) body += `<div class="fac-row"><b>${t.fitness}:</b>&nbsp;${[fmt(hotel.fitness_program), fmt(hotel.fitness_locatie)].filter(Boolean).join(' · ')}</div>`;
-    if (hotel.mic_dejun_program) body += `<div class="fac-row"><b>${t.micDejun}:</b>&nbsp;${fmt(hotel.mic_dejun_program)}</div>`;
+    if (serviciiRows.length) {
+      body += `<div class="fac-table-wrap"><table class="fac-table"><thead><tr>
+        <th>${t.tabelServiciu}</th><th>${t.tabelOrar}</th><th>${t.tabelLocatie}</th><th>${t.tabelTelefon}</th>
+      </tr></thead><tbody>`;
+      serviciiRows.forEach(r => {
+        body += `<tr><td>${fmt(r.label)}</td>` +
+          `<td${r.program ? '' : ' class="fac-td-empty"'}>${fmt(r.program) || '—'}</td>` +
+          `<td${r.locatie ? '' : ' class="fac-td-empty"'}>${fmt(r.locatie) || '—'}</td>` +
+          `<td${r.telefon ? '' : ' class="fac-td-empty"'}>${fmt(r.telefon) || '—'}</td></tr>`;
+      });
+      body += `</tbody></table></div>`;
+    }
+    if (hotel.nota_servicii) body += `<div class="fac-row note-bullet" style="margin-bottom:12px;">${fmt(hotel.nota_servicii)}</div>`;
+    if (minibarImgs.length) {
+      body += `<div class="fac-minibar-label">${t.minibar}</div><div class="fac-minibar-imgs">` +
+        minibarImgs.map(url => `<a href="${url}" target="_blank" rel="noopener"><img src="${url}" alt="${t.minibar} — ${t.minibarPoza}" loading="lazy"></a>`).join('') +
+        `</div>`;
+    }
     if (hotel.room_service) body += `<div class="fac-row note-bullet"><b>${t.roomService}:</b>&nbsp;${fmt(hotel.room_service)}</div>`;
     sections.push({ key: 'servicii', title: t.servicii, body, hotelBadge: true });
   }
