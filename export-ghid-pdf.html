@@ -275,31 +275,42 @@ function renderDirectory(places) {
   document.getElementById('directory-body').innerHTML = html;
 }
 
-async function init() {
-  const slug = new URLSearchParams(window.location.search).get('slug');
-  if (!slug) { document.getElementById('state-loading').style.display = 'none'; document.getElementById('state-error').style.display = ''; return; }
-
-  const res = await sbFetch(`operatori?slug=eq.${encodeURIComponent(slug)}&select=*`);
-  const rows = res.ok ? await res.json() : [];
-  if (!rows.length) { document.getElementById('state-loading').style.display = 'none'; document.getElementById('state-error').style.display = ''; return; }
-  const op = rows[0];
-  const zona = op.zona || 'rasnov';
-
-  document.getElementById('cover-eyebrow').textContent = `Ghid de oaspeți · ${ZONA_LABELS[zona] || zona}`;
-  document.getElementById('cover-title').textContent = op.nume_afisat || op.nume_afacere;
-  document.getElementById('cover-date').textContent = new Date().toLocaleDateString('ro-RO', { day:'2-digit', month:'short', year:'numeric' });
-  const link = `https://lokals.ro/ghid-oaspeti.html?apt=${encodeURIComponent(op.slug)}`;
-  document.getElementById('cover-link-a').textContent = link.replace('https://', '');
-  document.getElementById('cover-link-a').href = link;
-
-  renderEssentials(op);
-  renderRules(op);
-  renderContacts(op);
-  const places = await loadPlaces(zona);
-  renderDirectory(places);
-
+function showLoadError(){
   document.getElementById('state-loading').style.display = 'none';
-  document.getElementById('page').style.display = '';
+  document.getElementById('state-error').style.display = '';
+}
+
+async function init() {
+  try {
+    const slug = new URLSearchParams(window.location.search).get('slug');
+    if (!slug) { showLoadError(); return; }
+
+    const res = await sbFetch(`operatori?slug=eq.${encodeURIComponent(slug)}&select=*`);
+    if (!res.ok) { showLoadError(); return; }
+    const rows = await res.json();
+    if (!rows.length) { showLoadError(); return; }
+    const op = rows[0];
+    const zona = op.zona || 'rasnov';
+
+    document.getElementById('cover-eyebrow').textContent = `Ghid de oaspeți · ${ZONA_LABELS[zona] || zona}`;
+    document.getElementById('cover-title').textContent = op.nume_afisat || op.nume_afacere;
+    document.getElementById('cover-date').textContent = new Date().toLocaleDateString('ro-RO', { day:'2-digit', month:'short', year:'numeric' });
+    const link = `https://lokals.ro/ghid-oaspeti.html?apt=${encodeURIComponent(op.slug)}`;
+    document.getElementById('cover-link-a').textContent = link.replace('https://', '');
+    document.getElementById('cover-link-a').href = link;
+
+    renderEssentials(op);
+    renderRules(op);
+    renderContacts(op);
+    const places = await loadPlaces(zona);
+    renderDirectory(places);
+
+    document.getElementById('state-loading').style.display = 'none';
+    document.getElementById('page').style.display = '';
+  } catch (e) {
+    console.error(e);
+    showLoadError();
+  }
 }
 init();
 </script>

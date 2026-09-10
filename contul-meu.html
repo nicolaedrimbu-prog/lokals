@@ -38,11 +38,17 @@
   .action-btn:hover{border-color:var(--teal-deep); background:var(--cream);}
   .action-btn svg{flex-shrink:0;}
   .share-popover{position:absolute; bottom:calc(100% + 6px); left:16px; right:16px; background:#fff; border:1px solid var(--line); border-radius:12px;
-    box-shadow:0 8px 22px rgba(16,48,43,0.14); padding:8px; display:none; z-index:5;}
+    box-shadow:0 8px 22px rgba(16,48,43,0.14); padding:8px; display:none; z-index:5; max-width:280px;}
   .share-popover.open{display:block;}
-  .share-opt{display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:8px; font-size:13px; font-weight:600; color:var(--ink); text-decoration:none;}
+  .share-opt{display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:8px; font-size:13px; font-weight:600; color:var(--ink); text-decoration:none;
+    width:100%; box-sizing:border-box; border:none; background:none; cursor:pointer; font-family:inherit; text-align:left;}
   .share-opt:hover{background:var(--cream);}
   .share-opt svg{flex-shrink:0;}
+  .share-opt-sub{font-size:11px; color:var(--ink-soft); font-weight:400; display:block; margin-top:1px;}
+  .share-back{display:flex; align-items:center; gap:5px; border:none; background:none; color:var(--ink-soft); font-size:12px; font-weight:600;
+    font-family:inherit; cursor:pointer; padding:6px 6px 8px;}
+  .share-back:hover{color:var(--teal-deep);}
+  .share-group-title{font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--gold); padding:6px 10px 4px;}
   .fb-badge{position:absolute; top:-6px; right:-6px; background:var(--gold); color:#fff; font-size:10px; font-weight:700; line-height:1; min-width:17px; height:17px; border-radius:999px; display:flex; align-items:center; justify-content:center; padding:0 4px; box-shadow:0 0 0 2px #fff;}
 </style>
 </head>
@@ -136,6 +142,9 @@ const EMAIL_ICON = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" 
 const CLEAN_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l3 3l-1.5 1.5a2 2 0 0 0 3 3l1.5 -1.5l3 3l-1.5 1.5a2 2 0 1 0 3 3l6 -6a2 2 0 0 0 -3 -3l-1.5 1.5l-3 -3l1.5 -1.5a2 2 0 0 0 -3 -3z"/></svg>';
 const PDF_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"/><path d="M9 17v-4"/><path d="M9 13h1.5a1.5 1.5 0 0 1 0 3h-1.5"/><path d="M12.5 17v-4h1.5"/></svg>';
 const FEEDBACK_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-13a3 3 0 0 1 3 -3h10a3 3 0 0 1 3 3v6a3 3 0 0 1 -3 3h-9l-4 4z"/></svg>';
+const COPY_ICON = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8v-2a2 2 0 0 0 -2 -2h-8a2 2 0 0 0 -2 2v8a2 2 0 0 0 2 2h2"/></svg>';
+const SAVE_ICON = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12"/><path d="M8 12l4 4 4 -4"/><path d="M4 20h16"/></svg>';
+const BACK_ICON = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>';
 
 function guideUrl(slug) {
   return `https://lokals.ro/ghid-oaspeti.html?apt=${encodeURIComponent(slug)}`;
@@ -167,10 +176,19 @@ function renderCazari(rows, unreadCounts) {
         <a class="action-btn" href="${guideUrl(row.slug)}" target="_blank" rel="noopener">${GUIDE_ICON} Vezi ghidul</a>
         <a class="action-btn" href="curatenie-mentenanta.html?slug=${encodeURIComponent(row.slug)}">${CLEAN_ICON} Curățenie</a>
         <a class="action-btn" style="position:relative;" href="feedback-oaspeti.html?slug=${encodeURIComponent(row.slug)}">${FEEDBACK_ICON} Feedback${unread ? `<span class="fb-badge">${unread}</span>` : ''}</a>
-        <div class="share-popover" data-popover-for="${row.slug}">
-          <a class="share-opt" data-share-link="whatsapp" href="#" target="_blank" rel="noopener">${WHATSAPP_ICON} WhatsApp</a>
-          <a class="share-opt" data-share-link="email" href="#">${EMAIL_ICON} Email</a>
-          <a class="share-opt" href="export-ghid-pdf.html?slug=${encodeURIComponent(row.slug)}" target="_blank" rel="noopener">${PDF_ICON} Descarcă ghidul PDF</a>
+        <div class="share-popover" data-popover-for="${row.slug}" data-step="1">
+          <div class="share-step1">
+            <button class="share-opt" type="button" data-choose="link">${GUIDE_ICON} <span>Ghidul online<span class="share-opt-sub">Link către pagina live</span></span></button>
+            <button class="share-opt" type="button" data-choose="pdf">${PDF_ICON} <span>Ghid PDF<span class="share-opt-sub">Variantă offline, printabilă</span></span></button>
+          </div>
+          <div class="share-step2" style="display:none;">
+            <button class="share-back" type="button" data-back>${BACK_ICON} Înapoi</button>
+            <div class="share-group-title" data-step2-title></div>
+            <a class="share-opt" data-share-link="email" href="#">${EMAIL_ICON} Trimite pe Email</a>
+            <a class="share-opt" data-share-link="whatsapp" href="#" target="_blank" rel="noopener">${WHATSAPP_ICON} Trimite pe WhatsApp</a>
+            <a class="share-opt" data-share-link="save" href="#" target="_blank" rel="noopener" data-save-opt>${SAVE_ICON} <span data-save-label></span></a>
+            <button class="share-opt" type="button" data-copy>${COPY_ICON} Copiază linkul</button>
+          </div>
         </div>
       </div>
     `;
@@ -178,12 +196,80 @@ function renderCazari(rows, unreadCounts) {
   });
 }
 
+function pdfUrl(slug) {
+  return `export-ghid-pdf.html?slug=${encodeURIComponent(slug)}`;
+}
+
+function resetPopoverStep(popover) {
+  popover.dataset.step = '1';
+  popover.querySelector('.share-step1').style.display = '';
+  popover.querySelector('.share-step2').style.display = 'none';
+}
+
 function closeAllPopovers() {
-  document.querySelectorAll('.share-popover.open').forEach(p => p.classList.remove('open'));
+  document.querySelectorAll('.share-popover.open').forEach(p => { p.classList.remove('open'); resetPopoverStep(p); });
+}
+
+function showShareStep2(popover, type, slug, nume) {
+  popover.dataset.step = '2';
+  popover.dataset.type = type;
+  popover.querySelector('.share-step1').style.display = 'none';
+  const step2 = popover.querySelector('.share-step2');
+  step2.style.display = '';
+
+  const onlineLink = guideUrl(slug);
+  const shareLink = type === 'pdf' ? pdfUrl(slug) : onlineLink;
+  const isAbsolute = /^https?:\/\//.test(shareLink);
+  const absoluteShareLink = isAbsolute ? shareLink : `${window.location.origin}${window.location.pathname.replace(/contul-meu\.html$/, '')}${shareLink}`;
+
+  step2.querySelector('[data-step2-title]').textContent = type === 'pdf' ? 'Ghid PDF (offline)' : 'Ghidul online (link)';
+
+  const mesaj = type === 'pdf'
+    ? `Salut! Iată versiunea offline (PDF) a ghidului pentru ${nume} — o poți descărca sau printa de aici: ${absoluteShareLink}`
+    : `Ghidul de oaspeți pentru ${nume}: ${onlineLink}`;
+
+  step2.querySelector('[data-share-link="whatsapp"]').href = `https://wa.me/?text=${encodeURIComponent(mesaj)}`;
+  step2.querySelector('[data-share-link="email"]').href = `mailto:?subject=${encodeURIComponent((type === 'pdf' ? 'Ghid PDF — ' : 'Ghidul de oaspeți — ') + nume)}&body=${encodeURIComponent(mesaj)}`;
+
+  const saveOpt = step2.querySelector('[data-save-opt]');
+  saveOpt.href = absoluteShareLink;
+  step2.querySelector('[data-save-label]').textContent = type === 'pdf' ? 'Descarcă / Salvează PDF' : 'Deschide ghidul';
+
+  const copyBtn = step2.querySelector('[data-copy]');
+  copyBtn.dataset.copyValue = onlineLink;
+  copyBtn.innerHTML = `${COPY_ICON} <span data-copy-label>Copiază linkul</span>`;
 }
 
 document.getElementById('list-cazari').addEventListener('click', (e) => {
   const btn = e.target.closest('[data-action]');
+  const chooseBtn = e.target.closest('[data-choose]');
+  const backBtn = e.target.closest('[data-back]');
+  const copyBtn = e.target.closest('[data-copy]');
+
+  if (chooseBtn) {
+    const popover = chooseBtn.closest('.share-popover');
+    const slug = popover.dataset.popoverFor;
+    const nume = popover.dataset.nume || 'cazarea ta';
+    showShareStep2(popover, chooseBtn.dataset.choose, slug, nume);
+    return;
+  }
+  if (backBtn) {
+    resetPopoverStep(backBtn.closest('.share-popover'));
+    return;
+  }
+  if (copyBtn) {
+    const value = copyBtn.dataset.copyValue || '';
+    const label = copyBtn.querySelector('[data-copy-label]');
+    const restore = () => { if (label) label.textContent = 'Copiază linkul'; };
+    const showCopied = () => { if (label) label.textContent = 'Copiat!'; setTimeout(restore, 1600); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(value).then(showCopied).catch(() => alert(value));
+    } else {
+      alert(value);
+    }
+    return;
+  }
+
   if (!btn) return;
   const slug = btn.dataset.slug;
   const action = btn.dataset.action;
@@ -200,13 +286,7 @@ document.getElementById('list-cazari').addEventListener('click', (e) => {
     const alreadyOpen = popover.classList.contains('open');
     closeAllPopovers();
     if (alreadyOpen) return;
-
-    const nume = btn.dataset.nume || 'cazarea ta';
-    const link = guideUrl(slug);
-    const mesaj = `Ghidul de oaspeți pentru ${nume}: ${link}`;
-    popover.querySelector('[data-share-link="whatsapp"]').href = `https://wa.me/?text=${encodeURIComponent(mesaj)}`;
-    const emailLink = popover.querySelector('[data-share-link="email"]');
-    emailLink.href = `mailto:?subject=${encodeURIComponent('Ghidul de oaspeți — ' + nume)}&body=${encodeURIComponent(mesaj)}`;
+    popover.dataset.nume = btn.dataset.nume || 'cazarea ta';
     popover.classList.add('open');
   }
 });
