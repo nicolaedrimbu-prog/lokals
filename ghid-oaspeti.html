@@ -228,27 +228,6 @@
       <span id="feedback-btn-text">Trimite pe WhatsApp</span>
     </button>
   </div>
-
-  <div class="box" id="stay-fb-box" style="margin-top:14px;">
-    <p id="stay-fb-label" style="margin:0 0 4px; font-weight:600; color:var(--ink);">Cum a fost sejurul tău?</p>
-    <p id="stay-fb-sub" style="margin:0 0 14px; font-size:12px; color:var(--ink-soft);">Feedback-ul e privat — îl vede doar gazda ta, nu apare public.</p>
-
-    <div id="stay-fb-form">
-      <div class="sf-stars" id="stay-fb-stars"></div>
-      <div class="sf-types" id="stay-fb-types"></div>
-      <textarea id="stay-fb-text" rows="3"></textarea>
-      <input id="stay-fb-name" type="text">
-      <button id="stay-fb-submit" onclick="submitStayFeedback()"
-        style="background:var(--spruce-deep); color:#fff; border:none; border-radius:999px;
-          padding:9px 18px; font-size:13px; font-weight:500; cursor:pointer;">
-        <span id="stay-fb-submit-text">Trimite feedback</span>
-      </button>
-    </div>
-
-    <div id="stay-fb-success">
-      <p id="stay-fb-success-text" style="margin:0; font-weight:600; color:var(--spruce-deep);">Mulțumim! Am trimis feedback-ul gazdei tale.</p>
-    </div>
-  </div>
 </footer>
 
 <script>
@@ -433,14 +412,16 @@ let stayFbType = 'parere';
 let stayFbSubmitted = false;
 
 function renderStayFeedbackBox(){
+  // Secțiunea există în DOM doar pe cazările reale (renderFacilitati nu o creează pe sloturile
+  // "demo-*" sau când nu există deloc un operator) — dacă nu a fost creată, nu avem ce popula.
+  const starsWrap = document.getElementById('stay-fb-stars');
+  if (!starsWrap) return;
+
   const t = I18N[currentLang];
-  document.getElementById('stay-fb-label').textContent = t.stayFbLabel;
-  document.getElementById('stay-fb-sub').textContent = t.stayFbSub;
   document.getElementById('stay-fb-name').placeholder = t.stayFbNamePlaceholder;
   document.getElementById('stay-fb-submit-text').textContent = t.stayFbSubmitBtn;
   document.getElementById('stay-fb-success-text').textContent = t.stayFbSuccess;
 
-  const starsWrap = document.getElementById('stay-fb-stars');
   starsWrap.innerHTML = [1, 2, 3, 4, 5].map(n =>
     `<button type="button" class="sf-star ${n <= stayFbRating ? 'filled' : ''}" data-star="${n}">★</button>`
   ).join('');
@@ -459,10 +440,6 @@ function renderStayFeedbackBox(){
   const activeType = t.stayFbTypes.find(tp => tp.id === stayFbType);
   document.getElementById('stay-fb-text').placeholder = activeType ? activeType.placeholder : '';
 
-  // Pe sloturile "demo-*" nu există un operator real în baza de date, deci nu avem un
-  // operator_id la care să atașăm feedback-ul — ascundem formularul pe acele sloturi.
-  const isDemoSlot = !currentOperator || currentOperator.id === 'demo';
-  document.getElementById('stay-fb-box').style.display = isDemoSlot ? 'none' : '';
   document.getElementById('stay-fb-form').style.display = stayFbSubmitted ? 'none' : '';
   document.getElementById('stay-fb-success').style.display = stayFbSubmitted ? 'block' : 'none';
 }
@@ -623,6 +600,7 @@ const FAC_ICONS = {
   wifi: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#26382C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18l.01 0"/><path d="M9.172 15.172a4 4 0 0 1 5.656 0"/><path d="M6.343 12.343a8 8 0 0 1 11.314 0"/><path d="M3.515 9.515c4.686 -4.687 12.284 -4.687 17 0"/></svg>',
   servicii: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#26382C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21v-14l8 -4v18"/><path d="M19 21v-10l-6 -4"/><path d="M9 9l0 .01"/><path d="M9 12l0 .01"/><path d="M9 15l0 .01"/><path d="M9 18l0 .01"/></svg>',
   contact: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9C4536" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 16v.01"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.871l-8.106 -13.534a1.914 1.914 0 0 0 -3.274 0z"/></svg>',
+  feedback: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#26382C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-13a3 3 0 0 1 3 -3h10a3 3 0 0 1 3 3v6a3 3 0 0 1 -3 3h-9l-4 4z"/></svg>',
   whatsapp: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3C5B44" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"/></svg>',
   chevron: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B6459" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="fac-chevron"><path d="M6 9l6 6l6 -6"/></svg>',
   pin: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5B6459" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M17.657 16.657L13.414 20.9a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/></svg>',
@@ -748,6 +726,30 @@ function renderFacilitati() {
     sections.push({ key: 'contact', title: t.contact, body });
   }
 
+  // Feedback despre sejur — privat, către gazdă. Doar pe cazările reale (sloturile "demo-*"
+  // n-au un operator_id real în baza de date, deci n-avem la ce feedback să-l atașăm).
+  if (currentOperator.id !== 'demo') {
+    const tRoot = I18N[currentLang];
+    const body = `
+      <p style="margin:0 0 14px; font-size:12.5px; color:var(--ink-soft); line-height:1.5;">${tRoot.stayFbSub}</p>
+      <div id="stay-fb-form">
+        <div class="sf-stars" id="stay-fb-stars"></div>
+        <div class="sf-types" id="stay-fb-types"></div>
+        <textarea id="stay-fb-text" rows="3"></textarea>
+        <input id="stay-fb-name" type="text">
+        <button id="stay-fb-submit" onclick="submitStayFeedback()"
+          style="background:var(--spruce-deep); color:#fff; border:none; border-radius:999px;
+            padding:9px 18px; font-size:13px; font-weight:500; cursor:pointer;">
+          <span id="stay-fb-submit-text">Trimite feedback</span>
+        </button>
+      </div>
+      <div id="stay-fb-success">
+        <p id="stay-fb-success-text" style="margin:0; font-weight:600; color:var(--spruce-deep);"></p>
+      </div>
+    `;
+    sections.push({ key: 'feedback', title: tRoot.stayFbLabel, body });
+  }
+
   const container = document.getElementById('facilitati-sections');
   container.innerHTML = '';
   sections.forEach((sec) => {
@@ -776,6 +778,9 @@ function renderFacilitati() {
 
   // dacă rămân 0 secțiuni în acordeon (doar locație completată), ascundem cardul gol
   document.getElementById('facilitati-card').style.display = sections.length ? '' : 'none';
+
+  // populează conținutul interactiv al secțiunii de feedback (dacă a fost creată mai sus)
+  renderStayFeedbackBox();
 }
 
 // ---------- Cadranul dedicat "Locație & acces" (poză, adresă, buton de direcții) ----------
@@ -1039,7 +1044,6 @@ function setLang(lang){
   document.getElementById('code-label').textContent = t.codeLabel;
   document.getElementById('code-sub').textContent = t.codeSub;
   document.getElementById('code-btn-text').textContent = t.codeBtn;
-  renderStayFeedbackBox();
   renderFacilitati();
   renderFilters();
   render(currentFilter);
