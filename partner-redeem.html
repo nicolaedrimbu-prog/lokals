@@ -2,112 +2,83 @@
 <html lang="ro">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Confirmare beneficiu — Lokals</title>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --teal-deep:#10302B; --teal:#1A4A42; --gold:#C98A2C; --gold-soft:#E8CE9E;
-    --cream:#F7F2E8; --ink:#181E1B; --ink-soft:#5B6459; --line:#DCD5C6;
-    --brick:#9C4536; --brick-soft:#F5E4E0; --green:#2E6B4F; --green-soft:#E4F0E9;
+    --cream:#F7F2E8; --ink:#181E1B; --ink-soft:#5B6459; --line:#DCD5C6; --brick:#9C4536; --brick-soft:#F1E3DF;
+    --green:#3C6B3F; --green-soft:#E4EFE2;
   }
   *{box-sizing:border-box;}
-  body{margin:0; background:var(--cream); color:var(--ink); font-family:'Inter', system-ui, sans-serif;
-    min-height:100vh; display:flex; flex-direction:column;}
+  body{margin:0; background:var(--cream); color:var(--ink); font-family:'Inter', system-ui, sans-serif; min-height:100vh;}
+  .serif{font-family:'Fraunces', Georgia, serif;}
 
-  header{background:var(--teal-deep); padding:16px 20px; display:flex; align-items:center; gap:10px;}
-  .ring{width:22px; height:22px; border-radius:50%; background:var(--gold); position:relative; flex-shrink:0;}
-  .ring::after{content:''; position:absolute; inset:6px; border-radius:50%; background:var(--teal-deep);}
-  .wordmark{font-family:'Poppins', sans-serif; font-weight:700; color:#fff; font-size:18px;}
-  .tag{margin-left:auto; color:var(--gold); font-size:10px; font-weight:700; letter-spacing:0.08em;}
+  header{background:var(--teal-deep); padding:22px 20px 20px; text-align:center;}
+  header .wordmark{font-family:'Fraunces', Georgia, serif; font-weight:700; color:#fff; font-size:20px;}
+  header .tag{color:var(--gold-soft); font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin-top:4px;}
 
-  main{flex:1; padding:20px; max-width:480px; margin:0 auto; width:100%; display:flex; flex-direction:column;}
-  .biz-name{font-size:20px; font-weight:700; color:var(--teal-deep); margin:4px 0 2px;}
-  .biz-sub{font-size:13px; color:var(--ink-soft); margin:0 0 18px;}
+  main{max-width:420px; margin:0 auto; padding:22px 18px 60px;}
 
-  /* ---------- Scan stage ---------- */
-  #scan-stage{transition:opacity .25s ease, max-height .25s ease; overflow:hidden;}
-  #scan-stage.hidden{opacity:0; max-height:0; pointer-events:none;}
-  .scan-frame{position:relative; border-radius:20px; overflow:hidden; background:var(--teal-deep);
-    box-shadow:0 8px 24px rgba(16,48,43,0.18); aspect-ratio:1/1;}
-  .scan-frame::before{content:''; position:absolute; inset:14%; border:2.5px solid var(--gold);
-    border-radius:16px; z-index:5; pointer-events:none; opacity:0.85;}
-  .scan-hint{text-align:center; font-size:13px; color:var(--ink-soft); margin-top:14px;}
-  #reader{width:100%; height:100%;}
-  #reader video{object-fit:cover !important;}
+  .biz-name{font-family:'Fraunces', Georgia, serif; font-weight:700; font-size:21px; color:var(--teal-deep); text-align:center; margin-bottom:4px;}
+  .loading-dots::after{content:'…';}
+  .biz-sub{font-size:12.5px; color:var(--ink-soft); text-align:center; line-height:1.5; margin-bottom:20px;}
 
-  /* ---------- Manual entry (comenzi online) ---------- */
-  .manual-divider{display:flex; align-items:center; gap:10px; margin:20px 0; color:var(--ink-soft); font-size:12px;}
-  .manual-divider::before, .manual-divider::after{content:''; flex:1; height:1px; background:var(--line);}
-  .manual-box{background:#fff; border:1.5px solid var(--line); border-radius:16px; padding:16px;}
-  .manual-label{font-size:13px; font-weight:700; color:var(--teal-deep); margin-bottom:4px;}
-  .manual-sub{font-size:12px; color:var(--ink-soft); margin-bottom:10px;}
+  #scan-stage.hidden{display:none;}
+  .scan-frame{background:#fff; border:1px solid var(--line); border-radius:18px; padding:14px; overflow:hidden;}
+  #reader{border-radius:12px; overflow:hidden;}
+  .scan-hint{font-size:12.5px; color:var(--ink-soft); text-align:center; margin:12px 0 22px;}
+
+  .manual-divider{text-align:center; font-size:11px; font-weight:700; letter-spacing:.08em; color:var(--ink-soft); position:relative; margin:18px 0;}
+  .manual-divider::before, .manual-divider::after{content:''; position:absolute; top:50%; width:38%; height:1px; background:var(--line);}
+  .manual-divider::before{left:0;} .manual-divider::after{right:0;}
+
+  .manual-box{background:#fff; border:1px solid var(--line); border-radius:16px; padding:16px 18px;}
+  .manual-label{font-size:14px; font-weight:700; color:var(--teal-deep); margin-bottom:4px;}
+  .manual-sub{font-size:12px; color:var(--ink-soft); line-height:1.5; margin-bottom:12px;}
   .manual-row{display:flex; gap:8px;}
-  #manual-code{flex:1; border:1.5px solid var(--line); border-radius:12px; padding:12px 14px;
-    font-family:'JetBrains Mono', monospace; font-size:16px; letter-spacing:2px; text-transform:uppercase;
-    color:var(--ink); min-width:0;}
+  #manual-code{flex:1; border:1.5px solid var(--line); border-radius:10px; padding:11px 13px; font-size:16px; font-family:'Inter', monospace; letter-spacing:2px; text-transform:uppercase; text-align:center; min-width:0;}
   #manual-code:focus{outline:none; border-color:var(--teal);}
-  .btn-manual{flex-shrink:0; border:none; border-radius:12px; padding:0 18px; background:var(--teal-deep);
-    color:#fff; font-weight:700; font-size:14px; cursor:pointer;}
-  .manual-error{font-size:12px; color:var(--brick); margin-top:8px; min-height:16px;}
+  .btn-manual{background:var(--teal-deep); color:#fff; border:none; border-radius:10px; padding:0 18px; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;}
+  .manual-error{color:var(--brick); font-size:12px; margin-top:8px; min-height:15px;}
 
-  /* ---------- Result stage ---------- */
-  #result-stage{opacity:0; max-height:0; overflow:hidden; transition:opacity .3s ease .1s, max-height .3s ease;}
-  #result-stage.visible{opacity:1; max-height:800px;}
+  #result-stage, #outcome-stage{display:none;}
+  #result-stage.visible, #outcome-stage.visible{display:block;}
 
-  .confirm-card{background:#fff; border-radius:20px; padding:22px 20px; box-shadow:0 8px 24px rgba(16,48,43,0.1);}
-  .confirm-icon{width:44px; height:44px; border-radius:50%; background:var(--gold-soft); color:var(--gold);
-    display:flex; align-items:center; justify-content:center; font-size:22px; margin-bottom:12px;}
-  .confirm-row{display:flex; justify-content:space-between; align-items:baseline; padding:9px 0;
-    border-bottom:1px solid var(--line); font-size:14px;}
+  .confirm-card{background:#fff; border:1px solid var(--line); border-radius:18px; padding:26px 22px; text-align:center;}
+  .confirm-icon{font-size:44px; margin-bottom:12px;}
+  .confirm-row{display:flex; justify-content:space-between; align-items:center; padding:11px 0; border-bottom:1px solid var(--line); font-size:14px; text-align:left;}
   .confirm-row:last-of-type{border-bottom:none;}
   .confirm-row span{color:var(--ink-soft);}
-  .confirm-row b{color:var(--teal-deep); font-family:'JetBrains Mono', monospace; font-size:16px; letter-spacing:1px;}
-  .source-badge{display:inline-block; font-size:11px; font-weight:700; padding:3px 10px; border-radius:999px;
-    margin-top:4px;}
-  .source-badge.scan{background:var(--gold-soft); color:#7A5518;}
-  .source-badge.manual{background:#DCE7EB; color:#2E5A6B;}
+  .confirm-row b{color:var(--teal-deep); font-weight:700;}
+  .source-badge{font-size:11px; font-weight:700; padding:3px 10px; border-radius:999px;}
+  .source-badge.scan{background:var(--green-soft); color:var(--green);}
+  .source-badge.manual{background:var(--gold-soft); color:#8F6222;}
 
-  .btn-confirm{width:100%; margin-top:18px; padding:16px; border:none; border-radius:14px;
-    background:var(--teal-deep); color:#fff; font-size:16px; font-weight:700; cursor:pointer;
-    display:flex; align-items:center; justify-content:center; gap:8px; transition:transform .12s ease, background .2s;}
-  .btn-confirm:active{transform:scale(0.97);}
-  .btn-confirm:disabled{opacity:0.5; cursor:default;}
-  .btn-again{width:100%; margin-top:10px; padding:13px; border:1.5px solid var(--line); border-radius:14px;
-    background:transparent; color:var(--ink-soft); font-size:14px; font-weight:600; cursor:pointer;}
+  .btn-confirm{display:block; width:100%; background:var(--teal-deep); color:#fff; border:none; border-radius:12px; padding:15px; font-size:14.5px; font-weight:700; cursor:pointer; font-family:inherit; margin-top:20px;}
+  .btn-confirm:disabled{opacity:.6; cursor:default;}
+  .btn-again{display:block; width:100%; background:transparent; color:var(--ink-soft); border:1.5px solid var(--line); border-radius:12px; padding:13px; font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit; margin-top:10px;}
 
-  /* ---------- Outcome (success / error) ---------- */
-  #outcome-stage{opacity:0; max-height:0; overflow:hidden; transition:opacity .3s ease .1s, max-height .3s ease;}
-  #outcome-stage.visible{opacity:1; max-height:800px;}
-  .outcome-card{text-align:center; padding:32px 20px; border-radius:20px;}
-  .outcome-card.ok{background:var(--green-soft);}
-  .outcome-card.err{background:var(--brick-soft);}
-  .outcome-icon{width:64px; height:64px; border-radius:50%; margin:0 auto 14px; display:flex;
-    align-items:center; justify-content:center; font-size:32px; animation:pop .35s ease;}
-  .outcome-card.ok .outcome-icon{background:var(--green); color:#fff;}
-  .outcome-card.err .outcome-icon{background:var(--brick); color:#fff;}
-  .outcome-title{font-size:17px; font-weight:700; margin:0 0 4px;}
-  .outcome-card.ok .outcome-title{color:var(--green);}
-  .outcome-card.err .outcome-title{color:var(--brick);}
-  .outcome-sub{font-size:13px; color:var(--ink-soft); margin:0;}
-  @keyframes pop{from{transform:scale(0.6); opacity:0;} to{transform:scale(1); opacity:1;}}
-
-  .loading-dots::after{content:'…'; animation:dots 1.2s steps(4, end) infinite;}
-  @keyframes dots{0%,20%{content:'';} 40%{content:'.';} 60%{content:'..';} 80%,100%{content:'...';}}
+  .outcome-card{background:#fff; border:1.5px solid var(--line); border-radius:18px; padding:32px 22px; text-align:center;}
+  .outcome-card.ok{border-color:var(--green-soft); background:#FCFEFB;}
+  .outcome-card.err{border-color:#EAD3B6; background:#FBF4E7;}
+  .outcome-icon{width:56px; height:56px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:700; margin:0 auto 16px;}
+  .outcome-card.ok .outcome-icon{background:var(--green-soft); color:var(--green);}
+  .outcome-card.err .outcome-icon{background:var(--brick-soft); color:var(--brick);}
+  .outcome-title{font-family:'Fraunces', Georgia, serif; font-weight:700; font-size:19px; color:var(--teal-deep); margin:0 0 6px;}
+  .outcome-sub{font-size:13px; color:var(--ink-soft); margin:0; line-height:1.5;}
 </style>
 </head>
 <body>
 
 <header>
-  <div class="ring"></div>
   <div class="wordmark">lokals</div>
-  <div class="tag">PENTRU PARTENERI</div>
+  <div class="tag">Pentru parteneri</div>
 </header>
 
 <main>
-  <div class="biz-name" id="biz-name">Se încarcă<span class="loading-dots"></span></div>
+  <div class="biz-name serif" id="biz-name">Se încarcă<span class="loading-dots"></span></div>
   <div class="biz-sub">Scanați codul QR al oaspetelui, sau introduceți-l manual pentru comenzi online.</div>
 
   <div id="scan-stage">
@@ -141,32 +112,21 @@
   <div id="outcome-stage">
     <div class="outcome-card" id="outcome-card">
       <div class="outcome-icon" id="outcome-icon">✓</div>
-      <p class="outcome-title" id="outcome-title">—</p>
+      <p class="outcome-title serif" id="outcome-title">—</p>
       <p class="outcome-sub" id="outcome-sub">—</p>
     </div>
     <button class="btn-confirm" style="margin-top:14px;" onclick="resetToScan()">Scanează / verifică alt cod</button>
   </div>
 </main>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <script>
 const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
-const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_LbOENmZHd9d5su2EOTaqVcqDgwUfD6xBfltgKGG8326YnWApHtmv4ZNRJB3N40Yj902RfUM1Dexf/pub?gid=1395207386&single=true&output=csv";
 
 const params = new URLSearchParams(window.location.search);
 const businessId = (params.get('business') || '').trim();
 let businessName = businessId;
-
-async function loadBusinessName() {
-  try {
-    const res = await fetch(SHEET_CSV_URL);
-    const csvText = await res.text();
-    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
-    const row = parsed.data.find(r => (r.id || '').trim() === businessId);
-    if (row) businessName = row.nume;
-  } catch (e) { /* fallback la id */ }
-  document.getElementById('biz-name').textContent = businessId ? businessName : 'Lipsește ?business= din link';
-}
 
 async function sbFetch(path, options = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -178,6 +138,17 @@ async function sbFetch(path, options = {}) {
       ...(options.headers || {}),
     },
   });
+}
+
+// Numele afacerii vine acum din tabelul afaceri_ghid (fostul Sheet Google) —
+// vezi Back Office din panou-parteneri.html pentru administrarea lui.
+async function loadBusinessName() {
+  try {
+    const res = await sbFetch(`afaceri_ghid?id=eq.${encodeURIComponent(businessId)}&select=nume`);
+    const rows = await res.json();
+    if (rows && rows[0]) businessName = rows[0].nume;
+  } catch (e) { /* fallback la id */ }
+  document.getElementById('biz-name').textContent = businessId ? businessName : 'Lipsește ?business= din link';
 }
 
 function showStage(stage) {
