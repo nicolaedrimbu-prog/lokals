@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Panou parteneri — Lokals</title>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
   :root{
     --teal-deep:#10302B; --teal:#1A4A42; --gold:#C98A2C; --gold-soft:#E8CE9E;
@@ -120,6 +120,32 @@
   .addon-status.off{background:#EFE9DB; color:#8F6222;}
   .addon-note{font-size:11.5px; color:var(--ink-soft); margin-top:8px; line-height:1.5;}
   .switch input:disabled + .track{opacity:.55; cursor:default;}
+
+  /* ---- tab-uri panou ---- */
+  #tabbar{background:#fff; border-bottom:1px solid var(--line); padding:0 40px; display:flex; gap:4px;}
+  .tabbtn{background:transparent; border:none; border-bottom:2.5px solid transparent; color:var(--ink-soft); font-family:inherit; font-size:14px; font-weight:600; padding:14px 16px; cursor:pointer;}
+  .tabbtn.active{color:var(--teal-deep); border-bottom-color:var(--gold);}
+  .tabpanel{display:none;}
+  .tabpanel.active{display:block;}
+
+  /* ---- Back Office ---- */
+  #tab-backoffice #main{max-width:880px;}
+  .bo-section{margin-bottom:30px;}
+  .bo-title{font-size:12px; font-weight:700; color:var(--gold); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:8px;}
+  .bo-title .count{background:var(--teal-deep); color:#fff; border-radius:999px; padding:1px 8px; font-size:11px;}
+  .bo-table{width:100%; border-collapse:collapse; background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(16,48,43,0.06); border:1px solid var(--line);}
+  .bo-table th{text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ink-soft); padding:10px 14px; background:var(--cream); border-bottom:1px solid var(--line);}
+  .bo-table td{padding:12px 14px; font-size:13px; border-bottom:1px solid var(--line); vertical-align:middle;}
+  .bo-table tr:last-child td{border-bottom:none;}
+  .bo-name{font-weight:600; color:var(--teal-deep);}
+  .bo-sub{color:var(--ink-soft); font-size:11px; margin-top:2px;}
+  .bo-link{color:var(--teal); text-decoration:none; font-family:'JetBrains Mono', monospace; font-size:11.5px; word-break:break-all;}
+  .bo-link:hover{text-decoration:underline;}
+  .bo-copy{background:var(--teal-deep); color:#fff; border:none; border-radius:8px; padding:6px 10px; font-size:11px; font-weight:600; cursor:pointer; white-space:nowrap;}
+  .bo-copy:active{transform:scale(0.96);}
+  .bo-note{background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px 18px; font-size:13px; color:var(--ink-soft); line-height:1.6;}
+  .bo-note b{color:var(--ink);}
+  .bo-note.warn{border-color:#EAD3B6; background:#FBF4E7;}
 </style>
 </head>
 <body>
@@ -155,6 +181,12 @@
     </div>
   </div>
 
+  <div id="tabbar">
+    <button class="tabbtn active" data-tab="tab-parteneri">Parteneri &amp; afaceri</button>
+    <button class="tabbtn" data-tab="tab-backoffice">Back Office</button>
+  </div>
+
+  <div class="tabpanel active" id="tab-parteneri">
   <div id="main">
     <h1 class="serif">Parteneri &amp; afaceri</h1>
     <p class="lead">Toate afacerile înscrise în platformă. Publică un profil ca să apară live, imediat, în ghidul turistic.</p>
@@ -189,7 +221,191 @@
       <div id="zone-list"></div>
     </div>
   </div>
+  </div>
+
+  <!-- ===== Back Office — toate link-urile într-un singur loc ===== -->
+  <div class="tabpanel" id="tab-backoffice">
+  <div id="main">
+    <h1 class="serif">Back Office</h1>
+    <p class="lead">Toate link-urile de care ai nevoie, într-un singur loc. Verificate pe domeniul curent lokals.ro — copiază, distribuie, deschide.</p>
+
+    <div class="bo-section">
+      <div class="bo-title">🏠 Ghiduri active — apartamentele tale <span class="count">3</span></div>
+      <table class="bo-table">
+        <tr><th>Apartament</th><th>Link ghid</th><th></th></tr>
+        <tr>
+          <td><span class="bo-name">Apartamentul 5</span><div class="bo-sub">Beautiful views near the Fortress · Râșnov</div></td>
+          <td><a class="bo-link" href="https://lokals.ro/ghid-oaspeti.html?apt=ap5" target="_blank">lokals.ro/ghid-oaspeti.html?apt=ap5</a></td>
+          <td><button class="bo-copy" onclick="boCopy('https://lokals.ro/ghid-oaspeti.html?apt=ap5', this)">Copiază</button></td>
+        </tr>
+        <tr>
+          <td><span class="bo-name">Apartamentul 12</span><div class="bo-sub">Peaceful and inviting · Râșnov</div></td>
+          <td><a class="bo-link" href="https://lokals.ro/ghid-oaspeti.html?apt=ap12" target="_blank">lokals.ro/ghid-oaspeti.html?apt=ap12</a></td>
+          <td><button class="bo-copy" onclick="boCopy('https://lokals.ro/ghid-oaspeti.html?apt=ap12', this)">Copiază</button></td>
+        </tr>
+        <tr>
+          <td><span class="bo-name">Family House</span><div class="bo-sub">Family House with mountain views · Săcele-Brașov</div></td>
+          <td><a class="bo-link" href="https://lokals.ro/ghid-oaspeti.html?apt=sacele" target="_blank">lokals.ro/ghid-oaspeti.html?apt=sacele</a></td>
+          <td><button class="bo-copy" onclick="boCopy('https://lokals.ro/ghid-oaspeti.html?apt=sacele', this)">Copiază</button></td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="bo-section">
+      <div class="bo-title">🤝 Ghiduri — apartamentele vecinilor (probă) <span class="count">3</span></div>
+      <table class="bo-table">
+        <tr><th>Apartament</th><th>Link ghid</th><th></th></tr>
+        <tr>
+          <td><span class="bo-name">Apartamentul 6</span><div class="bo-sub">The Nest Beneath the Citadel</div></td>
+          <td><a class="bo-link" href="https://lokals.ro/ghid-oaspeti.html?apt=ap6" target="_blank">lokals.ro/ghid-oaspeti.html?apt=ap6</a></td>
+          <td><button class="bo-copy" onclick="boCopy('https://lokals.ro/ghid-oaspeti.html?apt=ap6', this)">Copiază</button></td>
+        </tr>
+        <tr>
+          <td><span class="bo-name">Apartamentul 8</span><div class="bo-sub">Hillside Haven</div></td>
+          <td><a class="bo-link" href="https://lokals.ro/ghid-oaspeti.html?apt=ap8" target="_blank">lokals.ro/ghid-oaspeti.html?apt=ap8</a></td>
+          <td><button class="bo-copy" onclick="boCopy('https://lokals.ro/ghid-oaspeti.html?apt=ap8', this)">Copiază</button></td>
+        </tr>
+        <tr>
+          <td><span class="bo-name">Apartamentul 9</span><div class="bo-sub">Alpine Eden Hideaway</div></td>
+          <td><a class="bo-link" href="https://lokals.ro/ghid-oaspeti.html?apt=ap9" target="_blank">lokals.ro/ghid-oaspeti.html?apt=ap9</a></td>
+          <td><button class="bo-copy" onclick="boCopy('https://lokals.ro/ghid-oaspeti.html?apt=ap9', this)">Copiază</button></td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="bo-section">
+      <div class="bo-title">🌍 Demo — pitch pentru gazde noi, alte zone <span class="count">8</span></div>
+      <table class="bo-table">
+        <tr><th>Zonă</th><th>Link demo</th><th></th></tr>
+        <tr><td><span class="bo-name">Predeal-Azuga</span></td><td><a class="bo-link" href="https://lokals.ro/ghid-oaspeti.html?apt=demo-predeal" target="_blank">…?apt=demo-predeal</a></td><td><button class="bo-copy" onclick="boCopy('https://lokals.ro/ghid-oaspeti.html?apt=demo-predeal', this)">Copiază</button></td></tr>
+        <tr><td><span class="bo-name">Sinaia-Bușteni</span></td><td><a class="bo-link" href="https://lokals.ro/ghid-oaspeti.html?apt=demo-sinaia" target="_blank">…?apt=demo-sinaia</a></td><td><button class="bo-copy" onclick="boCopy('https://lokals.ro/ghid-oaspeti.html?apt=demo-sinaia', this)">Copiază</button></td></tr>
+        <tr><td><span class="bo-name">Bran-Moieciu</span></td><td><a class="bo-link" href="https://lokals.ro/ghid-oaspeti.html?apt=demo-bran" target="_blank">…?apt=demo-bran</a></td><td><button class="bo-copy" onclick="boCopy('https://lokals.ro/ghid-oaspeti.html?apt=demo-bran', this)">Copiază</button></td></tr>
+        <tr><td><span class="bo-name">Zărnești</span></td><td><a class="bo-link" href="https://lokals.ro/ghid-oaspeti.html?apt=demo-zarnesti" target="_blank">…?apt=demo-zarnesti</a></td><td><button class="bo-copy" onclick="boCopy('https://lokals.ro/ghid-oaspeti.html?apt=demo-zarnesti', this)">Copiază</button></td></tr>
+        <tr><td><span class="bo-name">Făgăraș</span></td><td><a class="bo-link" href="https://lokals.ro/ghid-oaspeti.html?apt=demo-fagaras" target="_blank">…?apt=demo-fagaras</a></td><td><button class="bo-copy" onclick="boCopy('https://lokals.ro/ghid-oaspeti.html?apt=demo-fagaras', this)">Copiază</button></td></tr>
+        <tr><td><span class="bo-name">Viscri-Saschiz</span></td><td><a class="bo-link" href="https://lokals.ro/ghid-oaspeti.html?apt=demo-viscri" target="_blank">…?apt=demo-viscri</a></td><td><button class="bo-copy" onclick="boCopy('https://lokals.ro/ghid-oaspeti.html?apt=demo-viscri', this)">Copiază</button></td></tr>
+        <tr><td><span class="bo-name">Covasna</span></td><td><a class="bo-link" href="https://lokals.ro/ghid-oaspeti.html?apt=demo-covasna" target="_blank">…?apt=demo-covasna</a></td><td><button class="bo-copy" onclick="boCopy('https://lokals.ro/ghid-oaspeti.html?apt=demo-covasna', this)">Copiază</button></td></tr>
+        <tr><td><span class="bo-name">Vama Buzăului</span></td><td><a class="bo-link" href="https://lokals.ro/ghid-oaspeti.html?apt=demo-vama" target="_blank">…?apt=demo-vama</a></td><td><button class="bo-copy" onclick="boCopy('https://lokals.ro/ghid-oaspeti.html?apt=demo-vama', this)">Copiază</button></td></tr>
+      </table>
+    </div>
+
+    <div class="bo-section">
+      <div class="bo-title">✍️ Înscriere — hotelieri &amp; parteneri noi</div>
+      <table class="bo-table">
+        <tr><th>Ce e</th><th>Link</th><th></th></tr>
+        <tr>
+          <td><span class="bo-name">Auto-înscriere hotelieri</span><div class="bo-sub">Formular public de distribuit — scrie direct în tabelul operatori</div></td>
+          <td><a class="bo-link" href="https://lokals.ro/inregistrare-hotelier.html" target="_blank">lokals.ro/inregistrare-hotelier.html</a></td>
+          <td><button class="bo-copy" onclick="boCopy('https://lokals.ro/inregistrare-hotelier.html', this)">Copiază</button></td>
+        </tr>
+        <tr>
+          <td><span class="bo-name">Auto-înscriere parteneri</span><div class="bo-sub">Formular public — scrie direct în tabelul candidați_parteneri (vezi tab „Parteneri &amp; afaceri")</div></td>
+          <td><a class="bo-link" href="https://lokals.ro/inregistrare-partener.html" target="_blank">lokals.ro/inregistrare-partener.html</a></td>
+          <td><button class="bo-copy" onclick="boCopy('https://lokals.ro/inregistrare-partener.html', this)">Copiază</button></td>
+        </tr>
+        <tr>
+          <td><span class="bo-name">Autentificare cont</span><div class="bo-sub">Login hotelieri/parteneri — fără parolă, prin email</div></td>
+          <td><a class="bo-link" href="https://lokals.ro/cont.html" target="_blank">lokals.ro/cont.html</a></td>
+          <td><button class="bo-copy" onclick="boCopy('https://lokals.ro/cont.html', this)">Copiază</button></td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="bo-section">
+      <div class="bo-title">💳 Prețuri</div>
+      <table class="bo-table">
+        <tr><th>Ce e</th><th>Link</th><th></th></tr>
+        <tr>
+          <td><span class="bo-name">Simulator public de prețuri</span><div class="bo-sub">Pagină de vânzare, fără cont — 1-4 / 5-9 / 10+ apartamente, hoteluri</div></td>
+          <td><a class="bo-link" href="https://lokals.ro/preturi.html" target="_blank">lokals.ro/preturi.html</a></td>
+          <td><button class="bo-copy" onclick="boCopy('https://lokals.ro/preturi.html', this)">Copiază</button></td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="bo-section">
+      <div class="bo-title">📊 Monitorizare</div>
+      <table class="bo-table">
+        <tr><th>Ce arată</th><th>Link</th><th></th></tr>
+        <tr>
+          <td><span class="bo-name">Statistici accesări</span><div class="bo-sub">Toate apartamentele, grupate pe zonă</div></td>
+          <td><a class="bo-link" href="https://lokals.ro/statistici-ghid.html" target="_blank">lokals.ro/statistici-ghid.html</a></td>
+          <td><button class="bo-copy" onclick="boCopy('https://lokals.ro/statistici-ghid.html', this)">Copiază</button></td>
+        </tr>
+        <tr>
+          <td><span class="bo-name">Supabase — bază de date completă</span><div class="bo-sub">Toate tabelele: operatori, candidați parteneri, zone, traduceri</div></td>
+          <td><a class="bo-link" href="https://supabase.com/dashboard/project/mwtodfcwuwzgnkohxpwi/editor" target="_blank">supabase.com/dashboard/…</a></td>
+          <td><button class="bo-copy" onclick="boCopy('https://supabase.com/dashboard/project/mwtodfcwuwzgnkohxpwi/editor', this)">Copiază</button></td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="bo-section">
+      <div class="bo-title">🗂️ Baza de date — afaceri locale (ghidul turistic) <span class="count" id="afg-count">…</span></div>
+      <p class="lead" style="margin:-4px 0 14px; font-size:12.5px;">Sursa afacerilor din ghidul turistic (tabelul <code style="background:var(--cream); padding:1px 5px; border-radius:5px;">afaceri_ghid</code> din Supabase) — a înlocuit vechiul Google Sheet, care nu mai e folosit. Modifică, adaugă sau dezactivează afaceri direct de aici.</p>
+
+      <div class="toolbar" style="margin-bottom:14px;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <select id="afg-zona-filter" style="border:1.5px solid var(--line); border-radius:11px; padding:9px 12px; font-size:13px; font-family:inherit; background:#fff; color:var(--ink);">
+            <option value="toate">Toate zonele</option>
+          </select>
+          <select id="afg-cat-filter" style="border:1.5px solid var(--line); border-radius:11px; padding:9px 12px; font-size:13px; font-family:inherit; background:#fff; color:var(--ink);">
+            <option value="toate">Toate categoriile</option>
+          </select>
+          <input type="text" id="afg-search" placeholder="Caută după nume..." style="border:1.5px solid var(--line); border-radius:11px; padding:9px 14px; font-size:13px; font-family:inherit; width:200px; background:#fff;">
+        </div>
+        <button class="pbtn primary" id="afg-btn-add">+ Adaugă afacere nouă</button>
+      </div>
+
+      <div id="afg-add-wrap" style="display:none; margin-bottom:16px;"></div>
+
+      <div id="afg-loading" style="text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Se încarcă...</div>
+      <div id="afg-empty" style="display:none; text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Niciun rezultat pentru acest filtru.</div>
+      <div id="afg-list" style="display:flex; flex-direction:column; gap:10px;"></div>
+    </div>
+
+    <div class="bo-section">
+      <div class="bo-title">🎁 Scanare beneficii — parteneri</div>
+      <div class="bo-note">
+        <b>Încă activă, dar pe domeniul vechi GitHub Pages</b> — nu a fost mutată pe lokals.ro. Nu există un link fix per afacere; fiecare partener are propriul link, în formatul:<br><br>
+        <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">https://nicolaedrimbu-prog.github.io/ghid-rasnov/partner-redeem.html?business=<i>id-ul-afacerii</i></code><br><br>
+        <b>Exemplu, Peștera Valea Cetății:</b> <a class="bo-link" href="https://nicolaedrimbu-prog.github.io/ghid-rasnov/partner-redeem.html?business=pestera-valea-cetatii" target="_blank">…/partner-redeem.html?business=pestera-valea-cetatii</a>
+        <button class="bo-copy" style="margin-left:8px;" onclick="boCopy('https://nicolaedrimbu-prog.github.io/ghid-rasnov/partner-redeem.html?business=pestera-valea-cetatii', this)">Copiază</button><br><br>
+        Id-ul exact al fiecărei afaceri e păstrat acum ca și coloană <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">id</code> în tabelul <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">afaceri_ghid</code> (secțiunea „🗂️ Baza de date" de mai sus) — deschide detaliile unei afaceri acolo ca să vezi id-ul exact folosit în acest link.
+      </div>
+    </div>
+
+    <div class="bo-section">
+      <div class="bo-title">⚠️ De verificat cu tine</div>
+      <div class="bo-note warn">
+        <b>1. Formularul Google vechi</b> (forms.gle/UaGDwVYVR5HRf4gm6) — l-am înlocuit cu <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">inregistrare-partener.html</code> de mai sus, care scrie direct în baza de date curentă (tabelul acesta din panou); formularul Google separat probabil nu mai e conectat la nimic, dar n-am verificat direct — spune-mi dacă încă îl folosești.<br><br>
+        <b>2. Baza de date afaceri din Google Sheets</b> — <u>migrată</u>: toate cele 180 de afaceri sunt acum în tabelul <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">afaceri_ghid</code> din Supabase, iar ghidul (ghid-oaspeti.html) citește deja de acolo, nu mai din Sheet. Le poți edita din secțiunea „🗂️ Baza de date" de mai sus. Sheet-ul vechi poate fi arhivat/uitat — id-urile din el (folosite și la scanarea de beneficii, vezi mai jos) s-au păstrat exact, ca și coloană <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">id</code> în tabelul nou.<br><br>
+        <b>3. Pagina de scanare beneficii</b> (secțiunea de mai sus) — încă e pe domeniul vechi GitHub Pages, nu pe lokals.ro. Merită mutată la un moment dat pe domeniul principal, ca tot ce ține de Lokals să fie într-un singur loc — spune-mi dacă vrei să o migrăm.
+      </div>
+    </div>
+
+    <p id="footnote">lokals.ro · Back Office generat pentru uz intern</p>
+  </div>
+  </div>
+
 </div>
+
+<script>
+function boCopy(text, btn){
+  navigator.clipboard.writeText(text).then(() => {
+    const original = btn.textContent;
+    btn.textContent = '✓ Copiat';
+    setTimeout(() => { btn.textContent = original; }, 1500);
+  });
+}
+document.querySelectorAll('.tabbtn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tabbtn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tabpanel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  });
+});
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
@@ -253,7 +469,14 @@ function fmtData(iso){
 }
 
 function zonaLabel(z){
-  const map = { 'rasnov':'Râșnov', 'sacele-brasov':'Săcele-Brașov' };
+  const map = {
+    'rasnov':'Râșnov', 'sacele-brasov':'Săcele-Brașov',
+    'predeal-azuga':'Predeal-Azuga', 'sinaia-busteni-poiana-tapului':'Sinaia-Bușteni-Poiana Țapului',
+    'bran-moieciu-fundata':'Bran-Moieciu-Fundata', 'zarnesti-poiana-marului':'Zărnești-Poiana Mărului',
+    'fagaras-sambata-de-sus':'Făgăraș-Sâmbăta de Sus', 'bunesti-viscri-saschiz-meschendorf':'Bunești-Viscri-Saschiz-Meșendorf',
+    'covasna-targu-secuiesc-sfantu-gheorghe':'Covasna-Târgu Secuiesc-Sfântu Gheorghe',
+    'vama-buzaului-intorsura-buzaului':'Vama Buzăului-Întorsura Buzăului',
+  };
   return map[(z||'').trim()] || (z || '—');
 }
 
@@ -295,6 +518,7 @@ function enterPanel(email){
   showView('view-panel');
   loadAll();
   loadZones();
+  loadAfaceriGhid();
 }
 
 async function init(){
@@ -605,6 +829,279 @@ function fieldHtml(f, value){
   }
   return `<input type="${f.type === 'number' ? 'number' : f.type}" name="${f.key}" value="${escapeHtml(v)}">`;
 }
+
+// ---------- Back Office — management afaceri_ghid (fosta bază Google Sheets) ----------
+const AFACERI_FIELDS = [
+  { key: 'nume', label: 'Nume', type: 'text' },
+  { key: 'categorie', label: 'Categorie', type: 'select', options: Object.entries(CATEGORII) },
+  { key: 'zona', label: 'Zonă (una sau mai multe, separate prin virgulă)', type: 'text', full: true },
+  { key: 'ordine', label: 'Ordine (mai mic = mai sus; gol = la coadă)', type: 'number' },
+  { key: 'iconita_fallback', label: 'Iconiță', type: 'text' },
+  { key: 'descriere', label: 'Descriere (RO)', type: 'textarea', full: true },
+  { key: 'descriere_en', label: 'Descriere (EN)', type: 'textarea', full: true },
+  { key: 'website', label: 'Website', type: 'url' },
+  { key: 'facebook', label: 'Facebook', type: 'url' },
+  { key: 'instagram', label: 'Instagram', type: 'url' },
+  { key: 'telefon', label: 'Telefon', type: 'tel' },
+  { key: 'google_maps_place_id', label: 'Google Maps Place ID', type: 'text' },
+  { key: 'poza_1', label: 'Poză 1 (cale/URL)', type: 'text' },
+  { key: 'poza_2', label: 'Poză 2 (cale/URL)', type: 'text' },
+  { key: 'beneficiu', label: 'Beneficiu activ (text afișat oaspeților)', type: 'text', full: true },
+  { key: 'beneficiu_viitor', label: 'Etichetă „în curând"', type: 'select', options: [['', '—'], ['beneficii', 'Beneficii'], ['cadou', 'Cadou']] },
+  { key: 'persoana_contact', label: 'Persoană de contact', type: 'text' },
+  { key: 'email', label: 'Email', type: 'email' },
+  { key: 'note', label: 'Notă internă (nu apare public)', type: 'textarea', full: true },
+];
+
+let AFG_ROWS = [];
+let afgZonaFilter = 'toate';
+let afgCatFilter = 'toate';
+
+async function loadAfaceriGhid(){
+  document.getElementById('afg-loading').style.display = 'block';
+  document.getElementById('afg-list').innerHTML = '';
+  document.getElementById('afg-empty').style.display = 'none';
+  const { data, error } = await supabaseClient.from('afaceri_ghid').select('*').order('zona', { ascending: true }).order('ordine', { ascending: true, nullsFirst: false });
+  document.getElementById('afg-loading').style.display = 'none';
+  if (error) {
+    console.error(error);
+    document.getElementById('afg-list').innerHTML = `<p style="color:var(--brick); font-size:13px;">Nu am putut încărca — ${escapeHtml(error.message || '')}</p>`;
+    return;
+  }
+  AFG_ROWS = data || [];
+  document.getElementById('afg-count').textContent = AFG_ROWS.length;
+  populateAfgFilters();
+  renderAfgList();
+}
+
+function populateAfgFilters(){
+  const zoneSet = new Set();
+  AFG_ROWS.forEach(r => (r.zona || '').split(',').map(z => z.trim()).filter(Boolean).forEach(z => zoneSet.add(z)));
+  const zoneSel = document.getElementById('afg-zona-filter');
+  const prevZ = zoneSel.value || 'toate';
+  zoneSel.innerHTML = '<option value="toate">Toate zonele</option>' +
+    Array.from(zoneSet).sort().map(z => `<option value="${escapeHtml(z)}">${escapeHtml(zonaLabel(z))}</option>`).join('');
+  zoneSel.value = Array.from(zoneSet).includes(prevZ) ? prevZ : 'toate';
+  afgZonaFilter = zoneSel.value;
+
+  const catSel = document.getElementById('afg-cat-filter');
+  const prevC = catSel.value || 'toate';
+  catSel.innerHTML = '<option value="toate">Toate categoriile</option>' +
+    Object.entries(CATEGORII).map(([k, l]) => `<option value="${escapeHtml(k)}">${escapeHtml(l)}</option>`).join('');
+  catSel.value = prevC;
+  afgCatFilter = catSel.value;
+}
+
+function afgFieldsHtml(row, prefix){
+  return AFACERI_FIELDS.map(f => `
+    <div class="efield" style="${f.full ? 'grid-column:1/-1;' : ''}">
+      <label for="${prefix}-${f.key}">${escapeHtml(f.label)}</label>
+      ${fieldHtml(f, row ? row[f.key] : '').replace('<input', `<input id="${prefix}-${f.key}"`).replace('<select', `<select id="${prefix}-${f.key}"`).replace('<textarea', `<textarea id="${prefix}-${f.key}"`)}
+    </div>
+  `).join('');
+}
+
+function afgDetailsHtml(r){
+  const rowId = 'afg-' + r.id;
+  return `
+    <form data-afg-save="${escapeHtml(r.id)}">
+      <div class="egrid">${afgFieldsHtml(r, rowId)}</div>
+      <div class="esave-row">
+        <button type="submit" class="pbtn primary">Salvează modificările</button>
+        <button type="button" class="pbtn brick" data-afg-delete="${escapeHtml(r.id)}">Șterge afacerea</button>
+        <span class="esave-msg" id="afg-esave-msg-${rowId}"></span>
+      </div>
+    </form>
+  `;
+}
+
+function afgRowHtml(r){
+  const rowId = 'afg-' + r.id;
+  const icon = r.iconita_fallback || CAT_ICON[r.categorie] || '📍';
+  const zoneLabels = (r.zona || '').split(',').map(z => zonaLabel(z.trim())).filter(Boolean).join(', ');
+  return `
+    <div class="prow">
+      <div class="prow-top">
+        <div class="picon" style="background:${r.activ ? 'var(--green-soft)' : '#EFE9DB'};">${icon}</div>
+        <div class="pinfo">
+          <div class="pname-row">
+            <span class="pname serif">${escapeHtml(r.nume || '(fără nume)')}</span>
+            <span class="pbadge" style="background:${r.activ ? 'var(--green-soft)' : '#EFE9DB'}; color:${r.activ ? 'var(--green)' : '#8F6222'};">${r.activ ? 'Activ' : 'Inactiv'}</span>
+          </div>
+          <div class="pmeta">${escapeHtml(CATEGORII[r.categorie] || r.categorie || '—')} · ${escapeHtml(zoneLabels || '—')} &nbsp;·&nbsp; id: <code style="background:var(--cream); padding:1px 5px; border-radius:4px;">${escapeHtml(r.id)}</code></div>
+        </div>
+        <div class="pactions">
+          <label class="switch" title="Activ în ghid">
+            <input type="checkbox" data-afg-activ="${escapeHtml(r.id)}" ${r.activ ? 'checked' : ''}>
+            <span class="track"></span>
+          </label>
+          <button class="pbtn" data-afg-toggle="${rowId}">Editează</button>
+        </div>
+      </div>
+      <div class="pdetails" id="afg-details-${rowId}">${afgDetailsHtml(r)}</div>
+    </div>
+  `;
+}
+
+function renderAfgList(){
+  const q = (document.getElementById('afg-search').value || '').trim().toLowerCase();
+  let list = AFG_ROWS.slice();
+  if (afgZonaFilter !== 'toate') list = list.filter(r => (r.zona || '').split(',').map(z => z.trim()).includes(afgZonaFilter));
+  if (afgCatFilter !== 'toate') list = list.filter(r => r.categorie === afgCatFilter);
+  if (q) list = list.filter(r => (r.nume || '').toLowerCase().includes(q) || (r.id || '').toLowerCase().includes(q));
+
+  const listEl = document.getElementById('afg-list');
+  document.getElementById('afg-empty').style.display = list.length ? 'none' : 'block';
+  listEl.innerHTML = list.map(r => afgRowHtml(r)).join('');
+
+  listEl.querySelectorAll('[data-afg-toggle]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const details = document.getElementById('afg-details-' + btn.dataset.afgToggle);
+      details.classList.toggle('open');
+      btn.textContent = details.classList.contains('open') ? 'Ascunde' : 'Editează';
+    });
+  });
+  listEl.querySelectorAll('[data-afg-activ]').forEach(input => {
+    input.addEventListener('change', (e) => handleAfgActivToggle(e.target.getAttribute('data-afg-activ'), e.target.checked, e.target));
+  });
+  listEl.querySelectorAll('[data-afg-save]').forEach(form => {
+    form.addEventListener('submit', (e) => { e.preventDefault(); handleAfgSave(form); });
+  });
+  listEl.querySelectorAll('[data-afg-delete]').forEach(btn => {
+    btn.addEventListener('click', () => handleAfgDelete(btn.dataset.afgDelete, btn));
+  });
+}
+
+function afgCollectPayload(form){
+  const payload = {};
+  AFACERI_FIELDS.forEach(f => {
+    const el = form.querySelector(`[name="${f.key}"]`);
+    if (!el) return;
+    const val = el.value;
+    if (f.key === 'ordine') { payload.ordine = val === '' ? null : Number(val); return; }
+    if (f.key === 'beneficiu_viitor') { payload.beneficiu_viitor = val || null; return; }
+    payload[f.key] = val.trim() === '' ? null : val.trim();
+  });
+  return payload;
+}
+
+async function handleAfgSave(form){
+  const id = form.dataset.afgSave;
+  const rowId = 'afg-' + id;
+  const msgEl = document.getElementById('afg-esave-msg-' + rowId);
+  const btn = form.querySelector('button[type="submit"]');
+  const payload = afgCollectPayload(form);
+
+  btn.disabled = true;
+  msgEl.className = 'esave-msg'; msgEl.textContent = '';
+  const { error } = await supabaseClient.from('afaceri_ghid').update(payload).eq('id', id);
+  btn.disabled = false;
+  if (error) {
+    console.error(error);
+    msgEl.className = 'esave-msg err';
+    msgEl.textContent = 'Nu am putut salva. Încearcă din nou.';
+    return;
+  }
+  const row = AFG_ROWS.find(r => String(r.id) === String(id));
+  if (row) Object.assign(row, payload);
+  msgEl.className = 'esave-msg';
+  msgEl.textContent = 'Salvat.';
+  populateAfgFilters();
+  renderAfgList();
+  const details = document.getElementById('afg-details-' + rowId);
+  if (details) {
+    details.classList.add('open');
+    const toggleBtn = document.querySelector(`[data-afg-toggle="${rowId}"]`);
+    if (toggleBtn) toggleBtn.textContent = 'Ascunde';
+    const newMsgEl = document.getElementById('afg-esave-msg-' + rowId);
+    if (newMsgEl) newMsgEl.textContent = 'Salvat.';
+  }
+}
+
+async function handleAfgActivToggle(id, activ, input){
+  input.disabled = true;
+  const { error } = await supabaseClient.from('afaceri_ghid').update({ activ }).eq('id', id);
+  input.disabled = false;
+  if (error) {
+    console.error(error);
+    input.checked = !activ;
+    alert('Nu am putut salva schimbarea — încearcă din nou.');
+    return;
+  }
+  const row = AFG_ROWS.find(r => String(r.id) === String(id));
+  if (row) row.activ = activ;
+  renderAfgList();
+}
+
+async function handleAfgDelete(id, btn){
+  if (!confirm('Sigur ștergi definitiv această afacere din baza de date? Nu mai poate fi recuperată.')) return;
+  btn.disabled = true;
+  const { error } = await supabaseClient.from('afaceri_ghid').delete().eq('id', id);
+  if (error) {
+    console.error(error);
+    alert('Nu am putut șterge — încearcă din nou.');
+    btn.disabled = false;
+    return;
+  }
+  AFG_ROWS = AFG_ROWS.filter(r => String(r.id) !== String(id));
+  document.getElementById('afg-count').textContent = AFG_ROWS.length;
+  populateAfgFilters();
+  renderAfgList();
+}
+
+document.getElementById('afg-zona-filter').addEventListener('change', (e) => { afgZonaFilter = e.target.value; renderAfgList(); });
+document.getElementById('afg-cat-filter').addEventListener('change', (e) => { afgCatFilter = e.target.value; renderAfgList(); });
+document.getElementById('afg-search').addEventListener('input', renderAfgList);
+
+document.getElementById('afg-btn-add').addEventListener('click', () => {
+  const wrap = document.getElementById('afg-add-wrap');
+  const isOpen = wrap.style.display !== 'none';
+  if (isOpen) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+  wrap.innerHTML = `
+    <div class="prow" style="border-color:var(--gold);">
+      <div class="pname serif" style="margin-bottom:10px;">Afacere nouă</div>
+      <form id="afg-add-form">
+        <div class="efield">
+          <label for="afg-new-id">Id (identificator unic, ex: dino-parc — folosit și în link-ul de scanare beneficii)</label>
+          <input type="text" id="afg-new-id" name="id" required pattern="[a-z0-9\\-]+" title="litere mici, cifre și cratimă">
+        </div>
+        <div class="egrid">${afgFieldsHtml(null, 'afg-new')}</div>
+        <div class="esave-row">
+          <button type="submit" class="pbtn primary">Adaugă afacerea</button>
+          <span class="esave-msg" id="afg-add-msg"></span>
+        </div>
+      </form>
+    </div>
+  `;
+  wrap.style.display = 'block';
+  document.getElementById('afg-add-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const id = form.querySelector('[name="id"]').value.trim().toLowerCase();
+    const msgEl = document.getElementById('afg-add-msg');
+    const btn = form.querySelector('button[type="submit"]');
+    if (!id) { msgEl.className = 'esave-msg err'; msgEl.textContent = 'Id-ul este obligatoriu.'; return; }
+    const payload = afgCollectPayload(form);
+    payload.id = id;
+    payload.activ = true;
+    btn.disabled = true;
+    msgEl.className = 'esave-msg'; msgEl.textContent = '';
+    const { data, error } = await supabaseClient.from('afaceri_ghid').insert(payload).select();
+    btn.disabled = false;
+    if (error) {
+      console.error(error);
+      msgEl.className = 'esave-msg err';
+      msgEl.textContent = error.code === '23505' ? 'Acest id există deja — alege altul.' : 'Nu am putut adăuga. Încearcă din nou.';
+      return;
+    }
+    if (data && data[0]) AFG_ROWS.push(data[0]);
+    document.getElementById('afg-count').textContent = AFG_ROWS.length;
+    document.getElementById('afg-add-wrap').style.display = 'none';
+    document.getElementById('afg-add-wrap').innerHTML = '';
+    populateAfgFilters();
+    renderAfgList();
+  });
+});
 
 function detailsHtml(r){
   const raw = r.raw;

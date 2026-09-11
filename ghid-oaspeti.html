@@ -934,16 +934,13 @@ function renderLocatieCard(op, loc, t) {
   }
 }
 
-// ---------- Date live din Google Sheets ----------
-const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_LbOENmZHd9d5su2EOTaqVcqDgwUfD6xBfltgKGG8326YnWApHtmv4ZNRJB3N40Yj902RfUM1Dexf/pub?gid=1395207386&single=true&output=csv";
-
+// ---------- Date live din Supabase (afaceri_ghid) ----------
+// Fostul Sheet Google (SHEET_CSV_URL) a fost migrat integral în tabela
+// afaceri_ghid — vezi panou-parteneri.html, tab Back Office, pt. management.
 const CATEGORII_VALIDE = new Set(Object.keys(CATS));
 let PLACES = [];
 
-function rowToPlace(row) {
-  const activ = (row.activ || "").trim().toLowerCase();
-  if (activ === "nu") return null; // ascunsă manual din Sheets
-
+function afaceriToPlace(row) {
   const zonaRaw = (row.zona || "").trim().toLowerCase() || "rasnov";
   const zoneList = zonaRaw.split(",").map(z => z.trim()).filter(Boolean);
   if (!zoneList.includes(currentZona)) return null; // nu e din zona apartamentului curent
@@ -953,8 +950,9 @@ function rowToPlace(row) {
 
   const photos = [row.poza_1, row.poza_2].map(p => (p || "").trim()).filter(Boolean);
 
-  const ordineRaw = (row.ordine || "").trim();
-  const ordine = ordineRaw && !isNaN(Number(ordineRaw)) ? Number(ordineRaw) : Infinity; // fără cifră = la coadă
+  const ordine = (row.ordine === null || row.ordine === undefined || row.ordine === "")
+    ? Infinity
+    : Number(row.ordine); // fără cifră = la coadă
 
   const beneficiu = (row.beneficiu || "").trim() || null;
   const badgeRaw = (row.beneficiu_viitor || "").trim().toLowerCase();
@@ -977,6 +975,13 @@ function rowToPlace(row) {
     badge,
     beneficiu,
   };
+}
+
+async function loadAfaceriGhid() {
+  const res = await sbFetch(`afaceri_ghid?activ=eq.true&select=*`);
+  if (!res.ok) throw new Error('afaceri_ghid fetch failed');
+  const rows = await res.json();
+  return rows.map(afaceriToPlace).filter(Boolean);
 }
 
 // Iconițe implicite pe categorie, pentru partenerii publicați din Supabase
@@ -1024,19 +1029,16 @@ async function loadPublishedCandidati() {
 }
 
 async function loadPlaces() {
-  let sheetPlaces = [];
+  let afaceriPlaces = [];
   try {
-    const res = await fetch(SHEET_CSV_URL);
-    const csvText = await res.text();
-    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
-    sheetPlaces = parsed.data.map(rowToPlace).filter(Boolean);
+    afaceriPlaces = await loadAfaceriGhid();
   } catch (e) {
     document.getElementById('grid').innerHTML =
       `<p style="color:var(--brick); font-size:13px; grid-column:1/-1;">${I18N[currentLang].loadError}</p>`;
     return;
   }
   const candidatPlaces = await loadPublishedCandidati();
-  PLACES = sheetPlaces.concat(candidatPlaces);
+  PLACES = afaceriPlaces.concat(candidatPlaces);
   PLACES.sort((a, b) => a.ordine - b.ordine);
   renderFilters();
   render(currentFilter);
