@@ -409,6 +409,10 @@
           <label for="reg-gen-telefon">Telefon oaspete (opțional — pentru WhatsApp)</label>
           <input type="tel" id="reg-gen-telefon" placeholder="07xx xxx xxx">
         </div>
+        <div class="efield" style="grid-column:1/-1;">
+          <label for="reg-gen-codacces">Cod acces pentru acest oaspete (opțional — îl poți completa și mai târziu)</label>
+          <input type="text" id="reg-gen-codacces" placeholder="ex: 4821">
+        </div>
         <div style="grid-column:1/-1;">
           <button type="submit" class="pbtn primary">Generează link</button>
           <span class="esave-msg" id="reg-gen-msg"></span>
@@ -1448,6 +1452,12 @@ function renderRegList() {
           <button class="pbtn primary" data-reg-approve="${r.id}">✓ Validează</button>
           <button class="pbtn" data-reg-reject="${r.id}" style="border-color:var(--brick); color:var(--brick);">Respinge</button>` : ''}
       </div>
+      <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--line); display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+        <span class="pmeta" style="font-weight:600;">🔑 Cod acces (specific acestui oaspete):</span>
+        <input type="text" placeholder="ex: 4821" value="${escapeHtml(r.cod_acces || '')}" data-reg-cod-input="${r.id}" style="border:1.5px solid var(--line); border-radius:8px; padding:6px 10px; font-size:12.5px; font-family:inherit; width:140px;">
+        <button class="bo-copy" data-reg-save-cod="${r.id}">Salvează codul</button>
+        <span class="pmeta">Poți pregăti aici codul pentru oaspetele următor, fără să afectezi ghidul celui cazat acum.</span>
+      </div>
       ${r.status === 'asteptare_validare' ? `
         <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--line); font-size:12.5px; color:var(--ink-soft); display:grid; grid-template-columns:1fr 1fr; gap:4px 16px;">
           <div><b>Telefon:</b> ${escapeHtml(r.telefon || '—')}</div>
@@ -1475,6 +1485,22 @@ function renderRegList() {
       if (error) { console.error(error); msgEl.className = 'esave-msg err'; msgEl.textContent = 'Nu am putut trimite — încearcă din nou.'; return; }
       msgEl.className = 'esave-msg'; msgEl.textContent = 'Email trimis.';
       loadRegistrations();
+    });
+  });
+
+  listEl.querySelectorAll('[data-reg-save-cod]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-reg-save-cod');
+      const input = listEl.querySelector(`[data-reg-cod-input="${id}"]`);
+      const cod = (input.value || '').trim();
+      const msgEl = document.getElementById('reg-msg-' + id);
+      btn.disabled = true;
+      const { error } = await supabaseClient.from('inregistrari_oaspeti').update({ cod_acces: cod || null }).eq('id', id);
+      btn.disabled = false;
+      if (error) { console.error(error); msgEl.className = 'esave-msg err'; msgEl.textContent = 'Nu am putut salva codul — încearcă din nou.'; return; }
+      msgEl.className = 'esave-msg'; msgEl.textContent = 'Cod salvat.';
+      const row = REG_ROWS.find(x => String(x.id) === String(id));
+      if (row) row.cod_acces = cod || null;
     });
   });
 
@@ -1512,6 +1538,7 @@ document.getElementById('reg-gen-form').addEventListener('submit', async (e) => 
   const operatorId = document.getElementById('reg-gen-operator').value;
   const email = document.getElementById('reg-gen-email').value.trim();
   const telefon = document.getElementById('reg-gen-telefon').value.trim();
+  const codAcces = document.getElementById('reg-gen-codacces').value.trim();
   const msgEl = document.getElementById('reg-gen-msg');
   const btn = e.target.querySelector('button[type="submit"]');
   if (!operatorId) { msgEl.className = 'esave-msg err'; msgEl.textContent = 'Alege o cazare.'; return; }
@@ -1520,6 +1547,7 @@ document.getElementById('reg-gen-form').addEventListener('submit', async (e) => 
   const payload = { operator_id: operatorId, apt: opRow ? opRow.raw.slug : null };
   if (email) { payload.trimis_catre_email = email; payload.canal_trimitere = 'email'; payload.trimis_la = new Date().toISOString(); }
   else if (telefon) { payload.trimis_catre_telefon = telefon; payload.canal_trimitere = 'whatsapp'; }
+  if (codAcces) payload.cod_acces = codAcces;
 
   btn.disabled = true;
   msgEl.className = 'esave-msg'; msgEl.textContent = '';

@@ -864,9 +864,14 @@ async function renderFacilitati() {
         urgente = f.urgente || {}, hotel = f.hotel || {};
   const isHotel = currentOperator.tip === 'hotel';
 
+  // Codul de acces poate fi setat per-sejur (pregatit de gazda pentru acest oaspete
+  // exact, chiar daca a schimbat deja codul global pentru urmatoarea rezervare) —
+  // cand exista, are prioritate fata de codul general al cazarii.
+  const codAccesEfectiv = (currentStay && currentStay.cod_acces) ? currentStay.cod_acces : checkin.cod_acces;
+
   // are cazarea macar o informatie de afisat? altfel nu aratam sectiunea deloc
   const hasAny = currentOperator.adresa || currentOperator.foto_url || loc.gps || loc.parcare ||
-    checkin.cod_acces || checkin.instructiuni || checkin.ora || checkin.unitate || checkout.ora || checkout.instructiuni ||
+    codAccesEfectiv || checkin.instructiuni || checkin.ora || checkin.unitate || checkout.ora || checkout.instructiuni ||
     wifi.ssid || currentOperator.telefon || urgente.spital ||
     (isHotel && (hotel.restaurant_program || hotel.spa_program || hotel.fitness_program || hotel.mic_dejun_program || hotel.room_service || hotel.mesaj_management));
   if (!hasAny) { wrap.style.display = 'none'; return; }
@@ -902,10 +907,10 @@ async function renderFacilitati() {
   const sections = [];
 
   // Check-in — campuri separate, in ordine: ora, cod de acces, camera/apartament, note optionale
-  if (checkin.ora || checkin.cod_acces || checkin.unitate || checkin.instructiuni || receptie.program) {
+  if (checkin.ora || codAccesEfectiv || checkin.unitate || checkin.instructiuni || receptie.program) {
     let body = '';
     if (checkin.ora) body += `<div class="ci-row"><div class="stat-value">${fmt(checkin.ora)}</div></div>`;
-    if (checkin.cod_acces) body += `<div class="ci-row"><div class="ci-label">${t.codAcces}</div><span class="fac-code-big">${fmt(checkin.cod_acces)}</span></div>`;
+    if (codAccesEfectiv) body += `<div class="ci-row"><div class="ci-label">${t.codAcces}</div><span class="fac-code-big">${fmt(codAccesEfectiv)}</span></div>`;
     if (checkin.locker_locatie || checkin.locker_numar) {
       const parts = [checkin.locker_locatie, checkin.locker_numar].filter(Boolean).join(' · ');
       body += `<div class="fac-row">${FAC_ICONS.pin}<span><b>${t.locker}:</b> ${parts}</span></div>`;
