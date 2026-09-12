@@ -57,6 +57,37 @@
   .share-back:hover{color:var(--teal-deep);}
   .share-group-title{font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#8F6222; padding:2px 10px 6px;}
   .fb-badge{position:absolute; top:-6px; right:-6px; background:var(--gold); color:#fff; font-size:10px; font-weight:700; line-height:1; min-width:17px; height:17px; border-radius:999px; display:flex; align-items:center; justify-content:center; padding:0 4px; box-shadow:0 0 0 2px #fff;}
+  /* ===== Panou "Check-in oaspeți" (verificare identitate per-rezervare) ===== */
+  .reg-note{font-size:11.5px; color:#8F6222; background:var(--gold-soft); padding:8px 12px; margin:0 16px 12px; border-radius:10px;}
+  .reg-panel{display:none; border-top:1px solid var(--line); padding:14px 16px 16px; background:var(--cream);}
+  .reg-panel.open{display:block;}
+  .reg-toggle-row{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px;}
+  .reg-toggle-label{font-size:12.5px; font-weight:600; color:var(--ink);}
+  .reg-toggle-sub{font-size:11px; color:var(--ink-soft); margin-top:1px;}
+  .switch{position:relative; display:inline-block; width:38px; height:22px; flex-shrink:0;}
+  .switch input{opacity:0; width:0; height:0;}
+  .switch .slider{position:absolute; cursor:pointer; inset:0; background:var(--line); border-radius:999px; transition:.15s;}
+  .switch .slider:before{content:''; position:absolute; width:16px; height:16px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.15s;}
+  .switch input:checked + .slider{background:var(--teal-deep);}
+  .switch input:checked + .slider:before{transform:translateX(16px);}
+  .reg-form{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:6px;}
+  .reg-form input{grid-column:span 1; border:1.5px solid var(--line); border-radius:8px; padding:8px 10px; font-size:12.5px; font-family:inherit; width:100%; box-sizing:border-box;}
+  .reg-form label{font-size:10.5px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.02em; display:block; margin-bottom:3px;}
+  .reg-gen-btn{grid-column:1/-1; background:var(--teal-deep); color:#fff; border:none; font-size:12.5px; font-weight:700; padding:9px 16px; border-radius:999px; cursor:pointer; width:fit-content;}
+  .reg-msg{font-size:11.5px; margin-top:6px;}
+  .reg-msg.err{color:#9C4536;}
+  .reg-result{margin-top:10px; background:#fff; border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:12px;}
+  .reg-list-title{font-size:11px; font-weight:700; letter-spacing:.04em; color:var(--gold); text-transform:uppercase; margin:16px 0 8px;}
+  .reg-row{background:#fff; border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:8px; font-size:12.5px;}
+  .reg-row-top{display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;}
+  .reg-chip{font-size:10px; font-weight:700; padding:3px 9px; border-radius:999px; white-space:nowrap;}
+  .reg-meta{color:var(--ink-soft); font-size:11.5px; margin-top:3px;}
+  .reg-actions{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; align-items:center;}
+  .reg-btn{border:1.5px solid var(--line); background:#fff; color:var(--teal-deep); font-size:11.5px; font-weight:600; font-family:inherit; padding:6px 10px; border-radius:8px; cursor:pointer; text-decoration:none;}
+  .reg-btn.primary{background:var(--teal-deep); color:#fff; border-color:var(--teal-deep);}
+  .reg-btn.danger{border-color:#9C4536; color:#9C4536;}
+  .reg-cod-input{border:1.5px solid var(--line); border-radius:8px; padding:5px 8px; font-size:12px; font-family:inherit; width:110px;}
+  .reg-empty{color:var(--ink-soft); font-size:12px; padding:6px 0;}
 </style>
 </head>
 <body>
@@ -166,17 +197,43 @@ function guideUrl(slug) {
   return `https://lokals.ro/ghid-oaspeti.html?apt=${encodeURIComponent(slug)}`;
 }
 
+const REGISTRATION_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h1"/><path d="M9 13h6"/><path d="M9 17h6"/></svg>';
+
+let OPERATORI_BY_ID = {};
+let REG_BY_OP = {};
+let CURRENT_EMAIL = null;
+const REG_STATUS_LABEL = {
+  asteptare_completare: 'Trimis, neîncepută', asteptare_validare: 'Așteaptă validare',
+  validat: 'Validat', respins: 'Respins',
+};
+const REG_STATUS_COLOR = {
+  asteptare_completare: { bg: '#EFE9DB', color: 'var(--ink-soft)' },
+  asteptare_validare: { bg: 'var(--gold-soft)', color: '#8F6222' },
+  validat: { bg: '#E3ECE4', color: 'var(--teal-deep)' },
+  respins: { bg: '#F1E3DF', color: '#9C4536' },
+};
+
+function fmtDataScurt(iso) {
+  if (!iso) return '—';
+  try { return new Date(iso).toLocaleDateString('ro-RO', { day: '2-digit', month: 'short', year: 'numeric' }); }
+  catch (e) { return iso; }
+}
+
 function renderCazari(rows, unreadCounts) {
   unreadCounts = unreadCounts || {};
   const wrap = document.getElementById('list-cazari');
   wrap.innerHTML = '';
   rows.forEach(row => {
+    OPERATORI_BY_ID[row.id] = row;
     const card = document.createElement('div');
     card.className = 'card';
     const thumb = row.foto_url ? `<img src="${row.foto_url}" alt="">` : CAZARE_ICON;
     const nume = row.nume_afisat || row.nume_afacere;
     const unread = unreadCounts[row.id] || 0;
     const tierBadge = row.tier === 'essential' ? `<span class="badge badge-tier-essential">Essential</span>` : '';
+    const regRows = REG_BY_OP[row.id] || [];
+    const regPending = regRows.filter(r => r.status === 'asteptare_validare').length;
+    const isEssential = row.tier === 'essential';
     card.innerHTML = `
       <a class="card-main" href="setari-cazare.html?slug=${encodeURIComponent(row.slug)}">
         <div class="card-thumb">${thumb}</div>
@@ -210,7 +267,12 @@ function renderCazari(rows, unreadCounts) {
         <a class="action-btn" href="${guideUrl(row.slug)}" target="_blank" rel="noopener">${GUIDE_ICON} Vezi ghidul</a>
         <a class="action-btn" href="curatenie-mentenanta.html?slug=${encodeURIComponent(row.slug)}">${CLEAN_ICON} Curățenie</a>
         <a class="action-btn" style="position:relative;" href="feedback-oaspeti.html?slug=${encodeURIComponent(row.slug)}">${FEEDBACK_ICON} Feedback${unread ? `<span class="fb-badge">${unread}</span>` : ''}</a>
+        ${isEssential ? `
+          <button class="action-btn" type="button" style="position:relative;" data-action="reginfo" data-op-id="${row.id}">${REGISTRATION_ICON} Check-in oaspeți${regPending ? `<span class="fb-badge">${regPending}</span>` : ''}</button>
+        ` : ''}
       </div>
+      ${row.inregistrare_activa ? `<div class="reg-note">🔒 Verificarea identității e activă pentru această cazare — linkul „Vezi ghidul" de mai sus e blocat pentru oaspeți noi. Generează linkul personal al fiecărui oaspete din „Check-in oaspeți”.</div>` : ''}
+      ${isEssential ? `<div class="reg-panel" id="reg-panel-${row.id}"></div>` : ''}
     `;
     wrap.appendChild(card);
   });
@@ -315,7 +377,257 @@ document.getElementById('list-cazari').addEventListener('click', (e) => {
     popover.classList.add('open');
     btn.classList.add('active');
   }
+
+  if (action === 'reginfo') {
+    const opId = btn.dataset.opId;
+    const panel = document.getElementById('reg-panel-' + opId);
+    if (!panel) return;
+    const wasOpen = panel.classList.contains('open');
+    if (wasOpen) { panel.classList.remove('open'); return; }
+    if (!panel.dataset.built) {
+      renderRegPanel(opId);
+      panel.dataset.built = '1';
+    }
+    panel.classList.add('open');
+  }
 });
+
+function regRowsFor(operatorId) {
+  return REG_BY_OP[operatorId] || [];
+}
+
+function renderRegPanel(operatorId) {
+  const panel = document.getElementById('reg-panel-' + operatorId);
+  if (!panel) return;
+  const op = OPERATORI_BY_ID[operatorId];
+  panel.innerHTML = `
+    <div class="reg-toggle-row">
+      <div>
+        <div class="reg-toggle-label">Verificare identitate oaspeți</div>
+        <div class="reg-toggle-sub">Odată activă, oaspeții primesc câte un link personal pentru fiecare rezervare, iar ghidul li se deblochează după validare.</div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" data-reg-activ-toggle="${operatorId}" ${op && op.inregistrare_activa ? 'checked' : ''}>
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div id="reg-gen-wrap-${operatorId}" style="${op && op.inregistrare_activa ? '' : 'display:none;'}">
+      <form class="reg-form" data-reg-gen-form="${operatorId}">
+        <div>
+          <label>Email oaspete (opțional)</label>
+          <input type="email" data-reg-gen-email placeholder="oaspete@exemplu.com">
+        </div>
+        <div>
+          <label>Telefon oaspete (opțional)</label>
+          <input type="tel" data-reg-gen-telefon placeholder="07xx xxx xxx">
+        </div>
+        <div style="grid-column:1/-1;">
+          <label>Cod acces pentru acest oaspete (opțional, îl poți completa și mai târziu)</label>
+          <input type="text" data-reg-gen-cod placeholder="ex: 4821">
+        </div>
+        <button type="submit" class="reg-gen-btn">Generează link nou</button>
+        <span class="reg-msg" data-reg-gen-msg style="grid-column:1/-1;"></span>
+      </form>
+      <div class="reg-result" data-reg-gen-result style="display:none;"></div>
+      <div class="reg-list-title">Înregistrările acestei cazări</div>
+      <div data-reg-list></div>
+    </div>
+  `;
+
+  panel.querySelector(`[data-reg-activ-toggle="${operatorId}"]`).addEventListener('change', async (e) => {
+    const activ = e.target.checked;
+    e.target.disabled = true;
+    const { error } = await supabaseClient.from('operatori').update({ inregistrare_activa: activ }).eq('id', operatorId);
+    e.target.disabled = false;
+    if (error) {
+      console.error(error);
+      e.target.checked = !activ;
+      alert('Nu am putut salva schimbarea — încearcă din nou.');
+      return;
+    }
+    if (op) op.inregistrare_activa = activ;
+    panel.querySelector(`#reg-gen-wrap-${operatorId}`).style.display = activ ? '' : 'none';
+    // reflect the note + backward-compatible "Vezi ghidul" warning without a full reload
+    const card = document.getElementById('reg-panel-' + operatorId).closest('.card');
+    let note = card.querySelector('.reg-note');
+    if (activ && !note) {
+      note = document.createElement('div');
+      note.className = 'reg-note';
+      note.textContent = '🔒 Verificarea identității e activă pentru această cazare — linkul „Vezi ghidul” de mai sus e blocat pentru oaspeți noi. Generează linkul personal al fiecărui oaspete din „Check-in oaspeți”.';
+      card.querySelector('.card-actions').insertAdjacentElement('afterend', note);
+    } else if (!activ && note) {
+      note.remove();
+    }
+  });
+
+  panel.querySelector(`[data-reg-gen-form="${operatorId}"]`).addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const email = form.querySelector('[data-reg-gen-email]').value.trim();
+    const telefon = form.querySelector('[data-reg-gen-telefon]').value.trim();
+    const codAcces = form.querySelector('[data-reg-gen-cod]').value.trim();
+    const msgEl = form.querySelector('[data-reg-gen-msg]');
+    const btn = form.querySelector('button[type="submit"]');
+    const opRow = OPERATORI_BY_ID[operatorId];
+    const payload = { operator_id: operatorId, apt: opRow ? opRow.slug : null };
+    if (email) { payload.trimis_catre_email = email; payload.canal_trimitere = 'email'; payload.trimis_la = new Date().toISOString(); }
+    else if (telefon) { payload.trimis_catre_telefon = telefon; payload.canal_trimitere = 'whatsapp'; }
+    if (codAcces) payload.cod_acces = codAcces;
+
+    btn.disabled = true;
+    msgEl.className = 'reg-msg'; msgEl.textContent = '';
+    const { data, error } = await supabaseClient.from('inregistrari_oaspeti').insert(payload).select();
+    btn.disabled = false;
+    if (error) { console.error(error); msgEl.className = 'reg-msg err'; msgEl.textContent = 'Nu am putut genera linkul — încearcă din nou.'; return; }
+
+    const row = data[0];
+    if (!REG_BY_OP[operatorId]) REG_BY_OP[operatorId] = [];
+    REG_BY_OP[operatorId].unshift(row);
+
+    const link = `https://lokals.ro/ghid-oaspeti.html?stay=${row.token}`;
+    const waText = encodeURIComponent(`Salut! Te rog confirmă-ți identitatea pentru sejur, ca să primești toate detaliile de check-in: ${link}`);
+    const resultEl = panel.querySelector('[data-reg-gen-result]');
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = `
+      <div><b>Link generat${email ? ' și trimis pe email' : ''}:</b></div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:6px;">
+        <code style="background:var(--cream); padding:6px 10px; border-radius:6px; font-size:12px; word-break:break-all;">${link}</code>
+        <button class="reg-btn" type="button" data-copy-link="${link}">Copiază</button>
+        <a class="reg-btn" style="text-decoration:none;" href="https://wa.me/?text=${waText}" target="_blank" rel="noopener">WhatsApp</a>
+      </div>
+    `;
+    resultEl.querySelector('[data-copy-link]').addEventListener('click', (ev) => {
+      const value = ev.target.getAttribute('data-copy-link');
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(value).then(() => { ev.target.textContent = 'Copiat!'; setTimeout(() => ev.target.textContent = 'Copiază', 1600); });
+      } else { alert(value); }
+    });
+    form.reset();
+    renderRegList(operatorId);
+  });
+
+  renderRegList(operatorId);
+}
+
+function renderRegList(operatorId) {
+  const panel = document.getElementById('reg-panel-' + operatorId);
+  if (!panel) return;
+  const listEl = panel.querySelector('[data-reg-list]');
+  if (!listEl) return;
+  const rows = regRowsFor(operatorId);
+  if (rows.length === 0) { listEl.innerHTML = '<div class="reg-empty">Nicio înregistrare generată încă.</div>'; return; }
+
+  listEl.innerHTML = rows.map(r => {
+    const sc = REG_STATUS_COLOR[r.status] || REG_STATUS_COLOR.asteptare_completare;
+    const numeOaspete = [r.prenume, r.nume].filter(Boolean).join(' ') || '— oaspetele nu a completat încă —';
+    const link = `https://lokals.ro/ghid-oaspeti.html?stay=${r.token}`;
+    const waText = encodeURIComponent(`Salut! Te rog confirmă-ți identitatea pentru sejur, ca să primești toate detaliile de check-in: ${link}`);
+    return `
+    <div class="reg-row" data-reg-row="${r.id}">
+      <div class="reg-row-top">
+        <b>${escapeHtmlAcc(numeOaspete)}</b>
+        <span class="reg-chip" style="background:${sc.bg}; color:${sc.color};">${REG_STATUS_LABEL[r.status] || r.status}</span>
+      </div>
+      <div class="reg-meta">${r.email ? escapeHtmlAcc(r.email) + ' · ' : ''}${r.check_in ? fmtDataScurt(r.check_in) + ' → ' + fmtDataScurt(r.check_out) + ' · ' : ''}generat ${fmtDataScurt(r.created_at)}</div>
+      ${r.status === 'asteptare_validare' ? `
+        <div class="reg-meta">Telefon: ${escapeHtmlAcc(r.telefon || '—')} · ${r.act_tip === 'pasaport' ? 'Pașaport' : 'CI'}: ${escapeHtmlAcc(r.act_serie_numar || '—')} · Oaspeți: ${r.nr_oaspeti || '—'}</div>
+      ` : ''}
+      ${r.status === 'respins' && r.motiv_respingere ? `<div class="reg-meta" style="color:#9C4536;">Motiv respingere: ${escapeHtmlAcc(r.motiv_respingere)}</div>` : ''}
+      <div class="reg-actions">
+        <button class="reg-btn" type="button" data-reg-copy="${link}">Copiază link</button>
+        <a class="reg-btn" style="text-decoration:none;" href="https://wa.me/?text=${waText}" target="_blank" rel="noopener">WhatsApp</a>
+        ${r.status === 'asteptare_validare' ? `
+          <button class="reg-btn primary" type="button" data-reg-approve="${r.id}">✓ Validează</button>
+          <button class="reg-btn danger" type="button" data-reg-reject="${r.id}">Respinge</button>` : ''}
+        <input type="text" class="reg-cod-input" placeholder="cod acces" value="${escapeHtmlAcc(r.cod_acces || '')}" data-reg-cod-input="${r.id}">
+        <button class="reg-btn" type="button" data-reg-save-cod="${r.id}">Salvează codul</button>
+      </div>
+      <div class="reg-msg" data-reg-row-msg="${r.id}"></div>
+    </div>`;
+  }).join('');
+
+  listEl.querySelectorAll('[data-reg-copy]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const value = btn.getAttribute('data-reg-copy');
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(value).then(() => { btn.textContent = 'Copiat!'; setTimeout(() => btn.textContent = 'Copiază link', 1600); });
+      } else { alert(value); }
+    });
+  });
+
+  listEl.querySelectorAll('[data-reg-save-cod]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-reg-save-cod');
+      const input = listEl.querySelector(`[data-reg-cod-input="${id}"]`);
+      const cod = (input.value || '').trim();
+      const msgEl = listEl.querySelector(`[data-reg-row-msg="${id}"]`);
+      btn.disabled = true;
+      const { error } = await supabaseClient.from('inregistrari_oaspeti').update({ cod_acces: cod || null }).eq('id', id);
+      btn.disabled = false;
+      if (error) { console.error(error); msgEl.className = 'reg-msg err'; msgEl.textContent = 'Nu am putut salva codul.'; return; }
+      msgEl.className = 'reg-msg'; msgEl.textContent = 'Cod salvat.';
+      const row = regRowsFor(operatorId).find(x => String(x.id) === String(id));
+      if (row) row.cod_acces = cod || null;
+    });
+  });
+
+  listEl.querySelectorAll('[data-reg-approve]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-reg-approve');
+      btn.disabled = true;
+      const { error } = await supabaseClient.from('inregistrari_oaspeti').update({
+        status: 'validat', validat_la: new Date().toISOString(), validat_de: CURRENT_EMAIL,
+      }).eq('id', id);
+      btn.disabled = false;
+      if (error) { console.error(error); alert('Nu am putut valida — încearcă din nou.'); return; }
+      const row = regRowsFor(operatorId).find(x => String(x.id) === String(id));
+      if (row) { row.status = 'validat'; row.validat_la = new Date().toISOString(); row.validat_de = CURRENT_EMAIL; }
+      renderRegList(operatorId);
+      renderCazariFromCache();
+    });
+  });
+
+  listEl.querySelectorAll('[data-reg-reject]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-reg-reject');
+      const motiv = prompt('Ce lipsește sau e greșit? (mesajul se trimite oaspetelui)');
+      if (motiv === null) return;
+      btn.disabled = true;
+      const { error } = await supabaseClient.from('inregistrari_oaspeti').update({
+        status: 'respins', motiv_respingere: motiv, validat_la: new Date().toISOString(), validat_de: CURRENT_EMAIL,
+      }).eq('id', id);
+      btn.disabled = false;
+      if (error) { console.error(error); alert('Nu am putut respinge — încearcă din nou.'); return; }
+      const row = regRowsFor(operatorId).find(x => String(x.id) === String(id));
+      if (row) { row.status = 'respins'; row.motiv_respingere = motiv; }
+      renderRegList(operatorId);
+      renderCazariFromCache();
+    });
+  });
+}
+
+function escapeHtmlAcc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+let LAST_CAZARI_ROWS = [];
+let LAST_UNREAD_COUNTS = {};
+function renderCazariFromCache() {
+  // re-randăm doar badge-urile (numărul de "așteaptă validare") fără să distrugem panourile deschise
+  LAST_CAZARI_ROWS.forEach(row => {
+    const regRows = REG_BY_OP[row.id] || [];
+    const regPending = regRows.filter(r => r.status === 'asteptare_validare').length;
+    const btn = document.querySelector(`[data-action="reginfo"][data-op-id="${row.id}"]`);
+    if (!btn) return;
+    const existingBadge = btn.querySelector('.fb-badge');
+    if (regPending > 0) {
+      if (existingBadge) existingBadge.textContent = regPending;
+      else btn.insertAdjacentHTML('beforeend', `<span class="fb-badge">${regPending}</span>`);
+    } else if (existingBadge) {
+      existingBadge.remove();
+    }
+  });
+}
 
 document.addEventListener('click', (e) => {
   if (!e.target.closest('.share-popover') && !e.target.closest('[data-action="share"]')) {
@@ -354,6 +666,7 @@ async function init() {
   }
   document.getElementById('header-auth-name').textContent = displayName(session.user);
   const email = session.user.email;
+  CURRENT_EMAIL = email;
 
   const [cazariRes, afaceriRes] = await Promise.all([
     fetch(`${SUPABASE_URL}/rest/v1/operatori?email=eq.${encodeURIComponent(email)}&select=*&order=created_at.desc`, { headers: { apikey: SUPABASE_KEY } }),
@@ -378,6 +691,20 @@ async function init() {
         fbRows.forEach(r => { unreadCounts[r.operator_id] = (unreadCounts[r.operator_id] || 0) + 1; });
       }
     } catch (e) { /* badge-ul de feedback e un extra — lista de cazări rămâne utilă chiar dacă nu s-a putut încărca */ }
+
+    try {
+      const ids = cazari.map(r => r.id);
+      const { data: regRows, error: regErr } = await supabaseClient.from('inregistrari_oaspeti').select('*').in('operator_id', ids).order('created_at', { ascending: false });
+      if (regErr) throw regErr;
+      REG_BY_OP = {};
+      (regRows || []).forEach(r => {
+        if (!REG_BY_OP[r.operator_id]) REG_BY_OP[r.operator_id] = [];
+        REG_BY_OP[r.operator_id].push(r);
+      });
+    } catch (e) { /* la fel, badge-ul de check-in e un extra — lista rămâne utilă chiar dacă nu s-au putut încărca înregistrările */ }
+
+    LAST_CAZARI_ROWS = cazari;
+    LAST_UNREAD_COUNTS = unreadCounts;
     renderCazari(cazari, unreadCounts);
   }
   if (afaceri.length) {
