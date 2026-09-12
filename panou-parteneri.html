@@ -184,6 +184,7 @@
   <div id="tabbar">
     <button class="tabbtn active" data-tab="tab-parteneri">Parteneri &amp; afaceri</button>
     <button class="tabbtn" data-tab="tab-backoffice">Back Office</button>
+    <button class="tabbtn" data-tab="tab-inregistrari">Înregistrări</button>
   </div>
 
   <div class="tabpanel active" id="tab-parteneri">
@@ -366,11 +367,11 @@
     <div class="bo-section">
       <div class="bo-title">🎁 Scanare beneficii — parteneri</div>
       <div class="bo-note">
-        <b>Încă activă, dar pe domeniul vechi GitHub Pages</b> — nu a fost mutată pe lokals.ro. Nu există un link fix per afacere; fiecare partener are propriul link, în formatul:<br><br>
-        <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">https://nicolaedrimbu-prog.github.io/ghid-rasnov/partner-redeem.html?business=<i>id-ul-afacerii</i></code><br><br>
-        <b>Exemplu, Peștera Valea Cetății:</b> <a class="bo-link" href="https://nicolaedrimbu-prog.github.io/ghid-rasnov/partner-redeem.html?business=pestera-valea-cetatii" target="_blank">…/partner-redeem.html?business=pestera-valea-cetatii</a>
-        <button class="bo-copy" style="margin-left:8px;" onclick="boCopy('https://nicolaedrimbu-prog.github.io/ghid-rasnov/partner-redeem.html?business=pestera-valea-cetatii', this)">Copiază</button><br><br>
-        Id-ul exact al fiecărei afaceri e păstrat acum ca și coloană <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">id</code> în tabelul <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">afaceri_ghid</code> (secțiunea „🗂️ Baza de date" de mai sus) — deschide detaliile unei afaceri acolo ca să vezi id-ul exact folosit în acest link.
+        <b>Migrată pe lokals.ro</b> — <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">partner-redeem.html</code>, cu carduri QR noi (nedependente de domeniul vechi GitHub Pages). Nu există un link fix per afacere; fiecare partener are propriul link, în formatul:<br><br>
+        <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">https://lokals.ro/partner-redeem.html?business=<i>id-ul-afacerii</i></code><br><br>
+        <b>Exemplu, Peștera Valea Cetății:</b> <a class="bo-link" href="https://lokals.ro/partner-redeem.html?business=pestera-valea-cetatii" target="_blank">…/partner-redeem.html?business=pestera-valea-cetatii</a>
+        <button class="bo-copy" style="margin-left:8px;" onclick="boCopy('https://lokals.ro/partner-redeem.html?business=pestera-valea-cetatii', this)">Copiază</button><br><br>
+        Id-ul exact al fiecărei afaceri e păstrat ca și coloană <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">id</code> în tabelul <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">afaceri_ghid</code> (secțiunea „🗂️ Baza de date" de mai sus) — deschide detaliile unei afaceri acolo ca să vezi id-ul exact folosit în acest link. Cardurile QR fizice trebuie reprintate/redistribuite la toți partenerii, cu noile coduri.
       </div>
     </div>
 
@@ -379,11 +380,52 @@
       <div class="bo-note warn">
         <b>1. Formularul Google vechi</b> (forms.gle/UaGDwVYVR5HRf4gm6) — l-am înlocuit cu <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">inregistrare-partener.html</code> de mai sus, care scrie direct în baza de date curentă (tabelul acesta din panou); formularul Google separat probabil nu mai e conectat la nimic, dar n-am verificat direct — spune-mi dacă încă îl folosești.<br><br>
         <b>2. Baza de date afaceri din Google Sheets</b> — <u>migrată</u>: toate cele 180 de afaceri sunt acum în tabelul <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">afaceri_ghid</code> din Supabase, iar ghidul (ghid-oaspeti.html) citește deja de acolo, nu mai din Sheet. Le poți edita din secțiunea „🗂️ Baza de date" de mai sus. Sheet-ul vechi poate fi arhivat/uitat — id-urile din el (folosite și la scanarea de beneficii, vezi mai jos) s-au păstrat exact, ca și coloană <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">id</code> în tabelul nou.<br><br>
-        <b>3. Pagina de scanare beneficii</b> (secțiunea de mai sus) — încă e pe domeniul vechi GitHub Pages, nu pe lokals.ro. Merită mutată la un moment dat pe domeniul principal, ca tot ce ține de Lokals să fie într-un singur loc — spune-mi dacă vrei să o migrăm.
+        <b>3. Pagina de scanare beneficii</b> — <u>migrată</u> pe lokals.ro (vezi secțiunea „🎁 Scanare beneficii" de mai sus). Cardurile QR fizice existente la parteneri trebuie reprintate cu noile coduri, care duc direct pe lokals.ro.
       </div>
     </div>
 
     <p id="footnote">lokals.ro · Back Office generat pentru uz intern</p>
+  </div>
+  </div>
+
+  <!-- ===== Înregistrări oaspeți (verificare identitate) — funcționalitate Essential ===== -->
+  <div class="tabpanel" id="tab-inregistrari">
+  <div id="main">
+    <h1 class="serif">Înregistrări oaspeți</h1>
+    <p class="lead">Verificare de identitate înainte de check-in, configurabilă per proprietate — activeaz-o din fișa fiecărei cazări (tab „Parteneri &amp; afaceri"). Genereză un link nou pentru fiecare rezervare, trimite-l oaspetelui, apoi validează sau respinge datele completate.</p>
+
+    <div class="bo-section">
+      <div class="bo-title">✉️ Generează link nou de înregistrare</div>
+      <form id="reg-gen-form" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:end;">
+        <div class="efield" style="grid-column:1/-1;">
+          <label for="reg-gen-operator">Cazare</label>
+          <select id="reg-gen-operator" required></select>
+        </div>
+        <div class="efield">
+          <label for="reg-gen-email">Email oaspete (opțional — pentru trimitere automată)</label>
+          <input type="email" id="reg-gen-email" placeholder="oaspete@exemplu.com">
+        </div>
+        <div class="efield">
+          <label for="reg-gen-telefon">Telefon oaspete (opțional — pentru WhatsApp)</label>
+          <input type="tel" id="reg-gen-telefon" placeholder="07xx xxx xxx">
+        </div>
+        <div style="grid-column:1/-1;">
+          <button type="submit" class="pbtn primary">Generează link</button>
+          <span class="esave-msg" id="reg-gen-msg"></span>
+        </div>
+      </form>
+      <div id="reg-gen-result" style="display:none; margin-top:14px;"></div>
+    </div>
+
+    <div class="bo-section">
+      <div class="bo-title">📋 Toate înregistrările <span class="count" id="reg-count">…</span></div>
+      <div class="toolbar" style="margin-bottom:0;">
+        <div class="chips" id="reg-status-filter"></div>
+      </div>
+      <div id="reg-loading" style="text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Se încarcă...</div>
+      <div id="reg-empty" style="display:none; text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Nicio înregistrare pentru acest filtru.</div>
+      <div id="reg-list" style="display:flex; flex-direction:column; gap:10px;"></div>
+    </div>
   </div>
   </div>
 
@@ -519,6 +561,7 @@ function enterPanel(email){
   loadAll();
   loadZones();
   loadAfaceriGhid();
+  loadRegistrations();
 }
 
 async function init(){
@@ -559,6 +602,8 @@ async function loadAll(){
   document.getElementById('loading').style.display = 'none';
   renderChips();
   renderList();
+  populateRegOperatorSelect();
+  renderRegList();
 }
 
 // ---------- Zone pe landing page ----------
@@ -749,6 +794,32 @@ function renderList(){
       }
       const row = ROWS.find(r => r.source === 'operatori' && String(r.id) === String(id));
       if (row) row.raw.tier_ciclu = tier_ciclu;
+    });
+  });
+  listEl.querySelectorAll('[data-inreg-toggle]').forEach(input => {
+    input.addEventListener('change', async (e) => {
+      const id = e.target.getAttribute('data-inreg-toggle');
+      const inregistrare_activa = e.target.checked;
+      e.target.disabled = true;
+      const { error } = await supabaseClient.from('operatori').update({ inregistrare_activa }).eq('id', id);
+      e.target.disabled = false;
+      if (error) {
+        console.error(error);
+        e.target.checked = !inregistrare_activa;
+        alert('Nu am putut salva schimbarea — încearcă din nou.');
+        return;
+      }
+      const row = ROWS.find(r => r.source === 'operatori' && String(r.id) === String(id));
+      if (row) row.raw.inregistrare_activa = inregistrare_activa;
+      renderList();
+      const rowId = 'operatori-' + id;
+      const details = document.getElementById('details-' + rowId);
+      if (details) {
+        details.classList.add('open');
+        const toggleBtn = document.querySelector(`[data-toggle="${rowId}"]`);
+        if (toggleBtn) toggleBtn.textContent = 'Ascunde detalii';
+      }
+      populateRegOperatorSelect();
     });
   });
 }
@@ -1162,6 +1233,34 @@ function detailsHtml(r){
                 </select> · activat ${raw.tier_activat_la ? new Date(raw.tier_activat_la).toLocaleDateString('ro-RO') : '—'}`
              : 'Activează pentru a trece proprietatea pe planul Essential — folosește asta după ce ai confirmat plata manual (transfer, BT ePOS etc).'}
          </div>
+       </div>
+       <div class="addon-box" style="margin-top:10px;">
+         <div class="addon-row">
+           <div class="addon-icon">
+             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8F6222" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2l4 -4"/><circle cx="12" cy="12" r="9"/></svg>
+           </div>
+           <div class="addon-info">
+             <div class="addon-title">Înregistrare &amp; verificare identitate oaspeți</div>
+             <div class="addon-sub">${raw.tier === 'essential' ? 'Funcție Essential — activeaz-o per proprietate' : 'Necesită planul Essential activ (vezi mai sus)'}</div>
+           </div>
+           <span class="addon-status ${raw.inregistrare_activa ? 'on' : 'off'}">${raw.inregistrare_activa ? 'Activ' : 'Inactiv'}</span>
+           <label class="switch">
+             <input type="checkbox" data-inreg-toggle="${escapeHtml(r.id)}" ${raw.inregistrare_activa ? 'checked' : ''} ${raw.tier === 'essential' ? '' : 'disabled'}>
+             <span class="track"></span>
+           </label>
+         </div>
+         <div class="addon-note">Odată activă, oaspeții primesc acces la ghid (adresă, cod de acces, WiFi) doar după ce completezi și trimiți un link de înregistrare (tab „Înregistrări"), iar ei își confirmă identitatea. Genereaz-o per rezervare, din tab-ul „Înregistrări".</div>
+         <div class="addon-row" style="margin-top:10px; padding-top:10px; border-top:1px solid var(--line);">
+           <div class="addon-info">
+             <div class="addon-title" style="font-size:13px;">Poză act de identitate</div>
+             <div class="addon-sub">Pregătit tehnic, neactivat încă — se activează doar unde e cerut legal</div>
+           </div>
+           <span class="addon-status off">În curând</span>
+           <label class="switch">
+             <input type="checkbox" disabled>
+             <span class="track"></span>
+           </label>
+         </div>
        </div>`
     : '';
 
@@ -1250,6 +1349,201 @@ async function handleAction(btn, source, id, newStatus){
 
 document.getElementById('search').addEventListener('input', renderList);
 document.getElementById('sort').addEventListener('change', (e) => { currentSort = e.target.value; renderList(); });
+
+// ---------- Înregistrări oaspeți (verificare identitate) ----------
+let REG_ROWS = [];
+let regStatusFilter = 'toate';
+const REG_STATUS_LABEL = {
+  asteptare_completare: 'Trimis, neîncepută', asteptare_validare: 'Așteaptă validare',
+  validat: 'Validat', respins: 'Respins',
+};
+const REG_STATUS_COLOR = {
+  asteptare_completare: { bg: '#EFE9DB', color: 'var(--ink-soft)' },
+  asteptare_validare: { bg: 'var(--gold-soft)', color: '#8F6222' },
+  validat: { bg: 'var(--green-soft)', color: 'var(--green)' },
+  respins: { bg: '#F1E3DF', color: 'var(--brick)' },
+};
+
+function regOperatoriActive() {
+  return ROWS.filter(r => r.source === 'operatori' && r.raw.inregistrare_activa === true);
+}
+
+function populateRegOperatorSelect() {
+  const sel = document.getElementById('reg-gen-operator');
+  if (!sel) return;
+  const ops = regOperatoriActive();
+  if (ops.length === 0) {
+    sel.innerHTML = '<option value="">Nicio cazare nu are funcția activată încă</option>';
+    return;
+  }
+  sel.innerHTML = ops.map(r =>
+    `<option value="${escapeHtml(r.id)}">${escapeHtml(r.raw.nume_afisat || r.raw.nume_afacere)} (${escapeHtml(zonaLabel(r.zona))})</option>`
+  ).join('');
+}
+
+async function loadRegistrations() {
+  document.getElementById('reg-loading').style.display = 'block';
+  const { data, error } = await supabaseClient.from('inregistrari_oaspeti').select('*').order('created_at', { ascending: false });
+  document.getElementById('reg-loading').style.display = 'none';
+  if (error) { console.error(error); return; }
+  REG_ROWS = data || [];
+  renderRegChips();
+  renderRegList();
+}
+
+function regOperatorName(operatorId) {
+  const row = ROWS.find(r => r.source === 'operatori' && String(r.id) === String(operatorId));
+  return row ? (row.raw.nume_afisat || row.raw.nume_afacere) : '—';
+}
+
+function renderRegChips() {
+  const wrap = document.getElementById('reg-status-filter');
+  if (!wrap) return;
+  const counts = { toate: REG_ROWS.length };
+  REG_ROWS.forEach(r => { counts[r.status] = (counts[r.status] || 0) + 1; });
+  const items = [['toate', 'Toate'], ['asteptare_validare', 'Așteaptă validare'], ['asteptare_completare', 'Trimise, neîncepute'], ['validat', 'Validate'], ['respins', 'Respinse']];
+  wrap.innerHTML = items.map(([key, label]) =>
+    `<button class="chip ${regStatusFilter === key ? 'active' : ''}" data-reg-filter="${key}">${label} <span class="n">${counts[key] || 0}</span></button>`
+  ).join('');
+  wrap.querySelectorAll('[data-reg-filter]').forEach(btn => {
+    btn.addEventListener('click', () => { regStatusFilter = btn.getAttribute('data-reg-filter'); renderRegChips(); renderRegList(); });
+  });
+}
+
+function renderRegList() {
+  const listEl = document.getElementById('reg-list');
+  const countEl = document.getElementById('reg-count');
+  const emptyEl = document.getElementById('reg-empty');
+  if (!listEl) return;
+  countEl.textContent = REG_ROWS.length;
+  const rows = regStatusFilter === 'toate' ? REG_ROWS : REG_ROWS.filter(r => r.status === regStatusFilter);
+  emptyEl.style.display = rows.length === 0 ? 'block' : 'none';
+  listEl.innerHTML = rows.map(r => {
+    const sc = REG_STATUS_COLOR[r.status] || REG_STATUS_COLOR.asteptare_completare;
+    const numeOaspete = [r.prenume, r.nume].filter(Boolean).join(' ') || '— oaspetele nu a completat încă —';
+    const link = `https://lokals.ro/ghid-oaspeti.html?stay=${r.token}`;
+    const waText = encodeURIComponent(`Salut! Te rog confirmă-ți identitatea pentru sejur, ca să primești toate detaliile de check-in: ${link}`);
+    return `
+    <div class="prow">
+      <div class="prow-top">
+        <div class="picon" style="background:${sc.bg}; color:${sc.color}; font-size:13px; font-weight:700;">${(regOperatorName(r.operator_id) || '?').slice(0,1)}</div>
+        <div class="pinfo">
+          <div class="pname-row">
+            <span class="pname">${escapeHtml(regOperatorName(r.operator_id))}</span>
+            <span class="pmeta" style="background:${sc.bg}; color:${sc.color}; padding:3px 10px; border-radius:999px; font-weight:600;">${REG_STATUS_LABEL[r.status] || r.status}</span>
+          </div>
+          <div class="pmeta">${escapeHtml(numeOaspete)} ${r.email ? '· ' + escapeHtml(r.email) : ''} ${r.check_in ? '· ' + fmtData(r.check_in) + ' → ' + fmtData(r.check_out) : ''} · generat ${fmtData(r.created_at)}</div>
+        </div>
+      </div>
+      <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+        <button class="bo-copy" onclick="boCopy('${link}', this)">Copiază link</button>
+        <a class="bo-copy" style="text-decoration:none; display:inline-block;" href="https://wa.me/?text=${waText}" target="_blank" rel="noopener">Trimite pe WhatsApp</a>
+        ${!r.trimis_la && r.status === 'asteptare_completare' ? `
+          <span style="display:inline-flex; gap:6px; align-items:center;">
+            <input type="email" placeholder="email oaspete" data-reg-email-input="${r.id}" style="border:1.5px solid var(--line); border-radius:8px; padding:6px 10px; font-size:12.5px; font-family:inherit; width:170px;">
+            <button class="bo-copy" data-reg-send-email="${r.id}">Trimite email</button>
+          </span>` : ''}
+        ${r.trimis_la ? `<span class="pmeta">Trimis ${fmtData(r.trimis_la)}${r.canal_trimitere ? ' · ' + r.canal_trimitere : ''}</span>` : ''}
+        ${r.status === 'asteptare_validare' ? `
+          <button class="pbtn primary" data-reg-approve="${r.id}">✓ Validează</button>
+          <button class="pbtn" data-reg-reject="${r.id}" style="border-color:var(--brick); color:var(--brick);">Respinge</button>` : ''}
+      </div>
+      ${r.status === 'asteptare_validare' ? `
+        <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--line); font-size:12.5px; color:var(--ink-soft); display:grid; grid-template-columns:1fr 1fr; gap:4px 16px;">
+          <div><b>Telefon:</b> ${escapeHtml(r.telefon || '—')}</div>
+          <div><b>${r.act_tip === 'pasaport' ? 'Pașaport' : 'CI'}:</b> ${escapeHtml(r.act_serie_numar || '—')}</div>
+          <div><b>Oaspeți:</b> ${r.nr_oaspeti || '—'}</div>
+          <div><b>Completat:</b> ${fmtData(r.completat_la)}</div>
+        </div>` : ''}
+      ${r.status === 'respins' && r.motiv_respingere ? `<div class="pmeta" style="margin-top:8px; color:var(--brick);">Motiv respingere: ${escapeHtml(r.motiv_respingere)}</div>` : ''}
+      <div id="reg-msg-${r.id}" class="esave-msg"></div>
+    </div>`;
+  }).join('');
+
+  listEl.querySelectorAll('[data-reg-send-email]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-reg-send-email');
+      const input = listEl.querySelector(`[data-reg-email-input="${id}"]`);
+      const email = (input.value || '').trim();
+      const msgEl = document.getElementById('reg-msg-' + id);
+      if (!email) { msgEl.className = 'esave-msg err'; msgEl.textContent = 'Introdu un email întâi.'; return; }
+      btn.disabled = true;
+      const { error } = await supabaseClient.from('inregistrari_oaspeti').update({
+        trimis_catre_email: email, canal_trimitere: 'email', trimis_la: new Date().toISOString(),
+      }).eq('id', id);
+      btn.disabled = false;
+      if (error) { console.error(error); msgEl.className = 'esave-msg err'; msgEl.textContent = 'Nu am putut trimite — încearcă din nou.'; return; }
+      msgEl.className = 'esave-msg'; msgEl.textContent = 'Email trimis.';
+      loadRegistrations();
+    });
+  });
+
+  listEl.querySelectorAll('[data-reg-approve]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-reg-approve');
+      btn.disabled = true;
+      const { error } = await supabaseClient.from('inregistrari_oaspeti').update({
+        status: 'validat', validat_la: new Date().toISOString(), validat_de: ADMIN_EMAIL,
+      }).eq('id', id);
+      btn.disabled = false;
+      if (error) { console.error(error); alert('Nu am putut valida — încearcă din nou.'); return; }
+      loadRegistrations();
+    });
+  });
+
+  listEl.querySelectorAll('[data-reg-reject]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-reg-reject');
+      const motiv = prompt('Ce lipsește sau e greșit? (mesajul se trimite oaspetelui)');
+      if (motiv === null) return;
+      btn.disabled = true;
+      const { error } = await supabaseClient.from('inregistrari_oaspeti').update({
+        status: 'respins', motiv_respingere: motiv, validat_la: new Date().toISOString(), validat_de: ADMIN_EMAIL,
+      }).eq('id', id);
+      btn.disabled = false;
+      if (error) { console.error(error); alert('Nu am putut respinge — încearcă din nou.'); return; }
+      loadRegistrations();
+    });
+  });
+}
+
+document.getElementById('reg-gen-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const operatorId = document.getElementById('reg-gen-operator').value;
+  const email = document.getElementById('reg-gen-email').value.trim();
+  const telefon = document.getElementById('reg-gen-telefon').value.trim();
+  const msgEl = document.getElementById('reg-gen-msg');
+  const btn = e.target.querySelector('button[type="submit"]');
+  if (!operatorId) { msgEl.className = 'esave-msg err'; msgEl.textContent = 'Alege o cazare.'; return; }
+
+  const opRow = ROWS.find(r => r.source === 'operatori' && String(r.id) === String(operatorId));
+  const payload = { operator_id: operatorId, apt: opRow ? opRow.raw.slug : null };
+  if (email) { payload.trimis_catre_email = email; payload.canal_trimitere = 'email'; payload.trimis_la = new Date().toISOString(); }
+  else if (telefon) { payload.trimis_catre_telefon = telefon; payload.canal_trimitere = 'whatsapp'; }
+
+  btn.disabled = true;
+  msgEl.className = 'esave-msg'; msgEl.textContent = '';
+  const { data, error } = await supabaseClient.from('inregistrari_oaspeti').insert(payload).select();
+  btn.disabled = false;
+  if (error) { console.error(error); msgEl.className = 'esave-msg err'; msgEl.textContent = 'Nu am putut genera linkul — încearcă din nou.'; return; }
+
+  const row = data[0];
+  const link = `https://lokals.ro/ghid-oaspeti.html?stay=${row.token}`;
+  const waText = encodeURIComponent(`Salut! Te rog confirmă-ți identitatea pentru sejur, ca să primești toate detaliile de check-in: ${link}`);
+  const resultEl = document.getElementById('reg-gen-result');
+  resultEl.style.display = 'block';
+  resultEl.innerHTML = `
+    <div class="addon-box">
+      <div class="addon-note" style="margin-bottom:8px;"><b>Link generat${email ? ' și trimis pe email' : ''}:</b></div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        <code style="background:var(--cream); padding:6px 10px; border-radius:6px; font-size:12.5px; word-break:break-all;">${escapeHtml(link)}</code>
+        <button class="bo-copy" onclick="boCopy('${link}', this)">Copiază</button>
+        <a class="bo-copy" style="text-decoration:none;" href="https://wa.me/?text=${waText}" target="_blank" rel="noopener">Trimite pe WhatsApp</a>
+      </div>
+    </div>`;
+  e.target.reset();
+  loadRegistrations();
+});
 </script>
 </body>
 </html>
