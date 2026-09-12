@@ -826,6 +826,31 @@ function renderList(){
       populateRegOperatorSelect();
     });
   });
+  listEl.querySelectorAll('[data-autoemail-toggle]').forEach(input => {
+    input.addEventListener('change', async (e) => {
+      const id = e.target.getAttribute('data-autoemail-toggle');
+      const auto_trimite_din_email = e.target.checked;
+      e.target.disabled = true;
+      const { error } = await supabaseClient.from('operatori').update({ auto_trimite_din_email }).eq('id', id);
+      e.target.disabled = false;
+      if (error) {
+        console.error(error);
+        e.target.checked = !auto_trimite_din_email;
+        alert('Nu am putut salva schimbarea — încearcă din nou.');
+        return;
+      }
+      const row = ROWS.find(r => r.source === 'operatori' && String(r.id) === String(id));
+      if (row) row.raw.auto_trimite_din_email = auto_trimite_din_email;
+      renderList();
+      const rowId = 'operatori-' + id;
+      const details = document.getElementById('details-' + rowId);
+      if (details) {
+        details.classList.add('open');
+        const toggleBtn = document.querySelector(`[data-toggle="${rowId}"]`);
+        if (toggleBtn) toggleBtn.textContent = 'Ascunde detalii';
+      }
+    });
+  });
 }
 
 function rowHtml(r){
@@ -1265,6 +1290,24 @@ function detailsHtml(r){
              <span class="track"></span>
            </label>
          </div>
+         <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--line);">
+           <div class="addon-row">
+             <div class="addon-info">
+               <div class="addon-title" style="font-size:13px;">Completare automată din email (Booking.com / Airbnb)</div>
+               <div class="addon-sub">Redirecționează emailul de confirmare rezervare către adresa de mai jos — AI-ul completează linkul de înregistrare</div>
+             </div>
+             <span class="addon-status ${raw.auto_trimite_din_email !== false ? 'on' : 'off'}">${raw.auto_trimite_din_email !== false ? 'Trimite automat' : 'Doar completează, fără trimitere'}</span>
+             <label class="switch">
+               <input type="checkbox" data-autoemail-toggle="${escapeHtml(r.id)}" ${raw.auto_trimite_din_email !== false ? 'checked' : ''}>
+               <span class="track"></span>
+             </label>
+           </div>
+           <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
+             <code style="background:var(--cream); padding:6px 10px; border-radius:6px; font-size:12.5px;">${escapeHtml(raw.slug)}@rezervari.lokals.ro</code>
+             <button class="bo-copy" type="button" onclick="boCopy('${escapeHtml(raw.slug)}@rezervari.lokals.ro', this)">Copiază</button>
+           </div>
+           <div class="addon-note">Comutatorul de mai sus decide ce se întâmplă odată ce AI-ul a extras datele din email: PORNIT — trimite automat linkul oaspetelui, fără să mai treci prin tab-ul „Înregistrări"; OPRIT — doar pregătește înregistrarea, tu o completezi/trimiți manual, ca acum. Poți opri oricând, dacă extragerea automată greșește des.</div>
+         </div>
        </div>`
     : '';
 
@@ -1434,6 +1477,7 @@ function renderRegList() {
         <div class="pinfo">
           <div class="pname-row">
             <span class="pname">${escapeHtml(regOperatorName(r.operator_id))}</span>
+            ${r.sursa === 'email_auto' ? `<span class="pmeta" style="background:#E3ECE4; color:var(--green,#1A4A42); padding:3px 10px; border-radius:999px; font-weight:600;" title="Completat automat, extras cu AI dintr-un email de rezervare redirecționat">🤖 din email</span>` : ''}
             <span class="pmeta" style="background:${sc.bg}; color:${sc.color}; padding:3px 10px; border-radius:999px; font-weight:600;">${REG_STATUS_LABEL[r.status] || r.status}</span>
           </div>
           <div class="pmeta">${escapeHtml(numeOaspete)} ${r.email ? '· ' + escapeHtml(r.email) : ''} ${r.check_in ? '· ' + fmtData(r.check_in) + ' → ' + fmtData(r.check_out) : ''} · generat ${fmtData(r.created_at)}</div>

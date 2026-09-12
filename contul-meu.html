@@ -412,6 +412,20 @@ function renderRegPanel(operatorId) {
       </label>
     </div>
     <div id="reg-gen-wrap-${operatorId}" style="${op && op.inregistrare_activa ? '' : 'display:none;'}">
+      <div class="reg-toggle-row" style="margin-bottom:14px;">
+        <div>
+          <div class="reg-toggle-label">Completare automată din email (Booking.com / Airbnb)</div>
+          <div class="reg-toggle-sub">Redirecționează emailul de confirmare rezervare către <code>${escapeHtmlAcc(op ? op.slug : '')}@rezervari.lokals.ro</code> — AI-ul completează datele și, dacă comutatorul e pornit, trimite automat linkul oaspetelui.</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" data-reg-autoemail-toggle="${operatorId}" ${op && op.auto_trimite_din_email !== false ? 'checked' : ''}>
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center; margin-bottom:14px;">
+        <code style="background:#fff; border:1px solid var(--line); padding:6px 10px; border-radius:8px; font-size:12px;">${escapeHtmlAcc(op ? op.slug : '')}@rezervari.lokals.ro</code>
+        <button class="reg-btn" type="button" data-copy-forward-addr="${escapeHtmlAcc(op ? op.slug : '')}@rezervari.lokals.ro">Copiază adresa</button>
+      </div>
       <form class="reg-form" data-reg-gen-form="${operatorId}">
         <div>
           <label>Email oaspete (opțional)</label>
@@ -464,6 +478,29 @@ function renderRegPanel(operatorId) {
       const step1 = card.querySelector('.share-step1');
       if (step1) step1.insertAdjacentHTML('beforeend', `<button class="share-opt" type="button" data-choose="pdf">${PDF_ICON} <span>Ghid PDF<span class="share-opt-sub">Variantă offline, printabilă</span></span></button>`);
     }
+  });
+
+  panel.querySelector(`[data-reg-autoemail-toggle="${operatorId}"]`).addEventListener('change', async (e) => {
+    const auto = e.target.checked;
+    e.target.disabled = true;
+    const { error } = await supabaseClient.from('operatori').update({ auto_trimite_din_email: auto }).eq('id', operatorId);
+    e.target.disabled = false;
+    if (error) {
+      console.error(error);
+      e.target.checked = !auto;
+      alert('Nu am putut salva schimbarea — încearcă din nou.');
+      return;
+    }
+    if (op) op.auto_trimite_din_email = auto;
+  });
+
+  panel.querySelectorAll('[data-copy-forward-addr]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const value = btn.getAttribute('data-copy-forward-addr');
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(value).then(() => { btn.textContent = 'Copiat!'; setTimeout(() => btn.textContent = 'Copiază adresa', 1600); });
+      } else { alert(value); }
+    });
   });
 
   panel.querySelector(`[data-reg-gen-form="${operatorId}"]`).addEventListener('submit', async (e) => {
@@ -532,6 +569,7 @@ function renderRegList(operatorId) {
     <div class="reg-row" data-reg-row="${r.id}">
       <div class="reg-row-top">
         <b>${escapeHtmlAcc(numeOaspete)}</b>
+        ${r.sursa === 'email_auto' ? `<span class="reg-chip" style="background:#E3ECE4; color:var(--teal-deep);" title="Completat automat, extras cu AI dintr-un email de rezervare — verifică datele">🤖 din email</span>` : ''}
         <span class="reg-chip" style="background:${sc.bg}; color:${sc.color};">${REG_STATUS_LABEL[r.status] || r.status}</span>
       </div>
       <div class="reg-meta">${r.email ? escapeHtmlAcc(r.email) + ' · ' : ''}${r.check_in ? fmtDataScurt(r.check_in) + ' → ' + fmtDataScurt(r.check_out) + ' · ' : ''}generat ${fmtDataScurt(r.created_at)}</div>
