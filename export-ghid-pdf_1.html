@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ghid offline — Lokals</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  :root{
+    --bg:#EAE3D3; --surface:#FBF8F1; --ink:#20291F; --ink-soft:#5B6459;
+    --spruce:#3C5B44; --spruce-deep:#26382C; --amber:#B9812F; --amber-deep:#8F6222;
+    --brick:#9C4536; --line:rgba(32,41,31,0.18); --gold-soft:#E8CE9E;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:'Inter', system-ui, sans-serif;}
+  a{color:var(--spruce-deep);}
+  .serif{font-family:'Fraunces', Georgia, serif;}
+
+  .no-print{max-width:794px; margin:0 auto; padding:18px 20px 0;}
+  .print-bar{display:flex; align-items:center; justify-content:space-between; gap:12px; background:var(--spruce-deep); color:#fff; border-radius:14px; padding:14px 18px; margin-bottom:18px;}
+  .print-bar-text{font-size:13px; line-height:1.5;}
+  .print-btn{flex-shrink:0; display:flex; align-items:center; gap:8px; background:#fff; color:var(--spruce-deep); border:none; border-radius:999px; padding:11px 18px; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit;}
+  #state-loading, #state-error, #state-blocked{max-width:794px; margin:0 auto; padding:60px 20px; text-align:center; color:var(--ink-soft); font-size:14px;}
+
+  .page{width:794px; margin:0 auto; padding:36px 56px 60px; background:#fff; display:none;}
+
+  .cover{background:linear-gradient(135deg, #33493B 0%, var(--spruce-deep) 55%, #1B2721 100%); border-radius:18px; padding:38px 34px; color:#fff; margin-bottom:28px; position:relative; overflow:hidden;}
+  .cover::before{content:''; position:absolute; inset:0; opacity:.5; background:radial-gradient(circle at 15% 20%, rgba(255,255,255,0.12) 0%, transparent 40%);}
+  .cover-inner{position:relative;}
+  .cover-eyebrow{font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--gold-soft); margin-bottom:8px;}
+  .cover-title{font-size:28px; font-weight:700; margin-bottom:6px;}
+  .cover-sub{font-size:14px; color:#D6DED0; margin-bottom:22px;}
+  .cover-meta{display:flex; gap:22px; flex-wrap:wrap;}
+  .cover-meta-item{font-size:12px; color:#C8CFC2;}
+  .cover-meta-item b{display:block; font-size:15px; color:#fff; font-weight:700; margin-top:2px;}
+  .cover-link{margin-top:22px; padding-top:18px; border-top:1px solid rgba(255,255,255,0.18); font-size:12px; color:#C8CFC2;}
+  .cover-link a{color:#fff; font-weight:600; text-decoration:underline;}
+
+  .section{margin-bottom:26px;}
+  .section-title{font-size:12px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--amber-deep); margin-bottom:12px;}
+
+  .essentials-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:14px;}
+  .ess-card{border:1px solid var(--line); border-radius:12px; padding:14px 16px;}
+  .ess-label{font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-soft); margin-bottom:5px;}
+  .ess-value{font-size:14px; font-weight:600; color:var(--ink);}
+  .ess-value.mono{font-family:'JetBrains Mono', monospace; letter-spacing:1px;}
+  .ess-note{font-size:12px; color:var(--ink-soft); margin-top:4px; line-height:1.5;}
+
+  .rules-list{list-style:none; margin:0; padding:0; font-size:13px; color:var(--ink); line-height:1.7;}
+  .rules-list li{position:relative; padding-left:16px;}
+  .rules-list li::before{content:'•'; position:absolute; left:0; color:var(--amber-deep); font-weight:700;}
+
+  .contacts-row{display:flex; gap:18px; flex-wrap:wrap; font-size:13px;}
+  .contacts-row .item{color:var(--ink);}
+
+  .dir-cat{font-size:13px; font-weight:700; color:var(--spruce-deep); margin:16px 0 8px; padding-top:14px; border-top:1px solid var(--line);}
+  .dir-cat:first-child{border-top:none; padding-top:0; margin-top:0;}
+  .dir-item{display:flex; justify-content:space-between; gap:16px; padding:9px 0; border-bottom:1px solid var(--line);}
+  .dir-item:last-child{border-bottom:none;}
+  .dir-name{font-size:13.5px; font-weight:600; color:var(--ink);}
+  .dir-desc{font-size:11.5px; color:var(--ink-soft); margin-top:2px;}
+  .dir-links{display:flex; gap:10px; flex-shrink:0; align-items:flex-start; padding-top:1px; flex-wrap:wrap; justify-content:flex-end; max-width:220px;}
+  .dir-links a{font-size:11.5px; font-weight:600; text-decoration:none; white-space:nowrap;}
+
+  .pdf-footer{margin-top:30px; padding-top:16px; border-top:1px solid var(--line); font-size:10.5px; color:var(--ink-soft); text-align:center; line-height:1.6;}
+
+  @media print{
+    body{background:#fff;}
+    .no-print{display:none !important;}
+    .page{padding:0; width:auto;}
+  }
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  <div class="print-bar">
+    <div class="print-bar-text">Ghid offline, gata de descărcat. Apasă butonul, apoi alege „Salvează ca PDF” din fereastra de printare a browserului.</div>
+    <button class="print-btn" type="button" onclick="window.print()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#26382C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 17h2a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2h-14a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h2"/><path d="M17 9v-4a2 2 0 0 0 -2 -2h-6a2 2 0 0 0 -2 2v4"/><rect x="7" y="13" width="10" height="8" rx="1"/></svg>
+      Descarcă / Printează PDF
+    </button>
+  </div>
+</div>
+
+<div id="state-loading">Se încarcă ghidul...</div>
+<div id="state-error" style="display:none;">Nu am putut încărca datele acestei cazări.</div>
+<div id="state-blocked" style="display:none;">Această cazare cere verificarea identității oaspeților înainte de check-in — exportul PDF e dezactivat, pentru că un PDF nu poate cere confirmarea identității. Trimite oaspetelui linkul lui personal de înregistrare în loc de PDF.</div>
+
+<div class="page" id="page">
+  <div class="cover">
+    <div class="cover-inner">
+      <div class="cover-eyebrow" id="cover-eyebrow">Ghid de oaspeți</div>
+      <div class="cover-title serif" id="cover-title"></div>
+      <div class="cover-sub">Versiune offline — salvează sau printează pentru sejurul tău</div>
+      <div class="cover-meta">
+        <div class="cover-meta-item" id="cover-checkin" style="display:none;">Check-in<b id="cover-checkin-val"></b></div>
+        <div class="cover-meta-item" id="cover-checkout" style="display:none;">Check-out<b id="cover-checkout-val"></b></div>
+        <div class="cover-meta-item">Generat<b id="cover-date"></b></div>
+      </div>
+      <div class="cover-link">Varianta online, mereu actualizată: <a id="cover-link-a" href="#" target="_blank" rel="noopener"></a></div>
+    </div>
+  </div>
+
+  <div class="section" id="section-essentials" style="display:none;">
+    <div class="section-title">Acces &amp; esențiale</div>
+    <div class="essentials-grid" id="essentials-grid"></div>
+  </div>
+
+  <div class="section" id="section-rules" style="display:none;">
+    <div class="section-title">Regulile casei</div>
+    <ul class="rules-list" id="rules-list"></ul>
+  </div>
+
+  <div class="section" id="section-contacts" style="display:none;">
+    <div class="section-title">Contacte</div>
+    <div class="contacts-row" id="contacts-row"></div>
+  </div>
+
+  <div class="section" id="section-directory" style="display:none;">
+    <div class="section-title">Recomandările gazdei — afaceri locale</div>
+    <div id="directory-body"></div>
+  </div>
+
+  <div class="pdf-footer">
+    Generat automat pe baza ghidului tău de pe Lokals — actualizează oricând din contul tău, apoi descarcă din nou versiunea la zi.<br>
+    lokals.ro
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
+const SUPABASE_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_LbOENmZHd9d5su2EOTaqVcqDgwUfD6xBfltgKGG8326YnWApHtmv4ZNRJB3N40Yj902RfUM1Dexf/pub?gid=1395207386&single=true&output=csv";
+
+const CATS = {
+  aventura:  { label: "Aventură" },
+  cultura:   { label: "Cultură" },
+  wellness:  { label: "Wellness" },
+  gastro:    { label: "Gastronomie" },
+  livrare:   { label: "Livrare" },
+  producatori:{ label: "Producători Locali" },
+  facilitare:{ label: "Facilitare" },
+};
+const CATEGORII_VALIDE = new Set(Object.keys(CATS));
+const ZONA_LABELS = {
+  'rasnov': 'Râșnov', 'sacele-brasov': 'Săcele-Brașov', 'codlea-ghimbav-cristian': 'Codlea-Ghimbav-Cristian',
+  'predeal-azuga': 'Predeal-Azuga', 'sinaia-busteni-poiana-tapului': 'Sinaia-Bușteni-Poiana Tapului',
+  'bran-moieciu-fundata': 'Bran-Moieciu-Fundata', 'zarnesti-poiana-marului': 'Zărnești-Poiana Mărului',
+  'fagaras-sambata-de-sus': 'Făgăraș-Sâmbăta de Sus', 'bunesti-viscri-saschiz-meschendorf': 'Bunești-Viscri-Saschiz-Meschendorf',
+  'covasna-targu-secuiesc-sfantu-gheorghe': 'Covasna-Tg. Secuiesc-Sf. Gheorghe', 'vama-buzaului-intorsura-buzaului': 'Vama Buzăului-Întorsura Buzăului',
+};
+
+function esc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function rowToPlace(row, zona) {
+  const activ = (row.activ || "").trim().toLowerCase();
+  if (activ === "nu") return null;
+  const zonaRaw = (row.zona || "").trim().toLowerCase() || "rasnov";
+  const zoneList = zonaRaw.split(",").map(z => z.trim()).filter(Boolean);
+  if (!zoneList.includes(zona)) return null;
+  const cat = (row.categorie || "").trim();
+  if (!CATEGORII_VALIDE.has(cat)) return null;
+  const ordineRaw = (row.ordine || "").trim();
+  const ordine = ordineRaw && !isNaN(Number(ordineRaw)) ? Number(ordineRaw) : Infinity;
+  return {
+    name: (row.nume || "").trim(), cat, desc: (row.descriere || "").trim(),
+    website: (row.website || "").trim() || null, facebook: (row.facebook || "").trim() || null,
+    instagram: (row.instagram || "").trim() || null, phone: (row.telefon || "").trim() || null,
+    ordine,
+  };
+}
+function candidatToPlace(row) {
+  const cat = (row.categorie || "").trim();
+  if (!CATEGORII_VALIDE.has(cat)) return null;
+  return {
+    name: (row.nume_afacere || "").trim(), cat, desc: (row.descriere || "").trim(),
+    website: (row.website || "").trim() || null, facebook: (row.facebook || "").trim() || null,
+    instagram: (row.instagram || "").trim() || null, phone: (row.telefon || "").trim() || null,
+    ordine: Infinity,
+  };
+}
+
+// O cerere care rămâne agățată (blocată de o rețea/firewall care nu răspunde deloc, în loc să dea eroare)
+// ar bloca pagina la nesfârșit pe "Se încarcă..." fără fetchWithTimeout — fetch() nu are timeout implicit.
+async function fetchWithTimeout(url, options, ms) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms || 9000);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function sbFetch(path) {
+  return fetchWithTimeout(`${SUPABASE_URL}/rest/v1/${path}`, { headers: { apikey: SUPABASE_KEY } }, 9000);
+}
+
+async function loadPlaces(zona) {
+  let sheetPlaces = [];
+  try {
+    const res = await fetchWithTimeout(SHEET_CSV_URL, {}, 7000);
+    const csvText = await res.text();
+    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+    sheetPlaces = parsed.data.map(r => rowToPlace(r, zona)).filter(Boolean);
+  } catch (e) { /* ghidul offline rămâne util doar cu esențialele, chiar dacă Sheet-ul nu răspunde */ }
+
+  let candidatPlaces = [];
+  try {
+    const res = await sbFetch(`candidati_parteneri?status=eq.publicat&zona=eq.${encodeURIComponent(zona)}&select=*`);
+    if (res.ok) candidatPlaces = (await res.json()).map(candidatToPlace).filter(Boolean);
+  } catch (e) { /* la fel */ }
+
+  const places = sheetPlaces.concat(candidatPlaces);
+  places.sort((a, b) => a.ordine - b.ordine);
+  return places;
+}
+
+function fmt(s){ return (s || '').trim(); }
+
+function renderEssentials(op) {
+  const f = op.facilitati_cazare || {};
+  const checkin = f.checkin || {}, checkout = f.checkout || {}, wifi = f.wifi || {};
+  const cells = [];
+  if (checkin.ora) { cells.push(`<div class="ess-card"><div class="ess-label">Check-in</div><div class="ess-value">${esc(checkin.ora)}</div></div>`); }
+  if (checkin.cod_acces) { cells.push(`<div class="ess-card"><div class="ess-label">Cod acces</div><div class="ess-value mono">${esc(checkin.cod_acces)}</div></div>`); }
+  if (checkin.unitate) { cells.push(`<div class="ess-card"><div class="ess-label">${op.tip === 'hotel' ? 'Cameră' : 'Apartament'}</div><div class="ess-value">${esc(checkin.unitate)}</div></div>`); }
+  if (checkout.ora) { cells.push(`<div class="ess-card"><div class="ess-label">Check-out</div><div class="ess-value">${esc(checkout.ora)}</div></div>`); }
+  if (wifi.ssid) { cells.push(`<div class="ess-card"><div class="ess-label">Wi-Fi</div><div class="ess-value">${esc(wifi.ssid)}${wifi.parola ? ` <span style="color:var(--ink-soft); font-weight:400;">/ parola: ${esc(wifi.parola)}</span>` : ''}</div></div>`); }
+  if (checkin.instructiuni) { cells.push(`<div class="ess-card" style="grid-column:1/-1;"><div class="ess-label">Note check-in</div><div class="ess-note">${esc(checkin.instructiuni)}</div></div>`); }
+  if (checkout.instructiuni) { cells.push(`<div class="ess-card" style="grid-column:1/-1;"><div class="ess-label">Note check-out</div><div class="ess-note">${esc(checkout.instructiuni)}</div></div>`); }
+
+  if (checkin.ora) { document.getElementById('cover-checkin').style.display = ''; document.getElementById('cover-checkin-val').textContent = checkin.ora; }
+  if (checkout.ora) { document.getElementById('cover-checkout').style.display = ''; document.getElementById('cover-checkout-val').textContent = checkout.ora; }
+
+  if (cells.length) {
+    document.getElementById('section-essentials').style.display = '';
+    document.getElementById('essentials-grid').innerHTML = cells.join('');
+  }
+}
+
+function renderRules(op) {
+  const reguli = (op.facilitati_cazare || {}).reguli || {};
+  const lista = Array.isArray(reguli.lista) ? reguli.lista.filter(Boolean) : [];
+  if (!lista.length) return;
+  document.getElementById('section-rules').style.display = '';
+  document.getElementById('rules-list').innerHTML = lista.map(r => `<li>${esc(r)}</li>`).join('');
+}
+
+function renderContacts(op) {
+  const urgente = (op.facilitati_cazare || {}).urgente || {};
+  const contacteLista = Array.isArray(urgente.lista) ? urgente.lista.filter(Boolean) : (urgente.spital ? [urgente.spital] : []);
+  const items = [];
+  if (op.telefon) items.push(`<span class="item">☎ Gazdă: <a href="tel:+${op.telefon.replace(/\D/g,'')}">${esc(op.telefon)}</a></span>`);
+  items.push(`<span class="item">🚑 Urgențe: <a href="tel:112">112</a></span>`);
+  contacteLista.forEach(c => items.push(`<span class="item">${esc(c)}</span>`));
+  if (!items.length) return;
+  document.getElementById('section-contacts').style.display = '';
+  document.getElementById('contacts-row').innerHTML = items.join('');
+}
+
+function renderDirectory(places) {
+  if (!places.length) return;
+  const byCat = {};
+  places.forEach(p => { (byCat[p.cat] = byCat[p.cat] || []).push(p); });
+  let html = '';
+  Object.keys(CATS).forEach(cat => {
+    const items = byCat[cat];
+    if (!items || !items.length) return;
+    html += `<div class="dir-cat">${esc(CATS[cat].label)}</div>`;
+    items.forEach(p => {
+      const links = [];
+      if (p.phone) links.push(`<a href="tel:${p.phone.replace(/\s/g,'')}">☎ ${esc(p.phone)}</a>`);
+      if (p.website) links.push(`<a href="${p.website}" target="_blank" rel="noopener">🌐 website</a>`);
+      if (p.facebook) links.push(`<a href="${p.facebook}" target="_blank" rel="noopener">Facebook</a>`);
+      if (p.instagram) links.push(`<a href="${p.instagram}" target="_blank" rel="noopener">Instagram</a>`);
+      html += `<div class="dir-item">
+        <div><div class="dir-name">${esc(p.name)}</div>${p.desc ? `<div class="dir-desc">${esc(p.desc)}</div>` : ''}</div>
+        <div class="dir-links">${links.join('')}</div>
+      </div>`;
+    });
+  });
+  document.getElementById('section-directory').style.display = '';
+  document.getElementById('directory-body').innerHTML = html;
+}
+
+function showLoadError(){
+  document.getElementById('state-loading').style.display = 'none';
+  document.getElementById('state-error').style.display = '';
+}
+
+function showBlocked(){
+  document.getElementById('state-loading').style.display = 'none';
+  document.getElementById('state-blocked').style.display = '';
+}
+
+// Plasă de siguranță: dacă orice altceva rămâne agățat mai mult de 20s, arătăm eroarea
+// în loc să lăsăm pagina blocată la nesfârșit pe "Se încarcă...".
+let initDone = false;
+setTimeout(() => { if (!initDone) showLoadError(); }, 20000);
+
+async function init() {
+  try {
+    const slug = new URLSearchParams(window.location.search).get('slug');
+    if (!slug) { showLoadError(); return; }
+
+    const res = await sbFetch(`operatori?slug=eq.${encodeURIComponent(slug)}&select=*`);
+    if (!res.ok) { showLoadError(); return; }
+    const rows = await res.json();
+    if (!rows.length) { showLoadError(); return; }
+    const op = rows[0];
+    if (op.inregistrare_activa === true) { initDone = true; showBlocked(); return; }
+    const zona = op.zona || 'rasnov';
+
+    document.getElementById('cover-eyebrow').textContent = `Ghid de oaspeți · ${ZONA_LABELS[zona] || zona}`;
+    document.getElementById('cover-title').textContent = op.nume_afisat || op.nume_afacere;
+    document.getElementById('cover-date').textContent = new Date().toLocaleDateString('ro-RO', { day:'2-digit', month:'short', year:'numeric' });
+    const link = `https://lokals.ro/ghid-oaspeti.html?apt=${encodeURIComponent(op.slug)}`;
+    document.getElementById('cover-link-a').textContent = link.replace('https://', '');
+    document.getElementById('cover-link-a').href = link;
+
+    renderEssentials(op);
+    renderRules(op);
+    renderContacts(op);
+    const places = await loadPlaces(zona);
+    renderDirectory(places);
+
+    document.getElementById('state-loading').style.display = 'none';
+    document.getElementById('page').style.display = 'block';
+    initDone = true;
+  } catch (e) {
+    console.error(e);
+    initDone = true;
+    showLoadError();
+  }
+}
+init();
+</script>
+
+</body>
+</html>

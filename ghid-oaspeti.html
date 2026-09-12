@@ -286,7 +286,9 @@ const params = new URLSearchParams(window.location.search);
 let apt = params.get('apt') || 'general';
 // Link personalizat de check-in (trimis prin email/WhatsApp de gazdă) — dacă e prezent,
 // identifică apartamentul din rândul inregistrari_oaspeti, chiar dacă ?apt= lipsește.
-const stayToken = params.get('stay');
+// Rămâne "let": dacă lipsește din URL, resolveActiveStay() îl poate completa singur,
+// gasind sejurul validat activ azi (vezi mai jos — "link inteligent" pentru ?apt=).
+let stayToken = params.get('stay');
 let currentStay = null;
 
 const APT_NAMES = {
@@ -378,6 +380,37 @@ async function loadStay() {
       }
     }
   } catch (e) { /* gate-ul arată eroare generică mai jos, nu blocam restul paginii */ }
+}
+
+// "Link inteligent": dacă cineva deschide linkul general ?apt=... (ex. codul QR din
+// cameră, butonul "Vezi ghidul"/"Distribuie") fără token de sejur, pe o cazare cu
+// verificarea activă, căutăm singuri sejurul validat activ azi și ne comportăm ca și
+// cum am fi primit token-ul lui — fără să redirecționăm vizibil, fără să cerem nimic
+// oaspetelui. Dacă nu găsim niciun sejur validat pentru azi, rămâne blocajul standard.
+async function resolveActiveStay() {
+  if (!currentOperator || !currentOperator.id) return;
+  try {
+    const res = await sbFetch(`inregistrari_oaspeti?operator_id=eq.${encodeURIComponent(currentOperator.id)}&status=eq.validat&select=*`);
+    const rows = await res.json();
+    if (!rows || !rows.length) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const active = rows.filter(r => r.check_in && r.check_out && r.check_in <= today && today <= r.check_out);
+    if (!active.length) return;
+    // in ziua de turnover (checkout-ul unuia si check-in-ul altuia cad azi), preferam
+    // oaspetele nou (cel care tocmai a sosit) fata de cel care tocmai pleaca.
+    active.sort((a, b) => {
+      const aArrivesToday = a.check_in === today ? 1 : 0;
+      const bArrivesToday = b.check_in === today ? 1 : 0;
+      if (aArrivesToday !== bArrivesToday) return bArrivesToday - aArrivesToday;
+      return new Date(b.validat_la || b.created_at) - new Date(a.validat_la || a.created_at);
+    });
+    currentStay = active[0];
+    stayToken = currentStay.token;
+    if (currentStay.apt) {
+      apt = currentStay.apt;
+      CODE_STORAGE_KEY = `lokal_guest_code_${apt}`;
+    }
+  } catch (e) { /* ramane comportamentul standard (blocaj) daca ceva nu merge */ }
 }
 
 async function resolveOperator() {
@@ -1338,6 +1371,7 @@ async function setLang(lang){
 async function init() {
   await loadStay();
   await Promise.all([resolveOperator(), loadFeaturesMap()]);
+  if (!stayToken && gateRequired()) { await resolveActiveStay(); }
   await applyRegistrationGate();
   setLang('ro');
   loadPlaces();
