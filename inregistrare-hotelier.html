@@ -165,20 +165,9 @@
 
       <label for="zona">Zona în care operați</label>
       <select id="zona" required>
-        <option value="">Alege zona…</option>
-        <option value="rasnov">Râșnov</option>
-        <option value="sacele-brasov">Săcele-Brașov</option>
-        <option value="predeal-azuga">Predeal-Azuga</option>
-        <option value="sinaia-busteni-poiana-tapului">Sinaia-Bușteni</option>
-        <option value="bran-moieciu-fundata">Bran-Moieciu</option>
-        <option value="zarnesti-poiana-marului">Zărnești</option>
-        <option value="fagaras-sambata-de-sus">Făgăraș</option>
-        <option value="bunesti-viscri-saschiz-meschendorf">Viscri-Saschiz</option>
-        <option value="covasna-targu-secuiesc-sfantu-gheorghe">Covasna</option>
-        <option value="vama-buzaului-intorsura-buzaului">Vama Buzăului</option>
-        <option value="altele">Altă zonă din Brașov / împrejurimi</option>
+        <option value="">Se încarcă zonele…</option>
       </select>
-      <div class="hint">Momentan ghidul e live în Râșnov și Săcele-Brașov; pentru celelalte zone, profilul rămâne înregistrat și devine vizibil automat de îndată ce zona se activează.</div>
+      <div class="hint" id="zona-hint">Momentan ghidul e live în unele zone; pentru celelalte, profilul rămâne înregistrat și devine vizibil automat de îndată ce zona se activează.</div>
 
       <label for="adresa">Adresă completă (pentru expedierea afișelor)</label>
       <textarea id="adresa" required placeholder="ex. Str. Cetății nr. 12, Râșnov, jud. Brașov, cod poștal 505400"></textarea>
@@ -228,18 +217,30 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="lokals-zones.js"></script>
 <script>
 const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
 const GUIDE_BASE = "https://lokals.ro/ghid-oaspeti.html?apt=";
-const ZONA_LABELS = {
-  'rasnov': 'Râșnov', 'sacele-brasov': 'Săcele-Brașov', 'predeal-azuga': 'Predeal-Azuga',
-  'sinaia-busteni-poiana-tapului': 'Sinaia-Bușteni', 'bran-moieciu-fundata': 'Bran-Moieciu',
-  'zarnesti-poiana-marului': 'Zărnești', 'fagaras-sambata-de-sus': 'Făgăraș',
-  'bunesti-viscri-saschiz-meschendorf': 'Viscri-Saschiz', 'covasna-targu-secuiesc-sfantu-gheorghe': 'Covasna',
-  'vama-buzaului-intorsura-buzaului': 'Vama Buzăului', 'altele': 'zona ta',
-};
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let ZONE_LIST = [];
+async function initZoneSelect() {
+  ZONE_LIST = await LokalsZones.load(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const select = document.getElementById('zona');
+  select.innerHTML = '<option value="">Alege zona…</option>' +
+    ZONE_LIST.map(z => `<option value="${z.slug}">${z.nume}${z.activa ? '' : ' (în curând)'}</option>`).join('') +
+    '<option value="altele">Altă zonă din Brașov / împrejurimi</option>';
+  const activeNamesList = ZONE_LIST.filter(z => z.activa).map(z => z.nume);
+  const activeNames = activeNamesList.length > 1
+    ? activeNamesList.slice(0, -1).join(', ') + ' și ' + activeNamesList[activeNamesList.length - 1]
+    : activeNamesList.join('');
+  if (activeNames) {
+    document.getElementById('zona-hint').textContent =
+      `Momentan ghidul e live în ${activeNames}; pentru celelalte zone, profilul rămâne înregistrat și devine vizibil automat de îndată ce zona se activează.`;
+  }
+}
+initZoneSelect();
 
 // Hartă live: pe măsură ce hotelierul completează adresa, arătăm harta cu locația
 // respectivă — confirmare vizuală, fără să fie nevoie de un cont Google Maps API.
@@ -347,7 +348,7 @@ async function insertOperator(baseSlug, row, attempt = 0) {
 
 function renderPoster(container, slug, displayName, tagline, zona) {
   const guideUrl = GUIDE_BASE + slug;
-  const zonaLabel = ZONA_LABELS[zona] || 'zona ta';
+  const zonaLabel = LokalsZones.label(ZONE_LIST, zona);
   const wrap = document.createElement('div');
   wrap.className = 'poster-wrap';
   wrap.innerHTML = `

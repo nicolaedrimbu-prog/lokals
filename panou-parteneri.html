@@ -108,6 +108,23 @@
   .switch input:checked + .track{background:var(--green);}
   .switch input:checked + .track::before{transform:translateX(16px);}
   .switch input:disabled + .track{opacity:.6; cursor:default;}
+  .zone-name-input{flex:1; font-size:14.5px; font-weight:600; color:var(--teal-deep); border:1.5px solid transparent;
+    border-radius:8px; padding:5px 8px; font-family:inherit; background:transparent; min-width:0;}
+  .zone-name-input:hover{border-color:var(--line);}
+  .zone-name-input:focus{outline:none; border-color:var(--teal-deep); background:#fff;}
+  .zone-judet-input{width:120px; font-size:12px; color:var(--ink-soft); border:1.5px solid transparent;
+    border-radius:8px; padding:4px 8px; font-family:inherit; background:transparent; flex-shrink:0;}
+  .zone-judet-input:hover{border-color:var(--line);}
+  .zone-judet-input:focus{outline:none; border-color:var(--line); background:#fff;}
+  .zone-save-hint{font-size:10.5px; color:var(--green); flex-shrink:0; width:16px; text-align:center;}
+  .zone-add-form{display:flex; gap:8px; margin-top:14px; padding-top:14px; border-top:1px dashed var(--line); flex-wrap:wrap;}
+  .zone-add-form input{flex:1; min-width:140px; padding:10px 12px; border:1.5px solid var(--line); border-radius:10px;
+    font-size:13.5px; font-family:inherit;}
+  .zone-add-form input:focus{outline:none; border-color:var(--teal-deep);}
+  .zone-add-form button{background:var(--teal-deep); color:#fff; border:none; padding:10px 18px; border-radius:10px;
+    font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap;}
+  .zone-add-form button:disabled{opacity:.6; cursor:default;}
+  .zone-add-error{font-size:12px; color:#B23A3A; width:100%; min-height:14px;}
 
   .addon-box{margin-top:14px; padding-top:14px; border-top:1px dashed var(--line);}
   .addon-row{display:flex; align-items:center; gap:14px; padding:12px 14px; background:var(--cream); border-radius:12px;}
@@ -217,9 +234,15 @@
 
     <div id="zone-section">
       <h2 class="serif">Zone pe landing page</h2>
-      <p class="lead">Controlează ce zone apar active (clickabile) în bara „Vedeți ghidul, chiar acum” de pe pagina principală. O zonă inactivă apare listată, dar marcată „În curând”.</p>
+      <p class="lead">Controlează ce zone apar active (clickabile) în bara „Vedeți ghidul, chiar acum” de pe pagina principală. O zonă inactivă apare listată, dar marcată „În curând”. Numele unei zone se editează direct în listă (click pe text) — schimbarea se aplică automat peste tot (formulare de înscriere, ghidul de oaspeți, afișul QR).</p>
       <div id="zone-loading" style="text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Se încarcă...</div>
       <div id="zone-list"></div>
+      <div class="zone-add-form">
+        <input type="text" id="zone-add-nume" placeholder="Nume zonă (ex. Brașov - Poiana Brașov)">
+        <input type="text" id="zone-add-judet" placeholder="Județ (opțional)" style="flex:0 0 140px;">
+        <button type="button" id="zone-add-btn">+ Adaugă zonă nouă</button>
+        <div class="zone-add-error" id="zone-add-error"></div>
+      </div>
     </div>
   </div>
   </div>
@@ -514,16 +537,21 @@ function fmtData(iso){
   return d.toLocaleDateString('ro-RO', { day:'numeric', month:'short', year:'numeric' });
 }
 
+// Etichetele de zonă vin din tabela `zone_ghid` (ZONES, încărcat de loadZones()) —
+// nu mai sunt hardcodate aici, ca să nu trebuiască atinsă pagina asta de fiecare
+// dată când se redenumește sau se adaugă o zonă (vezi și secțiunea „Zone pe landing page”).
 function zonaLabel(z){
-  const map = {
-    'rasnov':'Râșnov', 'sacele-brasov':'Săcele-Brașov',
-    'predeal-azuga':'Predeal-Azuga', 'sinaia-busteni-poiana-tapului':'Sinaia-Bușteni-Poiana Țapului',
-    'bran-moieciu-fundata':'Bran-Moieciu-Fundata', 'zarnesti-poiana-marului':'Zărnești-Poiana Mărului',
-    'fagaras-sambata-de-sus':'Făgăraș-Sâmbăta de Sus', 'bunesti-viscri-saschiz-meschendorf':'Bunești-Viscri-Saschiz-Meșendorf',
-    'covasna-targu-secuiesc-sfantu-gheorghe':'Covasna-Târgu Secuiesc-Sfântu Gheorghe',
-    'vama-buzaului-intorsura-buzaului':'Vama Buzăului-Întorsura Buzăului',
-  };
-  return map[(z||'').trim()] || (z || '—');
+  const s = (z || '').trim();
+  const row = (ZONES || []).find(zz => zz.slug === s);
+  return (row && row.nume) || s || '—';
+}
+
+function slugifyZona(text){
+  const map = { 'ă':'a','â':'a','î':'i','ș':'s','ş':'s','ț':'t','ţ':'t',
+    'Ă':'a','Â':'a','Î':'i','Ș':'s','Ş':'s','Ț':'t','Ţ':'t' };
+  return text.split('').map(ch => map[ch] || ch).join('')
+    .toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
 }
 
 // ---------- Autentificare ----------
@@ -622,11 +650,26 @@ async function loadZones(){
   renderZones();
 }
 
+async function saveZoneField(slug, field, value, inputEl){
+  inputEl.disabled = true;
+  const { error } = await supabaseClient.from('zone_ghid').update({ [field]: value }).eq('slug', slug);
+  inputEl.disabled = false;
+  if (error) {
+    console.error(error);
+    alert('Nu am putut salva schimbarea — încearcă din nou.');
+    return false;
+  }
+  const z = ZONES.find(zz => zz.slug === slug);
+  if (z) z[field] = value;
+  return true;
+}
+
 function renderZones(){
   const wrap = document.getElementById('zone-list');
   wrap.innerHTML = ZONES.map(z => `
     <div class="zone-row ${z.activa ? 'on' : ''}">
-      <div class="zone-name">${escapeHtml(z.nume)}${z.judet ? `<div class="zone-sub">${escapeHtml(z.judet)}</div>` : ''}</div>
+      <input type="text" class="zone-name-input" data-zone-nume="${escapeHtml(z.slug)}" value="${escapeHtml(z.nume)}">
+      <input type="text" class="zone-judet-input" data-zone-judet="${escapeHtml(z.slug)}" value="${escapeHtml(z.judet || '')}" placeholder="județ">
       <span class="zone-badge ${z.activa ? 'on' : 'off'}">${z.activa ? 'Activă' : 'În curând'}</span>
       <label class="switch">
         <input type="checkbox" data-zone-toggle="${escapeHtml(z.slug)}" ${z.activa ? 'checked' : ''}>
@@ -638,21 +681,56 @@ function renderZones(){
     input.addEventListener('change', async (e) => {
       const slug = e.target.getAttribute('data-zone-toggle');
       const activa = e.target.checked;
-      e.target.disabled = true;
-      const { error } = await supabaseClient.from('zone_ghid').update({ activa }).eq('slug', slug);
-      e.target.disabled = false;
-      if (error) {
-        console.error(error);
-        e.target.checked = !activa;
-        alert('Nu am putut salva schimbarea — încearcă din nou.');
-        return;
-      }
-      const z = ZONES.find(zz => zz.slug === slug);
-      if (z) z.activa = activa;
+      const ok = await saveZoneField(slug, 'activa', activa, e.target);
+      if (!ok) { e.target.checked = !activa; return; }
       renderZones();
     });
   });
+  wrap.querySelectorAll('[data-zone-nume]').forEach(input => {
+    input.addEventListener('change', async (e) => {
+      const slug = e.target.getAttribute('data-zone-nume');
+      const nume = e.target.value.trim();
+      if (!nume) { const z = ZONES.find(zz => zz.slug === slug); e.target.value = z ? z.nume : ''; return; }
+      await saveZoneField(slug, 'nume', nume, e.target);
+    });
+  });
+  wrap.querySelectorAll('[data-zone-judet]').forEach(input => {
+    input.addEventListener('change', async (e) => {
+      const slug = e.target.getAttribute('data-zone-judet');
+      await saveZoneField(slug, 'judet', e.target.value.trim() || null, e.target);
+    });
+  });
 }
+
+document.getElementById('zone-add-btn').addEventListener('click', async () => {
+  const numeInput = document.getElementById('zone-add-nume');
+  const judetInput = document.getElementById('zone-add-judet');
+  const errEl = document.getElementById('zone-add-error');
+  const btn = document.getElementById('zone-add-btn');
+  errEl.textContent = '';
+
+  const nume = numeInput.value.trim();
+  if (!nume) { errEl.textContent = 'Completează numele zonei.'; return; }
+  const slug = slugifyZona(nume);
+  if (!slug) { errEl.textContent = 'Numele conține prea puține caractere valide pentru un identificator de zonă.'; return; }
+  if (ZONES.some(z => z.slug === slug)) { errEl.textContent = 'Există deja o zonă cu acest nume.'; return; }
+
+  btn.disabled = true;
+  const ordine = ZONES.length ? Math.max(...ZONES.map(z => z.ordine || 0)) + 1 : 1;
+  const { data, error } = await supabaseClient.from('zone_ghid')
+    .insert({ slug, nume, judet: judetInput.value.trim() || null, activa: false, ordine })
+    .select().single();
+  btn.disabled = false;
+  if (error) {
+    console.error(error);
+    errEl.textContent = 'Nu am putut salva zona nouă — încearcă din nou.';
+    return;
+  }
+  ZONES.push(data);
+  numeInput.value = '';
+  judetInput.value = '';
+  renderZones();
+});
 
 function renderChips(){
   const counts = { toate: ROWS.length, nou: 0, publicat: 0, respins: 0 };

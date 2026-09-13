@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="lokals-features.js"></script>
+<script src="lokals-zones.js"></script>
 <style>
   :root{
     --bg:#EAE3D3; --surface:#FBF8F1; --ink:#20291F; --ink-soft:#5B6459;
@@ -335,14 +336,13 @@ const APT_NAMES = {
   'demo-codlea':   { name: 'Demo — Ghid Lokal Codlea-Ghimbav-Cristian', zona: 'codlea-ghimbav-cristian', telefon: '40751090407' },
 };
 
-// Etichetă afișată (eyebrow) pentru fiecare zonă — folosită și de landing (bara de regiuni)
-const ZONA_LABELS = {
-  'rasnov': 'Râșnov', 'sacele-brasov': 'Săcele-Brașov', 'codlea-ghimbav-cristian': 'Codlea-Ghimbav-Cristian',
-  'predeal-azuga': 'Predeal-Azuga', 'sinaia-busteni-poiana-tapului': 'Sinaia-Bușteni-Poiana Tapului',
-  'bran-moieciu-fundata': 'Bran-Moieciu-Fundata', 'zarnesti-poiana-marului': 'Zărnești-Poiana Mărului',
-  'fagaras-sambata-de-sus': 'Făgăraș-Sâmbăta de Sus', 'bunesti-viscri-saschiz-meschendorf': 'Bunești-Viscri-Saschiz-Meschendorf',
-  'covasna-targu-secuiesc-sfantu-gheorghe': 'Covasna-Tg. Secuiesc-Sf. Gheorghe', 'vama-buzaului-intorsura-buzaului': 'Vama Buzăului-Întorsura Buzăului',
-};
+// Etichetă afișată (eyebrow) pentru fiecare zonă — încărcată din tabela Supabase
+// `zone_ghid` (vezi lokals-zones.js); redenumirea/activarea unei zone nu mai cere
+// nicio modificare de cod, doar un update in acea tabela.
+let zoneList = [];
+async function loadZonesMap() {
+  try { zoneList = await LokalsZones.load(SUPABASE_URL, SUPABASE_ANON_KEY); } catch (e) { zoneList = []; }
+}
 
 // Facilități complet fictive, afișate DOAR pe sloturile "demo-*" (fără operator real în Supabase) —
 // ilustrează cum arată secțiunea de check-in unui oaspete real, fără să expună vreo dată reală.
@@ -1411,7 +1411,7 @@ async function setLang(lang){
   currentLang = lang;
   document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
   const t = I18N[lang];
-  const cityLabel = currentApt ? (ZONA_LABELS[currentZona] || 'Râșnov') : 'Râșnov';
+  const cityLabel = currentApt ? LokalsZones.label(zoneList, currentZona) : 'Râșnov';
   document.getElementById('eyebrow-text').textContent = `${t.eyebrow} · ${cityLabel}`;
   document.getElementById('demo-banner').style.display = apt.startsWith('demo-') ? 'block' : 'none';
   document.getElementById('title-text').textContent = currentApt ? currentApt.name : '';
@@ -1431,7 +1431,7 @@ async function setLang(lang){
 
 async function init() {
   await loadStay();
-  await Promise.all([resolveOperator(), loadFeaturesMap()]);
+  await Promise.all([resolveOperator(), loadFeaturesMap(), loadZonesMap()]);
   if (!stayToken && gateRequired()) { await resolveActiveStay(); }
   await applyRegistrationGate();
   setLang('ro');

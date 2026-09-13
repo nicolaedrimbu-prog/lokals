@@ -6,6 +6,7 @@
 <title>Afiș QR — Lokals</title>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Poppins:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="lokals-zones.js"></script>
 <style>
   :root{
     --teal-deep:#10302B; --teal:#1A4A42; --gold:#C98A2C; --gold-soft:#E8CE9E;
@@ -95,18 +96,6 @@
 const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
 const SUPABASE_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
 
-const ZONA_LABELS = {
-  'rasnov': 'Râșnov', 'sacele-brasov': 'Săcele-Brașov', 'predeal-azuga': 'Predeal-Azuga',
-  'sinaia-busteni-poiana-tapului': 'Sinaia-Bușteni-Poiana Tapului', 'bran-moieciu-fundata': 'Bran-Moieciu-Fundata',
-  'zarnesti-poiana-marului': 'Zărnești-Poiana Mărului', 'fagaras-sambata-de-sus': 'Făgăraș-Sâmbăta de Sus',
-  'bunesti-viscri-saschiz-meschendorf': 'Bunești-Viscri-Saschiz-Meschendorf',
-  'covasna-targu-secuiesc-sfantu-gheorghe': 'Covasna-Tg. Secuiesc-Sf. Gheorghe',
-  'vama-buzaului-intorsura-buzaului': 'Vama Buzăului-Întorsura Buzăului', 'altele': 'zona ta',
-};
-function zonaLabel(z) {
-  return ZONA_LABELS[(z || '').trim()] || (z || 'zona ta');
-}
-
 async function init() {
   const slug = new URLSearchParams(window.location.search).get('slug');
   if (!slug) {
@@ -115,9 +104,12 @@ async function init() {
     return;
   }
 
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/operatori?slug=eq.${encodeURIComponent(slug)}&select=nume_afacere,nume_afisat,zona,adresa,slug&limit=1`, {
-    headers: { apikey: SUPABASE_KEY },
-  });
+  const [res, zoneList] = await Promise.all([
+    fetch(`${SUPABASE_URL}/rest/v1/operatori?slug=eq.${encodeURIComponent(slug)}&select=nume_afacere,nume_afisat,zona,adresa,slug&limit=1`, {
+      headers: { apikey: SUPABASE_KEY },
+    }),
+    LokalsZones.load(SUPABASE_URL, SUPABASE_KEY),
+  ]);
   const rows = await res.json();
   const row = rows && rows[0];
 
@@ -128,7 +120,7 @@ async function init() {
   }
 
   const nume = row.nume_afisat || row.nume_afacere || 'Cazarea ta';
-  const zona = zonaLabel(row.zona);
+  const zona = LokalsZones.label(zoneList, row.zona);
   const guideUrl = `https://lokals.ro/ghid-oaspeti.html?apt=${encodeURIComponent(row.slug)}`;
 
   document.getElementById('eyebrow-text').textContent = `Ghidul gazdei · ${zona}`;

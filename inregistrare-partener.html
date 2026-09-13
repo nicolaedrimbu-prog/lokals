@@ -109,16 +109,7 @@
       </select>
       <label for="zona">Zona</label>
       <select id="zona" required>
-        <option value="rasnov">Râșnov</option>
-        <option value="sacele-brasov">Săcele-Brașov</option>
-        <option value="predeal-azuga">Predeal-Azuga</option>
-        <option value="sinaia-busteni-poiana-tapului">Sinaia-Bușteni</option>
-        <option value="bran-moieciu-fundata">Bran-Moieciu</option>
-        <option value="zarnesti-poiana-marului">Zărnești</option>
-        <option value="fagaras-sambata-de-sus">Făgăraș</option>
-        <option value="bunesti-viscri-saschiz-meschendorf">Viscri-Saschiz</option>
-        <option value="covasna-targu-secuiesc-sfantu-gheorghe">Covasna</option>
-        <option value="vama-buzaului-intorsura-buzaului">Vama Buzăului</option>
+        <option value="">Se încarcă zonele…</option>
       </select>
       <label for="adresa">Adresă (opțional)</label>
       <textarea id="adresa" placeholder="ex. Str. Cetății nr. 5, Râșnov"></textarea>
@@ -176,10 +167,18 @@
   </div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="lokals-zones.js"></script>
 <script>
 const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function initZoneSelect() {
+  const zoneList = await LokalsZones.load(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const select = document.getElementById('zona');
+  select.innerHTML = zoneList.map(z => `<option value="${z.slug}">${z.nume}${z.activa ? '' : ' (în curând)'}</option>`).join('');
+}
+initZoneSelect();
 
 // Hartă live: pe măsură ce se completează adresa, arătăm harta cu locația respectivă —
 // confirmare vizuală, fără să fie nevoie de un cont Google Maps API.
