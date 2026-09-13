@@ -25,6 +25,15 @@
   h1{font-size:32px; margin:8px 0 6px;}
   header p{color:var(--ink-soft); font-size:15px; margin:4px 0;}
   #welcome{color:var(--spruce); font-weight:600; font-size:15px;}
+  /* Card de bun venit personalizat (Essential, sejur validat) */
+  #welcome-card{background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:22px 20px 20px; margin-bottom:18px;}
+  .wc-badge{display:inline-flex; align-items:center; gap:6px; background:var(--gold-soft); color:var(--amber-deep);
+    font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:5px 12px; border-radius:999px; margin-bottom:16px;}
+  .wc-title{font-family:'Fraunces', Georgia, serif; font-weight:700; font-size:23px; color:var(--ink); line-height:1.2; margin-bottom:14px;}
+  .wc-msg{font-family:'Fraunces', Georgia, serif; font-style:italic; font-size:15px; color:var(--spruce); line-height:1.6; margin:0 0 16px;}
+  .wc-host{display:flex; align-items:center; gap:8px;}
+  .wc-avatar{width:28px; height:28px; border-radius:50%; background:var(--spruce-deep); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  #wc-sign{font-size:12.5px; color:var(--ink-soft); font-weight:600;}
   nav{max-width:960px; margin:0 auto; padding:0 20px 20px; display:flex; gap:8px; flex-wrap:wrap;}
   .chip{border:1px solid var(--line); background:var(--surface); color:var(--ink);
     border-radius:999px; padding:8px 16px; font-size:14px; cursor:pointer;}
@@ -201,6 +210,21 @@
   <p id="welcome"></p>
   <p id="subtitle-text">O selecție de afaceri locale — activități, cultură, wellness și gastronomie, alese pentru sejurul tău.</p>
 </header>
+
+<!-- Card de bun venit personalizat — doar Essential, cu sejur validat (nume oaspete cunoscut) -->
+<div id="welcome-card-wrap" style="max-width:960px; margin:0 auto; padding:0 20px 4px; display:none;">
+  <div id="welcome-card">
+    <div class="wc-badge" id="wc-badge"></div>
+    <div class="wc-title" id="wc-title"></div>
+    <p class="wc-msg" id="wc-msg"></p>
+    <div class="wc-host">
+      <div class="wc-avatar">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9l9 9"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1 -1V10"/></svg>
+      </div>
+      <div id="wc-sign"></div>
+    </div>
+  </div>
+</div>
 
 <!-- ===== Informații cazare — vizibilă fără autentificare, tot ce ține de check-in/checkout/acces/urgențe ===== -->
 <div id="facilitati-wrap" style="display:none;">
@@ -730,6 +754,10 @@ const I18N = {
     eyebrow: "🔥 Ghid de oaspeți",
     title: "Recomandările gazdei",
     subtitle: "O selecție de afaceri locale — activități, cultură, wellness și gastronomie, alese pentru sejurul tău.",
+    wcBadge: "Pregătit special pentru tine",
+    wcWelcome: (name) => `Bine ai venit${name ? ', ' + name : ''}!`,
+    wcMessage: "Ne bucurăm să te găzduim! Am pregătit acest ghid cu tot ce ai nevoie pentru sejurul tău — cod de acces, recomandări și informații utile, într-un singur loc. Sper să te simți ca acasă.",
+    wcSign: "— Gazda ta",
     welcome: (name) => `Bun venit — ${name}`,
     all: "Toate",
     website: "🌐 Website",
@@ -782,6 +810,10 @@ const I18N = {
     eyebrow: "🔥 Guest Guide",
     title: "Host's Recommendations",
     subtitle: "A selection of local businesses — activities, culture, wellness and food, chosen for your stay.",
+    wcBadge: "Prepared just for you",
+    wcWelcome: (name) => `Welcome${name ? ', ' + name : ''}!`,
+    wcMessage: "We're delighted to host you! We've put together this guide with everything you need for your stay — access code, recommendations and useful info, all in one place. Hope you feel right at home.",
+    wcSign: "— Your host",
     welcome: (name) => `Welcome — ${name}`,
     all: "All",
     website: "🌐 Website",
@@ -906,6 +938,8 @@ async function renderFacilitati() {
   const hasAny = currentOperator.adresa || currentOperator.foto_url || loc.gps || loc.parcare ||
     codAccesEfectiv || checkin.instructiuni || checkin.ora || checkin.unitate || checkout.ora || checkout.instructiuni ||
     wifi.ssid || currentOperator.telefon || urgente.spital ||
+    (Array.isArray(reguli.lista) && reguli.lista.filter(Boolean).length) || reguli.poza_url ||
+    reguli.fumat !== undefined || reguli.animale !== undefined || reguli.liniste !== undefined || reguli.extra ||
     (isHotel && (hotel.restaurant_program || hotel.spa_program || hotel.fitness_program || hotel.mic_dejun_program || hotel.room_service || hotel.mesaj_management));
   if (!hasAny) { wrap.style.display = 'none'; return; }
 
@@ -983,6 +1017,13 @@ async function renderFacilitati() {
     if (reguli.liniste !== false) items.push(t.liniste);
     let body = `<ul class="rules-list">${items.map(i => `<li>${i}</li>`).join('')}</ul>`;
     if (reguli.extra) body += `<div class="fac-row note-bullet" style="margin-top:8px;">${tr(reguli.extra)}</div>`;
+    sections.push({ key: 'reguli', title: t.reguli, body });
+  } else if (reguli.poza_url) {
+    // Regulile casei — Gratuit (și Essential fără listă completată): poză încărcată de gazdă,
+    // disponibilă indiferent de plan — nu depinde de ghidUnlocked('reguli_casa').
+    const body = `<a href="${reguli.poza_url}" target="_blank" rel="noopener" style="display:block; width:140px; border-radius:10px; overflow:hidden; border:1px solid var(--line);">
+      <img src="${reguli.poza_url}" alt="" style="width:100%; display:block;">
+    </a>`;
     sections.push({ key: 'reguli', title: t.reguli, body });
   }
 
@@ -1347,6 +1388,25 @@ function renderFilters(){
   });
 }
 
+// Cardul de bun venit personalizat — vizibil doar când verificarea identității e activă
+// (Essential) ȘI există un sejur validat cu numele oaspetelui cunoscut. Fără el, ghidul
+// rămâne generic (ca pe planul Gratuit), fără să pretindem o personalizare pe care nu o avem.
+function renderWelcomeCard(t) {
+  const wrap = document.getElementById('welcome-card-wrap');
+  const activ = currentOperator && currentOperator.inregistrare_activa === true;
+  const guest = currentStay && currentStay.status === 'validat' ? currentStay : null;
+  const numeComplet = guest ? [guest.prenume, guest.nume].filter(Boolean).join(' ').trim() : '';
+  if (!activ || !guest || !numeComplet) {
+    wrap.style.display = 'none';
+    return;
+  }
+  document.getElementById('wc-badge').textContent = t.wcBadge;
+  document.getElementById('wc-title').textContent = t.wcWelcome(numeComplet);
+  document.getElementById('wc-msg').textContent = t.wcMessage;
+  document.getElementById('wc-sign').textContent = t.wcSign;
+  wrap.style.display = '';
+}
+
 async function setLang(lang){
   currentLang = lang;
   document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
@@ -1354,9 +1414,10 @@ async function setLang(lang){
   const cityLabel = currentApt ? (ZONA_LABELS[currentZona] || 'Râșnov') : 'Râșnov';
   document.getElementById('eyebrow-text').textContent = `${t.eyebrow} · ${cityLabel}`;
   document.getElementById('demo-banner').style.display = apt.startsWith('demo-') ? 'block' : 'none';
-  document.getElementById('title-text').textContent = t.title;
+  document.getElementById('title-text').textContent = currentApt ? currentApt.name : '';
   document.getElementById('subtitle-text').textContent = t.subtitle;
-  document.getElementById('welcome').textContent = currentApt ? t.welcome(currentApt.name) : '';
+  document.getElementById('welcome').textContent = t.title;
+  renderWelcomeCard(t);
   document.getElementById('feedback-label').textContent = t.feedbackLabel;
   document.getElementById('feedback-text').placeholder = t.feedbackPlaceholder;
   document.getElementById('feedback-btn-text').textContent = t.feedbackBtn;

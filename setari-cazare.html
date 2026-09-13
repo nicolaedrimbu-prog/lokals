@@ -258,6 +258,22 @@
       <div id="reguli-lista"></div>
     </div>
 
+    <!-- Poză cu regulile casei — disponibilă pe orice plan (Gratuit + Essential); nu e blocată de gating-ul Essential de mai sus -->
+    <div class="card" id="card-reguli-poza">
+      <div class="card-head">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 15l-5-5-9 9"/></svg>
+        <div class="card-title">Poză cu regulile casei</div>
+      </div>
+      <div class="hint" style="margin-top:-4px; margin-bottom:12px;">Ai deja regulile scrise pe hârtie, în apartament? Fotografiază-le și încarcă poza aici — apare în ghid exact așa cum arată acum, fără să le retastezi. Disponibilă pe orice plan; dacă ai completat și lista de mai sus (Essential), în ghid apare lista, nu poza.</div>
+      <div style="display:flex; gap:12px; align-items:center;">
+        <div id="reguli-poza-preview" class="minibar-preview" style="width:56px; height:74px;"></div>
+        <div>
+          <label for="f-reguli-poza" class="upload-label"><span id="f-reguli-poza-label">Încarcă poză</span></label>
+          <input id="f-reguli-poza" type="file" accept="image/*" style="display:none;">
+        </div>
+      </div>
+    </div>
+
     <!-- WiFi -->
     <div class="card" id="card-wifi">
       <div class="card-head">
@@ -618,12 +634,27 @@ function renderPreview() {
     document.getElementById('gv-body-checkout').innerHTML = body;
   }
 
-  // Regulile casei
+  // Regulile casei — lista structurată are prioritate; fără ea, arătăm poza încărcată (dacă există)
   const reguliList = Array.from({ length: REGULI_MAX }, (_, i) => val(`f-regula-${i + 1}`)).filter(Boolean);
-  document.getElementById('gv-item-reguli').style.display = reguliList.length ? '' : 'none';
+  const reguliPozaBg = document.getElementById('reguli-poza-preview').style.backgroundImage;
+  const reguliHasPoza = !!(reguliPozaBg && reguliPozaBg !== 'none');
+  document.getElementById('gv-item-reguli').style.display = (reguliList.length || reguliHasPoza) ? '' : 'none';
   if (reguliList.length) {
     anyVisible = true;
     document.getElementById('gv-body-reguli').innerHTML = `<ul class="gv-bullets">${reguliList.map(r => `<li>${esc(r)}</li>`).join('')}</ul>`;
+  } else if (reguliHasPoza) {
+    anyVisible = true;
+    const thumb = document.createElement('div');
+    thumb.style.cssText = 'width:64px; height:84px; border-radius:8px; background-size:cover; background-position:center;';
+    thumb.style.backgroundImage = reguliPozaBg;
+    const label = document.createElement('div');
+    label.className = 'gv-label';
+    label.style.marginTop = '6px';
+    label.textContent = 'Poză încărcată de gazdă';
+    const bodyEl = document.getElementById('gv-body-reguli');
+    bodyEl.innerHTML = '';
+    bodyEl.appendChild(thumb);
+    bodyEl.appendChild(label);
   }
 
   // WiFi
@@ -702,6 +733,9 @@ function fillForm(row) {
   for (let i = 1; i <= REGULI_MAX; i++) {
     document.getElementById(`f-regula-${i}`).value = reguliList[i - 1] || '';
   }
+  const reguliPozaPrev = document.getElementById('reguli-poza-preview');
+  reguliPozaPrev.style.backgroundImage = reguli.poza_url ? `url('${reguli.poza_url}')` : '';
+  document.getElementById('f-reguli-poza-label').textContent = reguli.poza_url ? 'Schimbă poza' : 'Încarcă poză';
 
   document.getElementById('f-wifi-nume').value = wifi.ssid || '';
   document.getElementById('f-wifi-parola').value = wifi.parola || '';
@@ -855,6 +889,7 @@ async function uploadPhoto(file, slug, prefix = 'cazare') {
   return data.publicUrl;
 }
 
+let pendingReguliPozaFile = null;
 let pendingMinibarFile1 = null;
 let pendingMinibarFile2 = null;
 function wireMinibarUpload(inputId, previewId, labelId, setPending) {
@@ -872,6 +907,7 @@ function wireMinibarUpload(inputId, previewId, labelId, setPending) {
 }
 wireMinibarUpload('f-minibar-foto1', 'minibar-preview-1', 'f-minibar-foto1-label', (f) => pendingMinibarFile1 = f);
 wireMinibarUpload('f-minibar-foto2', 'minibar-preview-2', 'f-minibar-foto2-label', (f) => pendingMinibarFile2 = f);
+wireMinibarUpload('f-reguli-poza', 'reguli-poza-preview', 'f-reguli-poza-label', (f) => pendingReguliPozaFile = f);
 
 document.getElementById('btn-save').addEventListener('click', async () => {
   const btn = document.getElementById('btn-save');
@@ -890,6 +926,11 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     let minibarFoto2Url = hotelPrev.minibar_foto2_url || null;
     if (pendingMinibarFile2) {
       minibarFoto2Url = await uploadPhoto(pendingMinibarFile2, currentRow.slug, 'minibar');
+    }
+    const reguliPrev = (currentRow.facilitati_cazare && currentRow.facilitati_cazare.reguli) || {};
+    let reguliPozaUrl = reguliPrev.poza_url || null;
+    if (pendingReguliPozaFile) {
+      reguliPozaUrl = await uploadPhoto(pendingReguliPozaFile, currentRow.slug, 'reguli');
     }
 
     const facilitati_cazare = {
@@ -915,6 +956,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
       },
       reguli: {
         lista: Array.from({ length: REGULI_MAX }, (_, i) => document.getElementById(`f-regula-${i + 1}`).value.trim()).filter(Boolean),
+        poza_url: reguliPozaUrl,
       },
       wifi: {
         ssid: document.getElementById('f-wifi-nume').value.trim(),
@@ -973,6 +1015,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     pendingPhotoFile = null;
     pendingMinibarFile1 = null;
     pendingMinibarFile2 = null;
+    pendingReguliPozaFile = null;
     fillForm(currentRow);
     showToast('Setările au fost salvate.');
   } catch (e) {
