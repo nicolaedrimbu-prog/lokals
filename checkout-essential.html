@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finalizează activarea Essential — Lokals</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Poppins:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root{
+    --teal-deep:#10302B; --teal:#1A4A42; --gold:#C98A2C; --gold-soft:#E8CE9E;
+    --cream:#F7F2E8; --ink:#181E1B; --ink-soft:#5B6459; --line:#DCD5C6;
+    --green:#3C6B3F; --green-soft:#E4EFE2; --brick:#9C4536;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--cream); font-family:'Inter', system-ui, sans-serif; color:var(--ink);}
+  a{color:var(--teal-deep);} a:hover{color:var(--gold);}
+  .serif{font-family:'Fraunces', Georgia, serif;}
+  main{max-width:600px; margin:0 auto; padding:26px 18px 60px;}
+  .card{background:#fff; border:1.5px solid var(--line); border-radius:18px; padding:22px 20px; margin-bottom:16px;}
+  .back-link{display:inline-flex; align-items:center; gap:5px; font-size:12.5px; font-weight:600; color:var(--ink-soft); text-decoration:none; margin-bottom:14px;}
+  .card-title{font-size:15px; font-weight:700; color:var(--teal-deep); margin-bottom:14px;}
+  .prop-row{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); font-size:13px;}
+  .prop-row:last-child{border-bottom:none;}
+  .prop-name{font-weight:600;}
+  .prop-price{color:var(--ink-soft); font-variant-numeric:tabular-nums;}
+  .sum-row{display:flex; align-items:center; justify-content:space-between; padding:6px 0; font-size:13.5px;}
+  .sum-row.total{border-top:1.5px solid var(--line); margin-top:8px; padding-top:12px; font-size:16px; font-weight:700; color:var(--teal-deep); font-family:'Fraunces', serif;}
+  .sum-label{color:var(--ink-soft);}
+  .sum-row.total .sum-label{color:var(--teal-deep); font-family:'Inter', sans-serif; font-weight:700; font-size:13.5px;}
+  .cycle-badge{display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; color:var(--teal-deep); background:var(--green-soft); padding:4px 11px; border-radius:999px;}
+  .savings-pill{display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:.03em; color:var(--green); background:var(--green-soft); padding:3px 10px; border-radius:999px;}
+  .seg-btn{border:none; font-family:inherit; font-size:12.5px; font-weight:700; padding:8px 16px; border-radius:999px; cursor:pointer; background:transparent; color:var(--ink-soft);}
+  .seg-btn.active{background:var(--teal-deep); color:#fff;}
+  .pay-option{border:1.5px solid var(--line); border-radius:14px; padding:16px; margin-bottom:12px;}
+  .pay-option.disabled{opacity:.55;}
+  .pay-option-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;}
+  .pay-option-title{font-size:13.5px; font-weight:700;}
+  .soon-tag{font-size:10px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:var(--brick); background:#F3E2DC; padding:3px 9px; border-radius:999px;}
+  .pay-option-desc{font-size:12px; color:var(--ink-soft); line-height:1.5;}
+  .card-fields{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px;}
+  .card-fields input{grid-column:1/-1; border:1.5px solid var(--line); border-radius:9px; padding:10px 12px; font-family:inherit; font-size:13px; background:#F3F0E8; color:var(--ink-soft); pointer-events:none;}
+  .card-fields input.half{grid-column:auto;}
+  .active-option{border-color:var(--teal-deep); background:linear-gradient(165deg, #FFFFFF 0%, var(--cream) 180%);}
+  .btn{display:flex; align-items:center; justify-content:center; width:100%; padding:13px; border-radius:999px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; text-decoration:none; border:none;}
+  .btn-primary{background:var(--gold); color:#fff; box-shadow:0 6px 16px rgba(201,138,44,0.3);}
+  .btn[disabled]{opacity:.6; cursor:default;}
+  .fine-print{font-size:11px; color:var(--ink-soft); text-align:center; margin-top:10px; line-height:1.5;}
+  #confirm-panel{display:none;}
+  .confirm-icon{width:52px; height:52px; border-radius:50%; background:var(--green-soft); display:flex; align-items:center; justify-content:center; margin:0 auto 14px;}
+</style>
+</head>
+<body>
+
+<div style="background:var(--teal-deep); padding:16px 18px; display:flex; align-items:center; justify-content:space-between;">
+  <a href="index.html" style="display:flex; align-items:center; gap:8px; text-decoration:none;">
+    <span style="width:22px; height:22px; border-radius:50%; background:var(--gold); position:relative; display:inline-block;">
+      <span style="position:absolute; inset:6px; border-radius:50%; background:var(--teal-deep);"></span>
+    </span>
+    <span style="font-family:'Poppins', sans-serif; font-weight:700; color:#fff; font-size:17px;">lokals</span>
+  </a>
+  <div id="header-auth" style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.08); padding:6px 12px; border-radius:999px;">
+    <span id="header-auth-name" style="font-size:12px; font-weight:600; color:#fff;"></span>
+    <span id="header-logout-btn" style="font-size:10.5px; color:var(--gold-soft); border-left:1px solid rgba(255,255,255,0.25); padding-left:8px; cursor:pointer;">Ieși din cont</span>
+  </div>
+</div>
+
+<main>
+
+  <div id="state-loading" style="padding:40px 0; text-align:center; color:var(--ink-soft); font-size:14px;">Se încarcă...</div>
+
+  <div id="state-noauth" style="display:none; text-align:center; padding:40px 0;">
+    <p class="serif" style="font-size:20px; font-weight:700; color:var(--teal-deep);">Trebuie să te autentifici</p>
+    <p style="color:var(--ink-soft); font-size:14px; margin:8px 0 18px;">Ca să finalizezi activarea Essential, trebuie să știm pentru care cont e.</p>
+    <a href="cont.html" style="display:inline-block; background:var(--teal-deep); color:#fff; padding:12px 22px; border-radius:999px; font-size:14px; font-weight:700; text-decoration:none;">Autentifică-te</a>
+  </div>
+
+  <div id="state-noselection" style="display:none; text-align:center; padding:40px 0;">
+    <p class="serif" style="font-size:20px; font-weight:700; color:var(--teal-deep);">Nu am găsit nicio selecție</p>
+    <p style="color:var(--ink-soft); font-size:14px; margin:8px 0 18px;">Alege mai întâi proprietățile pentru care vrei să activezi Essential.</p>
+    <a href="facturare.html" style="display:inline-block; background:var(--teal-deep); color:#fff; padding:12px 22px; border-radius:999px; font-size:14px; font-weight:700; text-decoration:none;">Înapoi la facturare</a>
+  </div>
+
+  <div id="state-form" style="display:none;">
+
+    <a href="facturare.html" id="back-link" class="back-link">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+      Înapoi
+    </a>
+
+    <div class="serif" style="font-size:23px; font-weight:700; color:var(--teal-deep); margin:6px 0 4px;">Finalizează activarea Essential</div>
+    <div style="font-size:13px; color:var(--ink-soft); line-height:1.55; margin-bottom:18px;">Verifică sumarul comenzii, apoi alege cum vrei să continui.</div>
+
+    <!-- Sumar comandă -->
+    <div class="card" id="summary-card">
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:14px;">
+        <div class="card-title" style="margin-bottom:0;">Sumarul comenzii</div>
+        <div style="display:flex; background:var(--cream); border:1.5px solid var(--line); border-radius:999px; padding:4px;">
+          <button type="button" class="seg-btn" id="btn-cycle-lunar">Lunar</button>
+          <button type="button" class="seg-btn" id="btn-cycle-anual">Anual</button>
+        </div>
+      </div>
+
+      <div id="prop-list"></div>
+
+      <!-- Codul de reducere se aplică AICI, înainte să calculăm totalul — sumarul de mai jos
+           reflectă deja prețul redus, ca tot ce vezi la "Total de plată acum" să fie suma reală de plătit. -->
+      <div id="discount-code-wrap" style="border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:14px 0; margin:14px 0;">
+        <label for="discount-code-input" style="display:block; font-size:11.5px; font-weight:600; color:var(--ink-soft); margin-bottom:6px;">Ai un cod de reducere?</label>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="discount-code-input" placeholder="ex: SACELE20" style="flex:1; min-width:0; border:1.5px solid var(--line); border-radius:11px; padding:10px 12px; font-size:13px; font-family:inherit; text-transform:uppercase; background:#fff;">
+          <button type="button" id="discount-code-apply" style="flex-shrink:0; border:1.5px solid var(--teal-deep); background:#fff; color:var(--teal-deep); border-radius:11px; padding:10px 16px; font-size:12.5px; font-weight:700; font-family:inherit; cursor:pointer;">Aplică</button>
+        </div>
+        <div id="discount-code-msg" style="font-size:12px; margin-top:6px; min-height:16px; line-height:1.4;"></div>
+      </div>
+
+      <div style="margin-top:14px;">
+        <div class="sum-row">
+          <span class="sum-label" id="sum-label-1">Cost pe lună (primele 3 luni)</span>
+          <span id="sum-value-1">—</span>
+        </div>
+        <div class="sum-row" id="sum-row-2">
+          <span class="sum-label" id="sum-label-2">Cost pe lună, din luna 4</span>
+          <span id="sum-value-2">—</span>
+        </div>
+        <div class="sum-row">
+          <span class="sum-label">Valoare plătită în 12 luni</span>
+          <span id="sum-value-3">—</span>
+        </div>
+        <div class="sum-row" id="sum-row-savings" style="display:none;">
+          <span class="sum-label">Economie față de tariful standard</span>
+          <span class="savings-pill" id="sum-savings-pill">—</span>
+        </div>
+        <div class="sum-row" id="sum-row-discount" style="display:none;">
+          <span class="sum-label">Cod aplicat</span>
+          <span class="savings-pill" id="sum-discount-pill" style="color:var(--teal-deep); background:var(--gold-soft);">—</span>
+        </div>
+        <div class="sum-row total">
+          <span class="sum-label" id="sum-total-label">Total de plată acum</span>
+          <span id="sum-total">—</span>
+        </div>
+      </div>
+      <div class="fine-print" style="text-align:left; margin-top:8px;">Prețuri cu TVA inclus (21%). Facturare manuală până la integrarea Stripe — activarea se face de echipa Lokals, nu automat.</div>
+    </div>
+
+    <!-- Opțiuni de continuare -->
+    <div class="card" id="pay-card">
+      <div class="card-title">Cum vrei să continui?</div>
+
+      <div class="pay-option active-option" id="option-manual">
+        <div class="pay-option-head">
+          <span class="pay-option-title">Activare prin echipa Lokals</span>
+          <span class="cycle-badge">Disponibil acum</span>
+        </div>
+        <div class="pay-option-desc">Trimiți cererea de activare pentru proprietățile selectate. Echipa Lokals (nico@lokals.ro) este notificată și activează pachetul Essential manual, apoi primești confirmare pe e-mail.</div>
+      </div>
+
+      <div class="pay-option disabled" id="option-card">
+        <div class="pay-option-head">
+          <span class="pay-option-title">Plată directă cu cardul</span>
+          <span class="soon-tag">În curând</span>
+        </div>
+        <div class="pay-option-desc">Se activează după integrarea cu Stripe — plata și activarea se vor face instant, fără pasul manual de mai sus.</div>
+        <div class="card-fields">
+          <input type="text" placeholder="Număr card" disabled>
+          <input type="text" class="half" placeholder="MM / AA" disabled>
+          <input type="text" class="half" placeholder="CVC" disabled>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="btn-submit" style="margin-top:6px;">Trimite cererea de activare →</button>
+      <div id="submit-error-msg" style="display:none; font-size:12px; color:#9C4536; text-align:center; margin-top:10px; line-height:1.4;"></div>
+      <div class="fine-print">Apăsând butonul, echipa Lokals primește o notificare pentru proprietățile selectate.</div>
+    </div>
+
+    <!-- Confirmare -->
+    <div class="card" id="confirm-panel">
+      <div class="confirm-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3C6B3F" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+      </div>
+      <div class="serif" style="font-size:18px; font-weight:700; color:var(--teal-deep); text-align:center; margin-bottom:8px;">Cerere trimisă</div>
+      <div id="confirm-panel-text" style="font-size:13px; color:var(--ink-soft); text-align:center; line-height:1.6;"></div>
+      <div style="margin-top:18px;"><a href="facturare.html" class="btn" style="background:var(--teal-deep); color:#fff;">Vezi facturarea</a></div>
+    </div>
+
+  </div>
+
+</main>
+
+<script>
+const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
+const SUPABASE_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentSession = null;
+let cazari = [];
+let selectedRows = [];
+let cycle = 'lunar';
+let appliedDiscount = null; // rândul din coduri_reducere validat și aplicat acum, sau null
+let pendingByOp = {};
+
+// ---------- Calcul preț — aceleași formule ca în preturi.html/facturare.html ----------
+const APT_TIERS = [
+  { max: 4, standard: 4.99, promo: 3.49, anual: 3.99 },
+  { max: 9, standard: 3.99, promo: 2.99, anual: 3.19 },
+  { max: Infinity, standard: 2.99, promo: 1.99, anual: 2.39 },
+];
+function aptTierFor(count) { return APT_TIERS.find(t => count <= t.max); }
+function hotelPriceStandard(nrCamere) { return Math.min(Math.max(nrCamere * 1.00, 20), 100); }
+function hotelPriceAnual(nrCamere) { return Math.min(Math.max(nrCamere * 0.80, 16), 80); }
+function hotelPricePromo(nrCamere) { return Math.min(Math.max(nrCamere * 0.79, 15), 100); }
+const VAT_RATE = 1.21;
+function eurToNumber(net) { return Math.ceil(net * VAT_RATE + 0.01) - 0.01; }
+function eurFmt(n) { return n.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; }
+// Treapta de preț se calculează după portofoliul TOTAL al gazdei (toate apartamentele cu
+// același grup_id) — nu după câte proprietăți sunt bifate în checkout-ul curent, la fel
+// ca-n preturi.html/facturare.html azi (decizie confirmată explicit).
+function portfolioSize(row) { return cazari.filter(r => r.tip === 'apartament' && r.grup_id === row.grup_id).length || 1; }
+
+// Prețul "țintă" dacă această cazare ar trece pe Essential acum, la ciclul ales — identic
+// cu targetPriceFor din facturare.html.
+function targetPriceFor(row, cyc) {
+  if (row.tip === 'hotel') {
+    const nrCamere = row.nr_camere || 1;
+    return cyc === 'anual' ? hotelPriceAnual(nrCamere) : hotelPricePromo(nrCamere);
+  }
+  const tier = aptTierFor(portfolioSize(row));
+  return cyc === 'anual' ? tier.anual : tier.promo;
+}
+function standardPriceFor(row) {
+  if (row.tip === 'hotel') return hotelPriceStandard(row.nr_camere || 1);
+  return aptTierFor(portfolioSize(row)).standard;
+}
+
+// Reducerea (mereu procentuală) se aplică pe prețul afișat, ÎNAINTE de a calcula orice total —
+// tot ce vine după (rândurile din sumar, "Total de plată acum") pornește deja de la prețul redus.
+function applyDiscount(unit, discount) {
+  if (!discount) return unit;
+  const reduced = unit * (1 - discount.valoare / 100);
+  return Math.round(reduced * 100) / 100;
+}
+
+function displayName(user) {
+  const meta = user.user_metadata || {};
+  if (meta.prenume) {
+    const initial = meta.nume ? meta.nume.trim().charAt(0).toUpperCase() + '.' : '';
+    return `${meta.prenume} ${initial}`.trim();
+  }
+  return user.email;
+}
+
+function showState(id) {
+  ['state-loading', 'state-noauth', 'state-noselection', 'state-form'].forEach(s => {
+    document.getElementById(s).style.display = (s === id) ? '' : 'none';
+  });
+}
+
+function updateCycleButtons() {
+  document.getElementById('btn-cycle-lunar').classList.toggle('active', cycle === 'lunar');
+  document.getElementById('btn-cycle-anual').classList.toggle('active', cycle === 'anual');
+}
+document.getElementById('btn-cycle-lunar').addEventListener('click', () => { cycle = 'lunar'; updateCycleButtons(); render(); });
+document.getElementById('btn-cycle-anual').addEventListener('click', () => { cycle = 'anual'; updateCycleButtons(); render(); });
+
+function render() {
+  const eligibleRows = selectedRows.filter(r => r.tier !== 'essential' && !pendingByOp[r.id]);
+  const n = eligibleRows.length;
+
+  document.getElementById('summary-card').style.display = n ? '' : 'none';
+  document.getElementById('pay-card').style.display = n ? '' : 'none';
+  if (!n) return;
+
+  const promoUnits = eligibleRows.map(r => applyDiscount(eurToNumber(targetPriceFor(r, 'lunar')), appliedDiscount));
+  const standardUnits = eligibleRows.map(r => applyDiscount(eurToNumber(standardPriceFor(r)), appliedDiscount));
+  const anualUnits = eligibleRows.map(r => applyDiscount(eurToNumber(targetPriceFor(r, 'anual')), appliedDiscount));
+  const sum = arr => arr.reduce((a, b) => a + b, 0);
+
+  const listEl = document.getElementById('prop-list');
+  listEl.innerHTML = eligibleRows.map((row, i) => {
+    const unit = cycle === 'anual' ? anualUnits[i] : promoUnits[i];
+    const name = row.nume_afisat || row.nume_afacere || '—';
+    return `<div class="prop-row"><span class="prop-name">${escapeHtml(name)}</span><span class="prop-price">${eurFmt(unit)}/lună</span></div>`;
+  }).join('');
+
+  const discRow = document.getElementById('sum-row-discount');
+  if (appliedDiscount) {
+    discRow.style.display = 'flex';
+    document.getElementById('sum-discount-pill').textContent = `${appliedDiscount.cod} · -${appliedDiscount.valoare}%`;
+  } else {
+    discRow.style.display = 'none';
+  }
+
+  if (cycle === 'anual') {
+    const total12mo = sum(anualUnits) * 12;
+    document.getElementById('sum-label-1').textContent = 'Echivalent pe lună (informativ)';
+    document.getElementById('sum-value-1').textContent = eurFmt(sum(anualUnits));
+    document.getElementById('sum-row-2').style.display = 'none';
+    document.getElementById('sum-value-3').textContent = eurFmt(total12mo);
+    const standardTotal = sum(standardUnits);
+    const anualTotal = sum(anualUnits);
+    const pctSavings = standardTotal ? Math.round((standardTotal - anualTotal) / standardTotal * 100) : 0;
+    document.getElementById('sum-row-savings').style.display = 'flex';
+    document.getElementById('sum-savings-pill').textContent = `~${pctSavings}% mai ieftin`;
+    document.getElementById('sum-total-label').textContent = 'Total de plată acum (integral, 12 luni)';
+    document.getElementById('sum-total').textContent = eurFmt(total12mo);
+  } else {
+    document.getElementById('sum-label-1').textContent = 'Cost pe lună (primele 3 luni, preț promo)';
+    document.getElementById('sum-value-1').textContent = eurFmt(sum(promoUnits));
+    document.getElementById('sum-row-2').style.display = 'flex';
+    document.getElementById('sum-label-2').textContent = 'Apoi, din luna 4';
+    document.getElementById('sum-value-2').textContent = eurFmt(sum(standardUnits));
+    document.getElementById('sum-value-3').textContent = eurFmt(sum(promoUnits) * 3 + sum(standardUnits) * 9);
+    document.getElementById('sum-row-savings').style.display = 'none';
+    document.getElementById('sum-total-label').textContent = 'Total de plată acum';
+    document.getElementById('sum-total').textContent = eurFmt(sum(promoUnits));
+  }
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+document.getElementById('discount-code-apply').addEventListener('click', async () => {
+  const input = document.getElementById('discount-code-input');
+  const msg = document.getElementById('discount-code-msg');
+  const btn = document.getElementById('discount-code-apply');
+  const raw = input.value.trim().toUpperCase();
+  input.value = raw;
+  appliedDiscount = null;
+
+  if (!raw) {
+    msg.style.color = 'var(--ink-soft)';
+    msg.textContent = '';
+    render();
+    return;
+  }
+
+  btn.disabled = true;
+  const prevText = btn.textContent;
+  btn.textContent = '...';
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/coduri_reducere?cod=eq.${encodeURIComponent(raw)}&select=*`, {
+      headers: { apikey: SUPABASE_KEY },
+    });
+    const rows = await res.json();
+    const row = rows && rows[0];
+    const today = new Date().toISOString().slice(0, 10);
+    const valid = row && row.activ && row.valabil_de <= today && (!row.valabil_pana || row.valabil_pana >= today);
+    if (valid) {
+      appliedDiscount = row;
+      msg.style.color = 'var(--green)';
+      msg.textContent = `✓ Cod aplicat — ${row.valoare}% reducere, deja scăzută din sumarul de mai jos.`;
+    } else {
+      msg.style.color = 'var(--brick, #9C4536)';
+      msg.textContent = row ? 'Acest cod nu mai este valabil.' : 'Cod invalid.';
+    }
+  } catch (e) {
+    console.error(e);
+    msg.style.color = 'var(--brick, #9C4536)';
+    msg.textContent = 'Nu am putut verifica codul chiar acum — încearcă din nou.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = prevText;
+    render();
+  }
+});
+
+async function postUpgradeRequest(row) {
+  return fetch(`${SUPABASE_URL}/rest/v1/cereri_upgrade`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+    },
+    body: JSON.stringify({
+      operator_id: row.id,
+      email: currentSession.user.email,
+      pachet: 'essential',
+      ciclu: cycle,
+      cod_reducere: appliedDiscount ? appliedDiscount.cod : null,
+    }),
+  });
+}
+
+async function attemptRequests(rows) {
+  const results = await Promise.all(rows.map(async row => ({ row, ok: (await postUpgradeRequest(row)).ok })));
+  return results;
+}
+
+function showConfirmPanel(count) {
+  const text = count === 1
+    ? 'nico@lokals.ro a fost notificat și urmează să activeze pachetul Essential pentru această proprietate în curând. Vei primi și o confirmare pe e-mail.'
+    : `nico@lokals.ro a fost notificat și urmează să activeze pachetul Essential pentru cele ${count} proprietăți în curând. Vei primi și o confirmare pe e-mail.`;
+  document.getElementById('confirm-panel-text').textContent = text;
+  document.getElementById('pay-card').style.display = 'none';
+  document.getElementById('summary-card').style.display = 'none';
+  document.getElementById('confirm-panel').style.display = 'block';
+}
+
+document.getElementById('btn-submit').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-submit');
+  const errEl = document.getElementById('submit-error-msg');
+  const eligibleRows = selectedRows.filter(r => r.tier !== 'essential' && !pendingByOp[r.id]);
+  if (!eligibleRows.length) return;
+
+  btn.disabled = true;
+  btn.textContent = 'Se trimite...';
+  errEl.style.display = 'none';
+
+  try {
+    let results = await attemptRequests(eligibleRows);
+    let failed = results.filter(r => !r.ok).map(r => r.row);
+    if (failed.length) {
+      // O eroare la prima încercare e uneori doar un blip de rețea — reîncercăm automat o
+      // dată, doar pentru proprietățile care chiar au eșuat (ca să nu trimitem cereri
+      // duplicate pentru cele care au reușit deja).
+      await new Promise(r => setTimeout(r, 1200));
+      const retryResults = await attemptRequests(failed);
+      failed = retryResults.filter(r => !r.ok).map(r => r.row);
+    }
+    if (failed.length) {
+      const names = failed.map(r => r.nume_afisat || r.nume_afacere || '—').join(', ');
+      throw new Error('Nu am putut trimite cererea pentru: ' + names + '. Încearcă din nou.');
+    }
+    showConfirmPanel(eligibleRows.length);
+  } catch (e) {
+    console.error(e);
+    btn.disabled = false;
+    btn.textContent = 'Trimite cererea de activare →';
+    errEl.style.display = 'block';
+    errEl.textContent = e && e.message && e.message.startsWith('Nu am putut')
+      ? e.message
+      : 'Nu am putut trimite cererea. Verifică conexiunea și mai încearcă o dată.';
+  }
+});
+
+async function loadCazari(email) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/operatori?email=eq.${encodeURIComponent(email)}&select=*`, {
+    headers: { apikey: SUPABASE_KEY }
+  });
+  cazari = await res.json();
+}
+
+async function refreshPendingForSelected(ids) {
+  if (!ids.length) { pendingByOp = {}; return; }
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/cereri_upgrade?operator_id=in.(${ids.join(',')})&status=eq.in_asteptare&select=id,operator_id&order=created_at.desc`, {
+    headers: { apikey: SUPABASE_KEY },
+  });
+  const rows = await res.json();
+  pendingByOp = {};
+  rows.forEach(r => { if (!pendingByOp[r.operator_id]) pendingByOp[r.operator_id] = r; });
+}
+
+function readSelection() {
+  // Sursa: sessionStorage, setat de facturare.html (selecție multiplă) sau preturi.html
+  // (o singură proprietate) înainte de a naviga aici. { ids: [...], cycle: 'lunar'|'anual' }
+  try {
+    return JSON.parse(sessionStorage.getItem('checkout_essential_selection') || 'null');
+  } catch (e) {
+    return null;
+  }
+}
+
+async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session || !session.user) {
+    showState('state-noauth');
+    return;
+  }
+  currentSession = session;
+  document.getElementById('header-auth-name').textContent = displayName(session.user);
+
+  const selection = readSelection();
+  if (!selection || !Array.isArray(selection.ids) || !selection.ids.length) {
+    showState('state-noselection');
+    return;
+  }
+  cycle = selection.cycle === 'anual' ? 'anual' : 'lunar';
+  updateCycleButtons();
+
+  await loadCazari(session.user.email);
+  selectedRows = cazari.filter(r => selection.ids.includes(r.id));
+  if (!selectedRows.length) {
+    showState('state-noselection');
+    return;
+  }
+
+  await refreshPendingForSelected(selectedRows.map(r => r.id));
+
+  if (!selectedRows.some(r => r.tier !== 'essential' && !pendingByOp[r.id])) {
+    showState('state-noselection');
+    document.querySelector('#state-noselection p.serif').textContent = 'Nimic de activat aici';
+    document.querySelector('#state-noselection p:not(.serif)').textContent = 'Proprietățile selectate au deja Essential activ sau o cerere în așteptare.';
+    return;
+  }
+
+  render();
+  showState('state-form');
+}
+
+document.getElementById('header-logout-btn').addEventListener('click', async () => {
+  await supabaseClient.auth.signOut();
+  window.location.href = 'index.html';
+});
+
+document.getElementById('back-link').addEventListener('click', (e) => {
+  if (window.history.length > 1) {
+    e.preventDefault();
+    window.history.back();
+  }
+});
+
+init();
+</script>
+</body>
+</html>

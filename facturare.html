@@ -93,21 +93,32 @@
 
     <div class="card" id="bulk-upgrade-card" style="display:none; border-color:var(--gold); border-width:2px; background:linear-gradient(165deg, #FFFDF8 0%, var(--gold-soft) 180%);">
       <div class="serif" style="font-size:16px; font-weight:700; color:var(--teal-deep); margin-bottom:6px;">Activează Essential pentru mai multe proprietăți</div>
-      <div style="font-size:12.5px; color:var(--ink-soft); line-height:1.5; margin-bottom:14px;">Bifează mai sus proprietățile pe Gratuit pe care vrei să le treci pe Essential, alege ciclul de facturare și trimite o singură cerere pentru toate.</div>
-
-      <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:14px;">
-        <div style="display:flex; background:#fff; border:1.5px solid var(--line); border-radius:999px; padding:4px;">
-          <button type="button" id="bulk-cycle-lunar" style="border:none; font-family:inherit; font-size:12.5px; font-weight:700; padding:8px 16px; border-radius:999px; cursor:pointer;">Lunar</button>
-          <button type="button" id="bulk-cycle-anual" style="border:none; font-family:inherit; font-size:12.5px; font-weight:700; padding:8px 16px; border-radius:999px; cursor:pointer;">Anual</button>
-        </div>
-      </div>
+      <div style="font-size:12.5px; color:var(--ink-soft); line-height:1.5; margin-bottom:14px;">Bifează mai sus proprietățile pe Gratuit pe care vrei să le treci pe Essential — mai jos vezi costul combinat, la ambele cicluri de facturare.</div>
 
       <div class="row"><span class="row-label">Proprietăți incluse</span><span class="row-value" id="bulk-count">0</span></div>
-      <div class="row"><span class="row-label">Total estimat / lună</span><span class="row-value" id="bulk-total">0,00 €</span></div>
-      <div style="font-size:11px; color:var(--ink-soft); margin-top:8px; line-height:1.5;" id="bulk-sub"></div>
 
-      <button type="button" id="bulk-upgrade-btn" class="btn" style="background:var(--gold); color:#fff; margin-top:16px; box-shadow:0 6px 16px rgba(201,138,44,0.3);">Cere activare Essential pentru aceste proprietăți</button>
-      <div id="bulk-error-msg" style="display:none; font-size:12px; color:#9C4536; text-align:center; margin-top:10px; line-height:1.4;"></div>
+      <div class="bulk-compare-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px;">
+        <div class="bulk-compare-col" style="border:1.5px solid var(--line); border-radius:12px; padding:13px 12px; background:#fff;">
+          <div style="font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:8px;">Lunar</div>
+          <div style="font-size:11px; color:var(--ink-soft); margin-bottom:1px;">Primele 3 luni</div>
+          <div class="serif" id="bulk-lunar-promo" style="font-size:15px; font-weight:700; color:var(--teal-deep); margin-bottom:6px;">—</div>
+          <div style="font-size:11px; color:var(--ink-soft); margin-bottom:1px;">Apoi, din luna 4</div>
+          <div class="serif" id="bulk-lunar-standard" style="font-size:15px; font-weight:700; color:var(--teal-deep); margin-bottom:6px;">—</div>
+          <div style="font-size:11px; color:var(--ink-soft); margin-bottom:1px;">Valoare în 12 luni</div>
+          <div class="serif" id="bulk-lunar-12mo" style="font-size:14px; font-weight:700; color:var(--teal-deep);">—</div>
+        </div>
+        <div class="bulk-compare-col" style="border:1.5px solid var(--gold); border-radius:12px; padding:13px 12px; background:linear-gradient(165deg, #FFFDF8 0%, var(--gold-soft) 180%);">
+          <div style="font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:#8F6222; margin-bottom:8px;">Anual</div>
+          <div style="font-size:11px; color:var(--ink-soft); margin-bottom:1px;">Pe lună, facturat anual</div>
+          <div class="serif" id="bulk-anual-monthly" style="font-size:15px; font-weight:700; color:var(--teal-deep); margin-bottom:6px;">—</div>
+          <div style="font-size:11px; color:var(--ink-soft); margin-bottom:1px;">Valoare în 12 luni</div>
+          <div class="serif" id="bulk-anual-12mo" style="font-size:14px; font-weight:700; color:var(--teal-deep); margin-bottom:6px;">—</div>
+          <span class="savings-pill" id="bulk-anual-savings" style="display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:.03em; color:var(--green); background:var(--green-soft); padding:3px 10px; border-radius:999px;">—</span>
+        </div>
+      </div>
+      <div style="font-size:11px; color:var(--ink-soft); margin-top:10px; line-height:1.5;">Prețuri cu TVA inclus (21%). Codul de reducere (dacă ai unul) se aplică la pasul următor, în checkout.</div>
+
+      <button type="button" id="bulk-checkout-btn" class="btn" style="background:var(--gold); color:#fff; margin-top:16px; box-shadow:0 6px 16px rgba(201,138,44,0.3);">Continuă la checkout →</button>
     </div>
 
     <div class="card" style="background:transparent; border:1.5px dashed var(--line);">
@@ -117,17 +128,6 @@
   </div>
 
 </main>
-
-<div id="confirm-modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(24,30,27,0.55); z-index:50; align-items:center; justify-content:center; padding:20px;">
-  <div style="background:#fff; border-radius:18px; max-width:380px; width:100%; padding:26px 22px; text-align:center;">
-    <div style="width:48px; height:48px; border-radius:50%; background:var(--green-soft); display:flex; align-items:center; justify-content:center; margin:0 auto 14px;">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
-    </div>
-    <div class="serif" style="font-size:18px; font-weight:700; color:var(--teal-deep); margin-bottom:8px;">Cerere trimisă</div>
-    <div id="confirm-modal-text" style="font-size:13.5px; color:var(--ink-soft); line-height:1.55; margin-bottom:20px;"></div>
-    <button type="button" id="confirm-modal-close" class="btn" style="background:var(--teal-deep); color:#fff;">Am înțeles</button>
-  </div>
-</div>
 
 <script>
 const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
@@ -315,9 +315,9 @@ function renderAll() {
 }
 
 // ---------- Activare Essential pentru mai multe proprietăți deodată — Nico vrea să
-// bifeze mai multe cazări pe Gratuit, să aleagă lunar/anual o singură dată și să
-// trimită o singură cerere pentru toate, cu un total estimat înainte să trimită. ----------
-let bulkCycle = 'lunar';
+// bifeze mai multe cazări pe Gratuit și să vadă costul combinat la AMBELE cicluri deodată,
+// apoi să continue la un checkout dedicat (unde alege ciclul definitiv, aplică eventual un
+// cod de reducere și trimite cererea). ----------
 let bulkEligibleRows = []; // randurile din selectie care sunt inca pe Gratuit si nu au deja o cerere in asteptare
 
 // Pretul "tinta" daca ACEASTA cazare ar trece pe Essential acum, la ciclul ales —
@@ -331,40 +331,40 @@ function targetPriceFor(row, cyc) {
   const tier = aptTierFor(portfolioSize(row));
   return cyc === 'anual' ? tier.anual : tier.promo;
 }
-
-function updateBulkCycleButtons() {
-  const lunarBtn = document.getElementById('bulk-cycle-lunar');
-  const anualBtn = document.getElementById('bulk-cycle-anual');
-  lunarBtn.style.background = bulkCycle === 'lunar' ? 'var(--teal-deep)' : 'transparent';
-  lunarBtn.style.color = bulkCycle === 'lunar' ? '#fff' : 'var(--ink-soft)';
-  anualBtn.style.background = bulkCycle === 'anual' ? 'var(--teal-deep)' : 'transparent';
-  anualBtn.style.color = bulkCycle === 'anual' ? '#fff' : 'var(--ink-soft)';
+function standardPriceFor(row) {
+  if (row.tip === 'hotel') return hotelPriceStandard(row.nr_camere || 1);
+  return aptTierFor(portfolioSize(row)).standard;
 }
-document.getElementById('bulk-cycle-lunar').addEventListener('click', () => { bulkCycle = 'lunar'; updateBulkCycleButtons(); renderBulkUpgradeCard(cazari.filter(r => selectedIds.has(r.id))); });
-document.getElementById('bulk-cycle-anual').addEventListener('click', () => { bulkCycle = 'anual'; updateBulkCycleButtons(); renderBulkUpgradeCard(cazari.filter(r => selectedIds.has(r.id))); });
 
 function renderBulkUpgradeCard(selectedRows) {
   const card = document.getElementById('bulk-upgrade-card');
   // Fluxul de mai jos are sens doar cu mai multe proprietăți în cont — pentru o singură
   // cazare, "Vezi planul Essential" din cardul de mai sus (spre preturi.html) e deja
-  // calea firească, cu selecția lunar/anual acolo.
+  // calea firească.
   if (cazari.length <= 1) { card.style.display = 'none'; bulkEligibleRows = []; return; }
   bulkEligibleRows = selectedRows.filter(r => r.tier !== 'essential' && !pendingByOp[r.id]);
 
   if (!bulkEligibleRows.length) { card.style.display = 'none'; return; }
   card.style.display = '';
-  updateBulkCycleButtons();
 
   document.getElementById('bulk-count').textContent = bulkEligibleRows.length;
 
-  let totalGross = 0;
-  bulkEligibleRows.forEach(r => { totalGross += eurToNumber(targetPriceFor(r, bulkCycle)); });
-  document.getElementById('bulk-total').textContent = totalGross.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+  let promoTotal = 0, standardTotal = 0, anualTotal = 0;
+  bulkEligibleRows.forEach(r => {
+    promoTotal += eurToNumber(targetPriceFor(r, 'lunar'));
+    standardTotal += eurToNumber(standardPriceFor(r));
+    anualTotal += eurToNumber(targetPriceFor(r, 'anual'));
+  });
+  const fmt = n => n.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 
-  const sub = bulkCycle === 'anual'
-    ? 'Facturat anual. Suma include TVA (21%).'
-    : 'Preț promo pentru primele 3 luni de la activare pentru fiecare proprietate, apoi tariful standard. Suma include TVA (21%).';
-  document.getElementById('bulk-sub').textContent = sub;
+  document.getElementById('bulk-lunar-promo').textContent = fmt(promoTotal) + '/lună';
+  document.getElementById('bulk-lunar-standard').textContent = fmt(standardTotal) + '/lună';
+  document.getElementById('bulk-lunar-12mo').textContent = fmt(promoTotal * 3 + standardTotal * 9);
+
+  document.getElementById('bulk-anual-monthly').textContent = fmt(anualTotal) + '/lună';
+  document.getElementById('bulk-anual-12mo').textContent = fmt(anualTotal * 12);
+  const pctSavings = standardTotal ? Math.round((standardTotal - anualTotal) / standardTotal * 100) : 0;
+  document.getElementById('bulk-anual-savings').textContent = `~${pctSavings}% mai ieftin`;
 }
 
 // Rotunjire identica cu eur(), dar returnata ca numar (nu string), ca sa putem aduna
@@ -373,78 +373,17 @@ function eurToNumber(net) {
   return Math.ceil(net * VAT_RATE + 0.01) - 0.01;
 }
 
-async function postBulkUpgradeRequest(row) {
-  return fetch(`${SUPABASE_URL}/rest/v1/cereri_upgrade`, {
-    method: 'POST',
-    headers: {
-      apikey: SUPABASE_KEY,
-      'Content-Type': 'application/json',
-      Prefer: 'return=representation',
-    },
-    body: JSON.stringify({
-      operator_id: row.id,
-      email: currentSession.user.email,
-      pachet: 'essential',
-      ciclu: bulkCycle,
-    }),
-  });
-}
-
-async function attemptBulkRequests(rows) {
-  const results = await Promise.all(rows.map(async row => ({ row, ok: (await postBulkUpgradeRequest(row)).ok })));
-  return results;
-}
-
-function showConfirmModal(count) {
-  const text = count === 1
-    ? 'nico@lokals.ro a fost notificat și urmează să activeze pachetul Essential pentru această proprietate în curând. Vei primi și o confirmare pe email.'
-    : `nico@lokals.ro a fost notificat și urmează să activeze pachetul Essential pentru cele ${count} proprietăți în curând. Vei primi și o confirmare pe email.`;
-  document.getElementById('confirm-modal-text').textContent = text;
-  document.getElementById('confirm-modal-overlay').style.display = 'flex';
-}
-document.getElementById('confirm-modal-close').addEventListener('click', () => {
-  document.getElementById('confirm-modal-overlay').style.display = 'none';
-});
-
-document.getElementById('bulk-upgrade-btn').addEventListener('click', async () => {
-  const btn = document.getElementById('bulk-upgrade-btn');
-  const errEl = document.getElementById('bulk-error-msg');
-  const rows = bulkEligibleRows.slice();
-  if (!rows.length) return;
-
-  btn.disabled = true;
-  btn.textContent = 'Se trimite...';
-  errEl.style.display = 'none';
-
-  try {
-    let results = await attemptBulkRequests(rows);
-    let failed = results.filter(r => !r.ok).map(r => r.row);
-    if (failed.length) {
-      // La fel ca la cererea individuală din preturi.html — o eroare la prima încercare
-      // poate fi doar un blip de rețea, așa că reîncercăm automat o dată, doar pentru
-      // proprietățile care chiar au eșuat (ca să nu trimitem cereri duplicate pentru
-      // cele care au reușit deja).
-      await new Promise(r => setTimeout(r, 1200));
-      const retryResults = await attemptBulkRequests(failed);
-      failed = retryResults.filter(r => !r.ok).map(r => r.row);
-    }
-    if (failed.length) {
-      const names = failed.map(r => r.nume_afisat || r.nume_afacere || '—').join(', ');
-      throw new Error('Nu am putut trimite cererea pentru: ' + names + '. Încearcă din nou.');
-    }
-    await refreshPendingForSelected();
-    renderAll();
-    showConfirmModal(rows.length);
-  } catch (e) {
-    console.error(e);
-    errEl.style.display = 'block';
-    errEl.textContent = e && e.message && e.message.startsWith('Nu am putut')
-      ? e.message
-      : 'Nu am putut trimite cererea. Verifică conexiunea și mai încearcă o dată.';
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Cere activare Essential pentru aceste proprietăți';
-  }
+// Trimiterea cererii efective (POST cereri_upgrade + email) și codul de reducere s-au mutat
+// în checkout-essential.html — aici doar pregătim selecția și navigăm acolo. Ciclul de
+// facturare (lunar/anual) se alege definitiv în checkout, nu aici — cardul de mai sus arată
+// ambele variante, ca gazda să poată compara înainte să decidă.
+document.getElementById('bulk-checkout-btn').addEventListener('click', () => {
+  if (!bulkEligibleRows.length) return;
+  sessionStorage.setItem('checkout_essential_selection', JSON.stringify({
+    ids: bulkEligibleRows.map(r => r.id),
+    cycle: 'lunar',
+  }));
+  window.location.href = 'checkout-essential.html';
 });
 
 // Suma afișată e suma prețurilor deja rotunjite/afișate per proprietate (nu prețul net

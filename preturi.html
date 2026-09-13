@@ -201,21 +201,11 @@
         <div class="feat-row"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span style="font-size:13px; line-height:1.45;">Modul curățenie &amp; mentenanță pentru echipa ta</span></div>
       </div>
 
-      <div id="discount-code-wrap" style="border-top:1px solid var(--line); padding-top:14px; margin-top:14px;">
-        <label for="discount-code-input" style="display:block; font-size:11.5px; font-weight:600; color:var(--ink-soft); margin-bottom:6px;">Ai un cod de reducere?</label>
-        <div style="display:flex; gap:8px;">
-          <input type="text" id="discount-code-input" placeholder="ex: SACELE20" style="flex:1; min-width:0; border:1.5px solid var(--line); border-radius:11px; padding:10px 12px; font-size:13px; font-family:inherit; text-transform:uppercase; background:#fff;">
-          <button type="button" id="discount-code-apply" style="flex-shrink:0; border:1.5px solid var(--teal-deep); background:#fff; color:var(--teal-deep); border-radius:11px; padding:10px 16px; font-size:12.5px; font-weight:700; font-family:inherit; cursor:pointer;">Aplică</button>
-        </div>
-        <div id="discount-code-msg" style="font-size:12px; margin-top:6px; min-height:16px; line-height:1.4;"></div>
-      </div>
-
-      <button type="button" id="btn-request-upgrade" class="plan-btn" style="background:var(--gold); color:#fff; margin-top:18px; box-shadow:0 6px 16px rgba(201,138,44,0.3);">Cere activare Essential</button>
-      <div id="request-error-msg" style="display:none; font-size:12px; color:#9C4536; text-align:center; margin-top:10px; line-height:1.4;"></div>
+      <button type="button" id="btn-request-upgrade" class="plan-btn" style="background:var(--gold); color:#fff; margin-top:18px; box-shadow:0 6px 16px rgba(201,138,44,0.3);">Continuă la checkout →</button>
       <div id="essential-status" style="display:none; font-size:12.5px; color:var(--ink-soft); text-align:center; margin-top:18px; line-height:1.5;"></div>
     </div>
 
-    <div style="text-align:center; font-size:11.5px; color:var(--ink-soft); margin-top:18px; line-height:1.5;">Activarea Essential se face manual, în scurt timp după cerere — te contactăm ca să stabilim plata. Poți reveni oricând la Gratuit.</div>
+    <div style="text-align:center; font-size:11.5px; color:var(--ink-soft); margin-top:18px; line-height:1.5;">La checkout poți aplica un cod de reducere și trimite cererea de activare. Activarea se face manual, în scurt timp — te contactăm ca să stabilim plata. Poți reveni oricând la Gratuit.</div>
 
   </div>
 
@@ -231,7 +221,6 @@ let cazari = [];
 let currentRow = null;
 let cycle = 'lunar';
 let pendingRequest = null; // ultima cerere in_asteptare pentru cazarea curenta, daca exista
-let appliedDiscount = null; // codul de reducere validat si aplicat acum (randul din coduri_reducere), sau null
 
 // ---------- Calcul pret — model degresiv (vezi documentul de monetizare) ----------
 const APT_TIERS = [
@@ -466,126 +455,30 @@ async function refreshPendingRequest() {
 function renderEssentialCta() {
   const btn = document.getElementById('btn-request-upgrade');
   const status = document.getElementById('essential-status');
-  const discountWrap = document.getElementById('discount-code-wrap');
   if (currentRow.tier === 'essential') {
     btn.style.display = 'none';
     status.style.display = 'block';
     status.innerHTML = `✓ Essential activ pentru această cazare. <a href="facturare.html">Vezi facturarea</a>`;
-    discountWrap.style.display = 'none';
   } else if (pendingRequest) {
     btn.style.display = 'none';
     status.style.display = 'block';
     status.textContent = 'Cererea ta e în așteptare — te contactăm în curând ca să activăm Essential.';
-    discountWrap.style.display = 'none';
   } else {
     btn.style.display = '';
     btn.disabled = false;
-    btn.textContent = 'Cere activare Essential';
+    btn.textContent = 'Continuă la checkout →';
     status.style.display = 'none';
-    discountWrap.style.display = '';
   }
 }
 
-// Reducerile de aici sunt "punctuale" — Nico le acordă manual, în afara ofertei generale
-// cu primele 3 luni la preț redus (care rămâne calculată automat, ca până acum). Codul nu
-// modifică prețul afișat (facturarea rămâne manuală, ca peste tot în platformă) — doar
-// confirmă gazdei ce înseamnă și îl atașează cererii, ca Nico să-l aplice la activare.
-function discountDescription(row) {
-  if (row.tip === 'procent') return `${row.valoare}% reducere`;
-  if (row.tip === 'suma_fixa') return `${eur(row.valoare)} € reducere/lună`;
-  if (row.tip === 'perioada_gratuita') return `${row.valoare} ${Number(row.valoare) === 1 ? 'lună gratuită' : 'luni gratuite'}`;
-  return 'reducere aplicată';
-}
-
-document.getElementById('discount-code-apply').addEventListener('click', async () => {
-  const input = document.getElementById('discount-code-input');
-  const msg = document.getElementById('discount-code-msg');
-  const btn = document.getElementById('discount-code-apply');
-  const raw = input.value.trim().toUpperCase();
-  input.value = raw;
-  appliedDiscount = null;
-
-  if (!raw) {
-    msg.style.color = 'var(--ink-soft)';
-    msg.textContent = '';
-    return;
-  }
-
-  btn.disabled = true;
-  const prevText = btn.textContent;
-  btn.textContent = '...';
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/coduri_reducere?cod=eq.${encodeURIComponent(raw)}&select=*`, {
-      headers: { apikey: SUPABASE_KEY },
-    });
-    const rows = await res.json();
-    const row = rows && rows[0];
-    const today = new Date().toISOString().slice(0, 10);
-    const valid = row && row.activ && row.valabil_de <= today && (!row.valabil_pana || row.valabil_pana >= today);
-    if (valid) {
-      appliedDiscount = row;
-      msg.style.color = 'var(--green)';
-      msg.textContent = `✓ Cod aplicat — ${discountDescription(row)}. Îl vedem la cererea ta și îl aplicăm când stabilim plata.`;
-    } else {
-      msg.style.color = 'var(--brick, #9C4536)';
-      msg.textContent = row ? 'Acest cod nu mai este valabil.' : 'Cod invalid.';
-    }
-  } catch (e) {
-    console.error(e);
-    msg.style.color = 'var(--brick, #9C4536)';
-    msg.textContent = 'Nu am putut verifica codul chiar acum — încearcă din nou.';
-  } finally {
-    btn.disabled = false;
-    btn.textContent = prevText;
-  }
-});
-
-async function postUpgradeRequest() {
-  return fetch(`${SUPABASE_URL}/rest/v1/cereri_upgrade`, {
-    method: 'POST',
-    headers: {
-      apikey: SUPABASE_KEY,
-      'Content-Type': 'application/json',
-      Prefer: 'return=representation',
-    },
-    body: JSON.stringify({
-      operator_id: currentRow.id,
-      email: currentSession.user.email,
-      pachet: 'essential',
-      ciclu: cycle,
-      cod_reducere: appliedDiscount ? appliedDiscount.cod : null,
-    }),
-  });
-}
-
-document.getElementById('btn-request-upgrade').addEventListener('click', async () => {
-  const btn = document.getElementById('btn-request-upgrade');
-  const errEl = document.getElementById('request-error-msg');
-  btn.disabled = true;
-  btn.textContent = 'Se trimite...';
-  errEl.style.display = 'none';
-  try {
-    let res = await postUpgradeRequest();
-    if (!res.ok) {
-      // O eroare la prima încercare e uneori doar un blip de rețea sau (rar) un moment
-      // în care cache-ul de schema al bazei nu s-a reîncărcat încă — mai încercăm o
-      // dată automat, fără să deranjăm gazda cu un al doilea click.
-      await new Promise(r => setTimeout(r, 1200));
-      res = await postUpgradeRequest();
-    }
-    if (!res.ok) throw new Error(await res.text());
-    appliedDiscount = null;
-    document.getElementById('discount-code-input').value = '';
-    document.getElementById('discount-code-msg').textContent = '';
-    await refreshPendingRequest();
-    renderEssentialCta();
-  } catch (e) {
-    console.error(e);
-    btn.disabled = false;
-    btn.textContent = 'Cere activare Essential';
-    errEl.style.display = 'block';
-    errEl.textContent = 'Nu am putut trimite cererea. Verifică conexiunea și mai încearcă o dată.';
-  }
+// Trimiterea cererii efective (inclusiv codul de reducere) s-a mutat în checkout-essential.html —
+// aici doar pregătim selecția (o singură proprietate) și navigăm acolo.
+document.getElementById('btn-request-upgrade').addEventListener('click', () => {
+  sessionStorage.setItem('checkout_essential_selection', JSON.stringify({
+    ids: [currentRow.id],
+    cycle: cycle,
+  }));
+  window.location.href = 'checkout-essential.html';
 });
 
 async function loadCazari(email) {
