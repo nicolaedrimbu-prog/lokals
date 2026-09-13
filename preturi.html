@@ -28,7 +28,7 @@
 <body>
 
 <div style="background:var(--teal-deep); padding:16px 18px; display:flex; align-items:center; justify-content:space-between; gap:10px;">
-  <a href="index.html" style="display:flex; align-items:center; gap:7px; text-decoration:none; color:var(--gold-soft); font-size:12.5px; font-weight:600; flex-shrink:0;">
+  <a href="index.html" id="btn-back" style="display:flex; align-items:center; gap:7px; text-decoration:none; color:var(--gold-soft); font-size:12.5px; font-weight:600; flex-shrink:0;">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
     <span>Înapoi</span>
   </a>
@@ -140,7 +140,7 @@
 
   <div id="state-form" style="display:none;">
 
-    <div class="serif" style="font-size:24px; font-weight:700; color:var(--teal-deep); text-align:center; margin:0 0 8px;">Alege planul potrivit pentru gazda ta</div>
+    <div class="serif" style="font-size:24px; font-weight:700; color:var(--teal-deep); text-align:center; margin:0 0 8px;">Alege planul potrivit pentru tine</div>
     <div style="font-size:13.5px; color:var(--ink-soft); text-align:center; line-height:1.55; margin-bottom:20px;">Ghidul de bază rămâne mereu gratuit. Essential adaugă personalizarea completă a unității.</div>
 
     <div id="apt-selector" style="display:flex; gap:8px; margin-bottom:20px;"></div>
@@ -211,6 +211,7 @@
       </div>
 
       <button type="button" id="btn-request-upgrade" class="plan-btn" style="background:var(--gold); color:#fff; margin-top:18px; box-shadow:0 6px 16px rgba(201,138,44,0.3);">Cere activare Essential</button>
+      <div id="request-error-msg" style="display:none; font-size:12px; color:#9C4536; text-align:center; margin-top:10px; line-height:1.4;"></div>
       <div id="essential-status" style="display:none; font-size:12.5px; color:var(--ink-soft); text-align:center; margin-top:18px; line-height:1.5;"></div>
     </div>
 
@@ -539,26 +540,39 @@ document.getElementById('discount-code-apply').addEventListener('click', async (
   }
 });
 
+async function postUpgradeRequest() {
+  return fetch(`${SUPABASE_URL}/rest/v1/cereri_upgrade`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+    },
+    body: JSON.stringify({
+      operator_id: currentRow.id,
+      email: currentSession.user.email,
+      pachet: 'essential',
+      ciclu: cycle,
+      cod_reducere: appliedDiscount ? appliedDiscount.cod : null,
+    }),
+  });
+}
+
 document.getElementById('btn-request-upgrade').addEventListener('click', async () => {
   const btn = document.getElementById('btn-request-upgrade');
+  const errEl = document.getElementById('request-error-msg');
   btn.disabled = true;
   btn.textContent = 'Se trimite...';
+  errEl.style.display = 'none';
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/cereri_upgrade`, {
-      method: 'POST',
-      headers: {
-        apikey: SUPABASE_KEY,
-        'Content-Type': 'application/json',
-        Prefer: 'return=representation',
-      },
-      body: JSON.stringify({
-        operator_id: currentRow.id,
-        email: currentSession.user.email,
-        pachet: 'essential',
-        ciclu: cycle,
-        cod_reducere: appliedDiscount ? appliedDiscount.cod : null,
-      }),
-    });
+    let res = await postUpgradeRequest();
+    if (!res.ok) {
+      // O eroare la prima încercare e uneori doar un blip de rețea sau (rar) un moment
+      // în care cache-ul de schema al bazei nu s-a reîncărcat încă — mai încercăm o
+      // dată automat, fără să deranjăm gazda cu un al doilea click.
+      await new Promise(r => setTimeout(r, 1200));
+      res = await postUpgradeRequest();
+    }
     if (!res.ok) throw new Error(await res.text());
     appliedDiscount = null;
     document.getElementById('discount-code-input').value = '';
@@ -569,7 +583,8 @@ document.getElementById('btn-request-upgrade').addEventListener('click', async (
     console.error(e);
     btn.disabled = false;
     btn.textContent = 'Cere activare Essential';
-    alert('Nu am putut trimite cererea chiar acum. Încearcă din nou în câteva secunde.');
+    errEl.style.display = 'block';
+    errEl.textContent = 'Nu am putut trimite cererea. Verifică conexiunea și mai încearcă o dată.';
   }
 });
 
@@ -609,6 +624,16 @@ async function init() {
 document.getElementById('header-logout-btn').addEventListener('click', async () => {
   await supabaseClient.auth.signOut();
   window.location.href = 'index.html';
+});
+
+// "Înapoi" trebuie să te întoarcă la pagina precedentă (ex. facturare.html sau
+// contul-meu.html de unde ai deschis prețurile), nu mereu la index.html — dar
+// href="index.html" rămâne fallback dacă pagina a fost deschisă direct, fără istoric.
+document.getElementById('btn-back').addEventListener('click', (e) => {
+  if (window.history.length > 1) {
+    e.preventDefault();
+    window.history.back();
+  }
 });
 
 init();

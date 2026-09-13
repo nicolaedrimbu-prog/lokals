@@ -91,6 +91,25 @@
       <div style="font-size:11.5px; color:var(--ink-soft); margin-top:6px; line-height:1.5;" id="total-sub"></div>
     </div>
 
+    <div class="card" id="bulk-upgrade-card" style="display:none; border-color:var(--gold); border-width:2px; background:linear-gradient(165deg, #FFFDF8 0%, var(--gold-soft) 180%);">
+      <div class="serif" style="font-size:16px; font-weight:700; color:var(--teal-deep); margin-bottom:6px;">Activează Essential pentru mai multe proprietăți</div>
+      <div style="font-size:12.5px; color:var(--ink-soft); line-height:1.5; margin-bottom:14px;">Bifează mai sus proprietățile pe Gratuit pe care vrei să le treci pe Essential, alege ciclul de facturare și trimite o singură cerere pentru toate.</div>
+
+      <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:14px;">
+        <div style="display:flex; background:#fff; border:1.5px solid var(--line); border-radius:999px; padding:4px;">
+          <button type="button" id="bulk-cycle-lunar" style="border:none; font-family:inherit; font-size:12.5px; font-weight:700; padding:8px 16px; border-radius:999px; cursor:pointer;">Lunar</button>
+          <button type="button" id="bulk-cycle-anual" style="border:none; font-family:inherit; font-size:12.5px; font-weight:700; padding:8px 16px; border-radius:999px; cursor:pointer;">Anual</button>
+        </div>
+      </div>
+
+      <div class="row"><span class="row-label">Proprietăți incluse</span><span class="row-value" id="bulk-count">0</span></div>
+      <div class="row"><span class="row-label">Total estimat / lună</span><span class="row-value" id="bulk-total">0,00 €</span></div>
+      <div style="font-size:11px; color:var(--ink-soft); margin-top:8px; line-height:1.5;" id="bulk-sub"></div>
+
+      <button type="button" id="bulk-upgrade-btn" class="btn" style="background:var(--gold); color:#fff; margin-top:16px; box-shadow:0 6px 16px rgba(201,138,44,0.3);">Cere activare Essential pentru aceste proprietăți</button>
+      <div id="bulk-error-msg" style="display:none; font-size:12px; color:#9C4536; text-align:center; margin-top:10px; line-height:1.4;"></div>
+    </div>
+
     <div class="card" style="background:transparent; border:1.5px dashed var(--line);">
       <div style="font-size:12.5px; color:var(--ink-soft); line-height:1.55;">Plata online cu cardul urmează să fie activată. Până atunci, activarea și facturarea planului Essential se fac manual, prin contactul nostru direct cu tine.</div>
     </div>
@@ -98,6 +117,17 @@
   </div>
 
 </main>
+
+<div id="confirm-modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(24,30,27,0.55); z-index:50; align-items:center; justify-content:center; padding:20px;">
+  <div style="background:#fff; border-radius:18px; max-width:380px; width:100%; padding:26px 22px; text-align:center;">
+    <div style="width:48px; height:48px; border-radius:50%; background:var(--green-soft); display:flex; align-items:center; justify-content:center; margin:0 auto 14px;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+    </div>
+    <div class="serif" style="font-size:18px; font-weight:700; color:var(--teal-deep); margin-bottom:8px;">Cerere trimisă</div>
+    <div id="confirm-modal-text" style="font-size:13.5px; color:var(--ink-soft); line-height:1.55; margin-bottom:20px;"></div>
+    <button type="button" id="confirm-modal-close" class="btn" style="background:var(--teal-deep); color:#fff;">Am înțeles</button>
+  </div>
+</div>
 
 <script>
 const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
@@ -275,12 +305,147 @@ function renderAll() {
     listEl.innerHTML = '';
     emptyMsg.style.display = 'block';
     totalCard.style.display = 'none';
+    renderBulkUpgradeCard([]);
     return;
   }
   emptyMsg.style.display = 'none';
   listEl.innerHTML = selectedRows.map(propertyCardHtml).join('');
   renderTotal(selectedRows);
+  renderBulkUpgradeCard(selectedRows);
 }
+
+// ---------- Activare Essential pentru mai multe proprietăți deodată — Nico vrea să
+// bifeze mai multe cazări pe Gratuit, să aleagă lunar/anual o singură dată și să
+// trimită o singură cerere pentru toate, cu un total estimat înainte să trimită. ----------
+let bulkCycle = 'lunar';
+let bulkEligibleRows = []; // randurile din selectie care sunt inca pe Gratuit si nu au deja o cerere in asteptare
+
+// Pretul "tinta" daca ACEASTA cazare ar trece pe Essential acum, la ciclul ales —
+// aceleasi formule ca in preturi.html (promo automat la lunar, pentru ca randul e
+// mereu Gratuit aici — vezi eligibilPromo din preturi.html).
+function targetPriceFor(row, cyc) {
+  if (row.tip === 'hotel') {
+    const nrCamere = row.nr_camere || 1;
+    return cyc === 'anual' ? hotelPriceAnual(nrCamere) : hotelPricePromo(nrCamere);
+  }
+  const tier = aptTierFor(portfolioSize(row));
+  return cyc === 'anual' ? tier.anual : tier.promo;
+}
+
+function updateBulkCycleButtons() {
+  const lunarBtn = document.getElementById('bulk-cycle-lunar');
+  const anualBtn = document.getElementById('bulk-cycle-anual');
+  lunarBtn.style.background = bulkCycle === 'lunar' ? 'var(--teal-deep)' : 'transparent';
+  lunarBtn.style.color = bulkCycle === 'lunar' ? '#fff' : 'var(--ink-soft)';
+  anualBtn.style.background = bulkCycle === 'anual' ? 'var(--teal-deep)' : 'transparent';
+  anualBtn.style.color = bulkCycle === 'anual' ? '#fff' : 'var(--ink-soft)';
+}
+document.getElementById('bulk-cycle-lunar').addEventListener('click', () => { bulkCycle = 'lunar'; updateBulkCycleButtons(); renderBulkUpgradeCard(cazari.filter(r => selectedIds.has(r.id))); });
+document.getElementById('bulk-cycle-anual').addEventListener('click', () => { bulkCycle = 'anual'; updateBulkCycleButtons(); renderBulkUpgradeCard(cazari.filter(r => selectedIds.has(r.id))); });
+
+function renderBulkUpgradeCard(selectedRows) {
+  const card = document.getElementById('bulk-upgrade-card');
+  // Fluxul de mai jos are sens doar cu mai multe proprietăți în cont — pentru o singură
+  // cazare, "Vezi planul Essential" din cardul de mai sus (spre preturi.html) e deja
+  // calea firească, cu selecția lunar/anual acolo.
+  if (cazari.length <= 1) { card.style.display = 'none'; bulkEligibleRows = []; return; }
+  bulkEligibleRows = selectedRows.filter(r => r.tier !== 'essential' && !pendingByOp[r.id]);
+
+  if (!bulkEligibleRows.length) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  updateBulkCycleButtons();
+
+  document.getElementById('bulk-count').textContent = bulkEligibleRows.length;
+
+  let totalGross = 0;
+  bulkEligibleRows.forEach(r => { totalGross += eurToNumber(targetPriceFor(r, bulkCycle)); });
+  document.getElementById('bulk-total').textContent = totalGross.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+
+  const sub = bulkCycle === 'anual'
+    ? 'Facturat anual. Suma include TVA (21%).'
+    : 'Preț promo pentru primele 3 luni de la activare pentru fiecare proprietate, apoi tariful standard. Suma include TVA (21%).';
+  document.getElementById('bulk-sub').textContent = sub;
+}
+
+// Rotunjire identica cu eur(), dar returnata ca numar (nu string), ca sa putem aduna
+// mai multe preturi si sa formatam o singura data totalul.
+function eurToNumber(net) {
+  return Math.ceil(net * VAT_RATE + 0.01) - 0.01;
+}
+
+async function postBulkUpgradeRequest(row) {
+  return fetch(`${SUPABASE_URL}/rest/v1/cereri_upgrade`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+    },
+    body: JSON.stringify({
+      operator_id: row.id,
+      email: currentSession.user.email,
+      pachet: 'essential',
+      ciclu: bulkCycle,
+    }),
+  });
+}
+
+async function attemptBulkRequests(rows) {
+  const results = await Promise.all(rows.map(async row => ({ row, ok: (await postBulkUpgradeRequest(row)).ok })));
+  return results;
+}
+
+function showConfirmModal(count) {
+  const text = count === 1
+    ? 'nico@lokals.ro a fost notificat și urmează să activeze pachetul Essential pentru această proprietate în curând. Vei primi și o confirmare pe email.'
+    : `nico@lokals.ro a fost notificat și urmează să activeze pachetul Essential pentru cele ${count} proprietăți în curând. Vei primi și o confirmare pe email.`;
+  document.getElementById('confirm-modal-text').textContent = text;
+  document.getElementById('confirm-modal-overlay').style.display = 'flex';
+}
+document.getElementById('confirm-modal-close').addEventListener('click', () => {
+  document.getElementById('confirm-modal-overlay').style.display = 'none';
+});
+
+document.getElementById('bulk-upgrade-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('bulk-upgrade-btn');
+  const errEl = document.getElementById('bulk-error-msg');
+  const rows = bulkEligibleRows.slice();
+  if (!rows.length) return;
+
+  btn.disabled = true;
+  btn.textContent = 'Se trimite...';
+  errEl.style.display = 'none';
+
+  try {
+    let results = await attemptBulkRequests(rows);
+    let failed = results.filter(r => !r.ok).map(r => r.row);
+    if (failed.length) {
+      // La fel ca la cererea individuală din preturi.html — o eroare la prima încercare
+      // poate fi doar un blip de rețea, așa că reîncercăm automat o dată, doar pentru
+      // proprietățile care chiar au eșuat (ca să nu trimitem cereri duplicate pentru
+      // cele care au reușit deja).
+      await new Promise(r => setTimeout(r, 1200));
+      const retryResults = await attemptBulkRequests(failed);
+      failed = retryResults.filter(r => !r.ok).map(r => r.row);
+    }
+    if (failed.length) {
+      const names = failed.map(r => r.nume_afisat || r.nume_afacere || '—').join(', ');
+      throw new Error('Nu am putut trimite cererea pentru: ' + names + '. Încearcă din nou.');
+    }
+    await refreshPendingForSelected();
+    renderAll();
+    showConfirmModal(rows.length);
+  } catch (e) {
+    console.error(e);
+    errEl.style.display = 'block';
+    errEl.textContent = e && e.message && e.message.startsWith('Nu am putut')
+      ? e.message
+      : 'Nu am putut trimite cererea. Verifică conexiunea și mai încearcă o dată.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Cere activare Essential pentru aceste proprietăți';
+  }
+});
 
 // Suma afișată e suma prețurilor deja rotunjite/afișate per proprietate (nu prețul net
 // insumat urmat de un singur TVA aplicat) — ca totalul să se potrivească exact cu ce arată
