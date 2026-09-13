@@ -308,18 +308,13 @@
 
     <div class="bo-section">
       <div class="bo-title">🎟️ Coduri de reducere <span class="count" id="disc-count">…</span></div>
-      <p class="lead" style="margin:-4px 0 14px; font-size:12.5px;">Reduceri „punctuale” pe care le acorzi manual, în afara ofertei generale cu primele 3 luni la preț redus (care rămâne calculată automat, ca până acum). Gazda introduce codul la cererea de activare Essential din preturi.html — codul apare atașat cererii (și în emailul de notificare), tu îl aplici manual la facturare. Dezactivează un cod după ce l-ai folosit, ca să nu mai poată fi aplicat din nou.</p>
+      <p class="lead" style="margin:-4px 0 14px; font-size:12.5px;">Reduceri „punctuale” pe care le acorzi manual, în afara ofertei generale cu primele 3 luni la preț redus (care rămâne calculată automat, ca până acum). Codurile sunt mereu procentuale. Data introdusă e data până la care codul e aplicabil (gol = fără limită) — după ea, codul nu se mai poate folosi. Dezactivează un cod oricând ca să nu mai poată fi aplicat.</p>
       <div id="disc-loading" style="text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Se încarcă...</div>
       <div id="disc-list"></div>
       <div class="zone-add-form" id="disc-add-form">
         <input type="text" id="disc-add-cod" placeholder="Cod (ex. SACELE20)" style="flex:1 1 140px; text-transform:uppercase;">
-        <select id="disc-add-tip" style="flex:0 0 150px; padding:10px 12px; border:1.5px solid var(--line); border-radius:10px; font-size:13px; font-family:inherit; background:#fff;">
-          <option value="procent">Procent (%)</option>
-          <option value="suma_fixa">Sumă fixă (€/lună)</option>
-          <option value="perioada_gratuita">Perioadă gratuită (luni)</option>
-        </select>
-        <input type="number" id="disc-add-valoare" placeholder="Valoare" min="0" step="0.01" style="flex:0 0 100px;">
-        <input type="date" id="disc-add-valabil-pana" style="flex:0 0 150px;" title="Valabil până la (opțional — gol = fără limită)">
+        <input type="number" id="disc-add-valoare" placeholder="Procent reducere (%)" min="0" max="100" step="1" style="flex:0 0 150px;">
+        <input type="date" id="disc-add-valabil-pana" style="flex:0 0 150px;" title="Aplicabil până la (opțional — gol = fără limită)">
         <input type="text" id="disc-add-nota" placeholder="Notă internă (opțional)" style="flex:1 1 160px;">
         <button type="button" id="disc-add-btn">+ Adaugă cod</button>
         <div class="zone-add-error" id="disc-add-error"></div>
@@ -820,12 +815,12 @@ function renderDemoGuides(){
 let DISC_CODES = [];
 let DISC_USAGE = {}; // cod -> numar de cereri_upgrade care l-au folosit (informativ)
 
-const DISC_TIP_LABEL = { procent: 'Procent', suma_fixa: 'Sumă fixă', perioada_gratuita: 'Perioadă gratuită' };
+// Codurile sunt mereu procentuale acum (tip = 'procent' e singura valoare permisă în DB);
+// funcția rămâne tolerantă la valori vechi doar ca să nu crape dacă mai există date istorice.
 function discTipDesc(row){
-  if (row.tip === 'procent') return `${row.valoare}% reducere`;
   if (row.tip === 'suma_fixa') return `${row.valoare} €/lună reducere`;
   if (row.tip === 'perioada_gratuita') return `${row.valoare} ${Number(row.valoare) === 1 ? 'lună gratuită' : 'luni gratuite'}`;
-  return DISC_TIP_LABEL[row.tip] || row.tip;
+  return `${row.valoare}% reducere`;
 }
 
 async function loadDiscountCodes(){
@@ -912,7 +907,6 @@ function renderDiscountCodes(){
 
 document.getElementById('disc-add-btn').addEventListener('click', async () => {
   const codInput = document.getElementById('disc-add-cod');
-  const tipInput = document.getElementById('disc-add-tip');
   const valoareInput = document.getElementById('disc-add-valoare');
   const valabilPanaInput = document.getElementById('disc-add-valabil-pana');
   const notaInput = document.getElementById('disc-add-nota');
@@ -924,12 +918,12 @@ document.getElementById('disc-add-btn').addEventListener('click', async () => {
   const valoare = parseFloat(valoareInput.value);
   if (!cod) { errEl.textContent = 'Completează codul.'; return; }
   if (DISC_CODES.some(r => r.cod === cod)) { errEl.textContent = 'Există deja un cod cu acest nume.'; return; }
-  if (!valoare || valoare <= 0) { errEl.textContent = 'Completează o valoare mai mare decât 0.'; return; }
+  if (!valoare || valoare <= 0 || valoare > 100) { errEl.textContent = 'Completează un procent între 0 și 100.'; return; }
 
   btn.disabled = true;
   const { data, error } = await supabaseClient.from('coduri_reducere')
     .insert({
-      cod, tip: tipInput.value, valoare,
+      cod, tip: 'procent', valoare,
       valabil_pana: valabilPanaInput.value || null,
       nota: notaInput.value.trim() || null,
     })
