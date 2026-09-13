@@ -69,36 +69,26 @@
     </a>
 
     <div class="serif" style="font-size:24px; font-weight:700; color:var(--teal-deep); text-align:center; margin:0 0 8px;">Facturare</div>
-    <div style="font-size:13.5px; color:var(--ink-soft); text-align:center; line-height:1.55; margin-bottom:20px;">Planul curent și starea contului pentru cazarea ta.</div>
+    <div style="font-size:13.5px; color:var(--ink-soft); text-align:center; line-height:1.55; margin-bottom:20px;" id="page-sub">Planul curent și starea contului pentru cazarea ta.</div>
 
-    <div id="apt-selector" style="display:flex; gap:8px; margin-bottom:20px;"></div>
-
-    <div class="card">
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
-        <div style="font-size:11px; font-weight:700; letter-spacing:.05em; color:var(--ink-soft); text-transform:uppercase;">Plan curent</div>
-        <span id="plan-badge" class="badge badge-gratuit">Gratuit</span>
+    <div id="apt-selector-wrap" style="display:none; margin-bottom:20px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+        <div style="font-size:11px; font-weight:700; letter-spacing:.05em; color:var(--ink-soft); text-transform:uppercase;">Proprietăți selectate (<span id="sel-count">0</span>/<span id="sel-total">0</span>)</div>
+        <span id="sel-toggle-all" style="font-size:11.5px; font-weight:600; color:var(--teal-deep); cursor:pointer; text-decoration:underline;">Selectează tot</span>
       </div>
+      <div id="apt-selector" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+    </div>
 
-      <div id="plan-details">
-        <div class="row"><span class="row-label">Cazare</span><span class="row-value" id="detail-nume">—</span></div>
-        <div class="row" id="row-ciclu" style="display:none;"><span class="row-label">Ciclu de facturare</span><span class="row-value" id="detail-ciclu">—</span></div>
-        <div class="row" id="row-activat" style="display:none;"><span class="row-label">Activat la</span><span class="row-value" id="detail-activat">—</span></div>
-        <div class="row" id="row-pret" style="display:none;"><span class="row-label" id="detail-pret-label">Preț curent</span><span class="row-value" id="detail-pret">—</span></div>
-      </div>
-      <div id="plan-vat-note" style="display:none; font-size:11px; color:var(--ink-soft); margin-top:2px;">Preț cu TVA inclus (21%).</div>
+    <div id="sel-empty-msg" style="display:none; text-align:center; color:var(--ink-soft); font-size:13px; padding:18px 0;">Selectează cel puțin o proprietate ca să vezi facturarea.</div>
 
-      <div id="plan-cta-free" style="display:none; margin-top:18px;">
-        <p style="font-size:12.5px; color:var(--ink-soft); line-height:1.5; margin:0 0 12px;">Ești pe planul Gratuit. Poți trece la Essential pentru personalizare completă a ghidului.</p>
-        <a href="preturi.html" class="btn" style="background:var(--teal-deep); color:#fff;">Vezi planul Essential</a>
-      </div>
+    <div id="properties-list"></div>
 
-      <div id="plan-cta-pending" style="display:none; margin-top:18px; text-align:center;">
-        <p style="font-size:12.5px; color:var(--ink-soft); line-height:1.5; margin:0;">Cererea ta de activare Essential e în așteptare — te contactăm în curând ca să stabilim plata.</p>
+    <div class="card" id="total-card" style="display:none; border-color:var(--teal-deep); border-width:2px; background:var(--cream);">
+      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px;">
+        <div class="serif" style="font-size:15px; font-weight:700; color:var(--teal-deep);">Total de plată / lună</div>
+        <div class="serif" id="total-amount" style="font-size:24px; font-weight:700; color:var(--teal-deep); white-space:nowrap;">0,00 €</div>
       </div>
-
-      <div id="plan-cta-essential" style="display:none; margin-top:18px; text-align:center;">
-        <p style="font-size:12.5px; color:var(--green); font-weight:600; line-height:1.5; margin:0;">✓ Essential activ pentru această cazare.</p>
-      </div>
+      <div style="font-size:11.5px; color:var(--ink-soft); margin-top:6px; line-height:1.5;" id="total-sub"></div>
     </div>
 
     <div class="card" style="background:transparent; border:1.5px dashed var(--line);">
@@ -116,8 +106,6 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentSession = null;
 let cazari = [];
-let currentRow = null;
-let pendingRequest = null;
 
 // ---------- Calcul preț — aceleași formule ca în preturi.html (vezi foaia "Pricing" din
 // lokals-matrice-comparativa-v2.xlsx) — folosite aici doar ca să arătăm ce plătește gazda ACUM. ----------
@@ -162,6 +150,10 @@ function currentPriceFor(row) {
   return { pret: tier.standard, suffix: '/lună' };
 }
 
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
 function displayName(user) {
   const meta = user.user_metadata || {};
   if (meta.prenume) {
@@ -177,30 +169,55 @@ function showState(id) {
   });
 }
 
+// ---------- Selecție multiplă de proprietăți — Nico vrea să poată bifa mai multe
+// cazări (hotel/apartamente) deodată și să vadă un Total de plată lunar pe toate. ----------
+let selectedIds = new Set();      // id-urile cazarilor bifate acum
+let pendingByOp = {};              // operator_id -> randul din cereri_upgrade "in_asteptare", daca exista
+
 function renderAptSelector() {
+  const wrap = document.getElementById('apt-selector-wrap');
   const sel = document.getElementById('apt-selector');
   sel.innerHTML = '';
-  if (cazari.length <= 1) return;
+  if (cazari.length <= 1) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  document.getElementById('sel-total').textContent = cazari.length;
+  document.getElementById('sel-count').textContent = selectedIds.size;
+  document.getElementById('sel-toggle-all').textContent = selectedIds.size === cazari.length ? 'Deselectează tot' : 'Selectează tot';
+
   cazari.forEach(row => {
+    const isSel = selectedIds.has(row.id);
     const chip = document.createElement('div');
-    chip.className = 'apt-chip' + (row.id === currentRow.id ? ' active' : '');
-    chip.textContent = row.nume_afisat || row.nume_afacere;
+    chip.className = 'apt-chip' + (isSel ? ' active' : '');
+    chip.innerHTML = `<span style="margin-right:5px;">${isSel ? '☑' : '☐'}</span>${escapeHtml(row.nume_afisat || row.nume_afacere)}`;
     chip.addEventListener('click', async () => {
-      currentRow = row;
+      if (selectedIds.has(row.id)) selectedIds.delete(row.id); else selectedIds.add(row.id);
       renderAptSelector();
-      await refreshPendingRequest();
-      renderPlanDetails();
+      await refreshPendingForSelected();
+      renderAll();
     });
     sel.appendChild(chip);
   });
 }
 
-async function refreshPendingRequest() {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/cereri_upgrade?operator_id=eq.${currentRow.id}&status=eq.in_asteptare&select=id&order=created_at.desc&limit=1`, {
+document.getElementById('sel-toggle-all').addEventListener('click', async () => {
+  if (selectedIds.size === cazari.length) selectedIds.clear();
+  else selectedIds = new Set(cazari.map(r => r.id));
+  renderAptSelector();
+  await refreshPendingForSelected();
+  renderAll();
+});
+
+// Cererile "în așteptare" pentru toate cazările bifate acum, într-un singur request
+// (in.(id1,id2,...)) — nu una câte una, ca să nu multiplicăm apelurile la fiecare bifare.
+async function refreshPendingForSelected() {
+  const ids = [...selectedIds];
+  if (!ids.length) { pendingByOp = {}; return; }
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/cereri_upgrade?operator_id=in.(${ids.join(',')})&status=eq.in_asteptare&select=id,operator_id&order=created_at.desc`, {
     headers: { apikey: SUPABASE_KEY },
   });
   const rows = await res.json();
-  pendingRequest = rows[0] || null;
+  pendingByOp = {};
+  rows.forEach(r => { if (!pendingByOp[r.operator_id]) pendingByOp[r.operator_id] = r; });
 }
 
 function formatDate(iso) {
@@ -215,51 +232,84 @@ function cicluLabel(ciclu) {
   return '—';
 }
 
-function renderPlanDetails() {
-  const badge = document.getElementById('plan-badge');
-  const nume = document.getElementById('detail-nume');
-  const rowCiclu = document.getElementById('row-ciclu');
-  const rowActivat = document.getElementById('row-activat');
-  const ctaFree = document.getElementById('plan-cta-free');
-  const ctaPending = document.getElementById('plan-cta-pending');
-  const ctaEssential = document.getElementById('plan-cta-essential');
-  const rowPret = document.getElementById('row-pret');
-  const vatNote = document.getElementById('plan-vat-note');
+function propertyCardHtml(row) {
+  const isEssential = row.tier === 'essential';
+  let bodyRows = '';
+  let ctaHtml = '';
 
-  nume.textContent = currentRow.nume_afisat || currentRow.nume_afacere || '—';
-
-  ctaFree.style.display = 'none';
-  ctaPending.style.display = 'none';
-  ctaEssential.style.display = 'none';
-  rowCiclu.style.display = 'none';
-  rowActivat.style.display = 'none';
-  rowPret.style.display = 'none';
-  vatNote.style.display = 'none';
-
-  if (currentRow.tier === 'essential') {
-    badge.textContent = 'Essential';
-    badge.className = 'badge badge-essential';
-    rowCiclu.style.display = 'flex';
-    document.getElementById('detail-ciclu').textContent = cicluLabel(currentRow.tier_ciclu);
-    if (currentRow.tier_activat_la) {
-      rowActivat.style.display = 'flex';
-      document.getElementById('detail-activat').textContent = formatDate(currentRow.tier_activat_la);
+  if (isEssential) {
+    bodyRows += `<div class="row"><span class="row-label">Ciclu de facturare</span><span class="row-value">${cicluLabel(row.tier_ciclu)}</span></div>`;
+    if (row.tier_activat_la) {
+      bodyRows += `<div class="row"><span class="row-label">Activat la</span><span class="row-value">${formatDate(row.tier_activat_la)}</span></div>`;
     }
-    const { pret, suffix } = currentPriceFor(currentRow);
-    rowPret.style.display = 'flex';
-    document.getElementById('detail-pret-label').textContent = suffix.includes('promo') ? 'Preț promo curent' : 'Preț curent';
-    document.getElementById('detail-pret').textContent = `${eur(pret)} €${suffix}`;
-    vatNote.style.display = 'block';
-    ctaEssential.style.display = 'block';
+    const { pret, suffix } = currentPriceFor(row);
+    const label = suffix.includes('promo') ? 'Preț promo curent' : 'Preț curent';
+    bodyRows += `<div class="row"><span class="row-label">${label}</span><span class="row-value">${eur(pret)} €${suffix}</span></div>`;
+    ctaHtml = `<div style="font-size:11.5px; color:var(--green); font-weight:600; margin-top:12px;">✓ Essential activ pentru această cazare.</div>`;
+  } else if (pendingByOp[row.id]) {
+    ctaHtml = `<div style="font-size:12px; color:var(--ink-soft); margin-top:12px; line-height:1.5;">Cererea ta de activare Essential e în așteptare — te contactăm în curând ca să stabilim plata.</div>`;
   } else {
-    badge.textContent = 'Gratuit';
-    badge.className = 'badge badge-gratuit';
-    if (pendingRequest) {
-      ctaPending.style.display = 'block';
-    } else {
-      ctaFree.style.display = 'block';
-    }
+    ctaHtml = `<div style="margin-top:12px;"><a href="preturi.html?slug=${encodeURIComponent(row.slug || '')}" class="btn" style="background:var(--teal-deep); color:#fff;">Vezi planul Essential</a></div>`;
   }
+
+  return `
+    <div class="card">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:${bodyRows ? '10px' : '0'};">
+        <div style="font-weight:700; font-size:14px; color:var(--ink);">${escapeHtml(row.nume_afisat || row.nume_afacere || '—')}</div>
+        <span class="badge ${isEssential ? 'badge-essential' : 'badge-gratuit'}">${isEssential ? 'Essential' : 'Gratuit'}</span>
+      </div>
+      ${bodyRows}
+      ${isEssential ? `<div style="font-size:10.5px; color:var(--ink-soft); margin-top:2px;">Preț cu TVA inclus (21%).</div>` : ''}
+      ${ctaHtml}
+    </div>
+  `;
+}
+
+function renderAll() {
+  const listEl = document.getElementById('properties-list');
+  const emptyMsg = document.getElementById('sel-empty-msg');
+  const totalCard = document.getElementById('total-card');
+  const selectedRows = cazari.filter(r => selectedIds.has(r.id));
+
+  if (!selectedRows.length) {
+    listEl.innerHTML = '';
+    emptyMsg.style.display = 'block';
+    totalCard.style.display = 'none';
+    return;
+  }
+  emptyMsg.style.display = 'none';
+  listEl.innerHTML = selectedRows.map(propertyCardHtml).join('');
+  renderTotal(selectedRows);
+}
+
+// Suma afișată e suma prețurilor deja rotunjite/afișate per proprietate (nu prețul net
+// insumat urmat de un singur TVA aplicat) — ca totalul să se potrivească exact cu ce arată
+// fiecare card de mai sus, fără nicio diferență de rotunjire între cele două.
+function renderTotal(selectedRows) {
+  const totalCard = document.getElementById('total-card');
+  // Totalul are sens doar când exista mai mult de o proprietate în cont — pentru o
+  // singură cazare ar dubla degeaba prețul deja afișat în cardul de mai sus.
+  if (cazari.length <= 1) { totalCard.style.display = 'none'; return; }
+
+  const essentialRows = selectedRows.filter(r => r.tier === 'essential');
+  let totalGross = 0;
+  essentialRows.forEach(r => {
+    const { pret } = currentPriceFor(r);
+    totalGross += Math.ceil(pret * VAT_RATE + 0.01) - 0.01;
+  });
+
+  totalCard.style.display = '';
+  document.getElementById('total-amount').textContent = totalGross.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+
+  const anyAnual = essentialRows.some(r => r.tier_ciclu === 'anual');
+  let sub;
+  if (!essentialRows.length) {
+    sub = `${selectedRows.length} proprietăți selectate — toate pe planul Gratuit, fără cost.`;
+  } else {
+    sub = `${essentialRows.length} din ${selectedRows.length} proprietăți selectate au Essential activ. Suma include TVA (21%)`
+      + (anyAnual ? ' — pentru cazările facturate anual e afișat echivalentul lunar.' : '.');
+  }
+  document.getElementById('total-sub').textContent = sub;
 }
 
 async function loadCazari(email) {
@@ -283,11 +333,19 @@ async function init() {
     showState('state-nomatch');
     return;
   }
+  // Un link cu ?slug=... (ex. "Vezi facturarea" dintr-o singură cazare) pre-selectează
+  // doar acea proprietate; altfel pornim cu toate bifate, ca să se vadă Totalul complet.
   const requestedSlug = new URLSearchParams(window.location.search).get('slug');
-  currentRow = (requestedSlug && cazari.find(r => r.slug === requestedSlug)) || cazari[0];
+  const requestedRow = requestedSlug && cazari.find(r => r.slug === requestedSlug);
+  selectedIds = new Set((requestedRow ? [requestedRow] : cazari).map(r => r.id));
+
+  document.getElementById('page-sub').textContent = cazari.length > 1
+    ? 'Bifează una sau mai multe proprietăți ca să vezi planul și totalul de plată.'
+    : 'Planul curent și starea contului pentru cazarea ta.';
+
   renderAptSelector();
-  await refreshPendingRequest();
-  renderPlanDetails();
+  await refreshPendingForSelected();
+  renderAll();
   showState('state-form');
 }
 
