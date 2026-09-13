@@ -307,6 +307,26 @@
     </div>
 
     <div class="bo-section">
+      <div class="bo-title">🎟️ Coduri de reducere <span class="count" id="disc-count">…</span></div>
+      <p class="lead" style="margin:-4px 0 14px; font-size:12.5px;">Reduceri „punctuale” pe care le acorzi manual, în afara ofertei generale cu primele 3 luni la preț redus (care rămâne calculată automat, ca până acum). Gazda introduce codul la cererea de activare Essential din preturi.html — codul apare atașat cererii (și în emailul de notificare), tu îl aplici manual la facturare. Dezactivează un cod după ce l-ai folosit, ca să nu mai poată fi aplicat din nou.</p>
+      <div id="disc-loading" style="text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Se încarcă...</div>
+      <div id="disc-list"></div>
+      <div class="zone-add-form" id="disc-add-form">
+        <input type="text" id="disc-add-cod" placeholder="Cod (ex. SACELE20)" style="flex:1 1 140px; text-transform:uppercase;">
+        <select id="disc-add-tip" style="flex:0 0 150px; padding:10px 12px; border:1.5px solid var(--line); border-radius:10px; font-size:13px; font-family:inherit; background:#fff;">
+          <option value="procent">Procent (%)</option>
+          <option value="suma_fixa">Sumă fixă (€/lună)</option>
+          <option value="perioada_gratuita">Perioadă gratuită (luni)</option>
+        </select>
+        <input type="number" id="disc-add-valoare" placeholder="Valoare" min="0" step="0.01" style="flex:0 0 100px;">
+        <input type="date" id="disc-add-valabil-pana" style="flex:0 0 150px;" title="Valabil până la (opțional — gol = fără limită)">
+        <input type="text" id="disc-add-nota" placeholder="Notă internă (opțional)" style="flex:1 1 160px;">
+        <button type="button" id="disc-add-btn">+ Adaugă cod</button>
+        <div class="zone-add-error" id="disc-add-error"></div>
+      </div>
+    </div>
+
+    <div class="bo-section">
       <div class="bo-title">✍️ Înscriere — hotelieri &amp; parteneri noi</div>
       <table class="bo-table">
         <tr><th>Ce e</th><th>Link</th><th></th></tr>
@@ -589,6 +609,7 @@ function enterPanel(email){
   loadAfaceriGhid();
   loadRegistrations();
   loadDemoGuides();
+  loadDiscountCodes();
 }
 
 async function init(){
@@ -794,6 +815,135 @@ function renderDemoGuides(){
     });
   });
 }
+
+// ---------- Coduri de reducere ("reduceri punctuale") ----------
+let DISC_CODES = [];
+let DISC_USAGE = {}; // cod -> numar de cereri_upgrade care l-au folosit (informativ)
+
+const DISC_TIP_LABEL = { procent: 'Procent', suma_fixa: 'Sumă fixă', perioada_gratuita: 'Perioadă gratuită' };
+function discTipDesc(row){
+  if (row.tip === 'procent') return `${row.valoare}% reducere`;
+  if (row.tip === 'suma_fixa') return `${row.valoare} €/lună reducere`;
+  if (row.tip === 'perioada_gratuita') return `${row.valoare} ${Number(row.valoare) === 1 ? 'lună gratuită' : 'luni gratuite'}`;
+  return DISC_TIP_LABEL[row.tip] || row.tip;
+}
+
+async function loadDiscountCodes(){
+  document.getElementById('disc-loading').style.display = 'block';
+  const [codesRes, usageRes] = await Promise.all([
+    supabaseClient.from('coduri_reducere').select('*').order('created_at', { ascending: false }),
+    supabaseClient.from('cereri_upgrade').select('cod_reducere').not('cod_reducere', 'is', null),
+  ]);
+  document.getElementById('disc-loading').style.display = 'none';
+  if (codesRes.error) { console.error(codesRes.error); return; }
+  DISC_CODES = codesRes.data || [];
+  DISC_USAGE = {};
+  (usageRes.data || []).forEach(r => {
+    const cod = (r.cod_reducere || '').trim().toUpperCase();
+    if (cod) DISC_USAGE[cod] = (DISC_USAGE[cod] || 0) + 1;
+  });
+  renderDiscountCodes();
+}
+
+async function saveDiscField(cod, field, value, inputEl){
+  if (inputEl) inputEl.disabled = true;
+  const { error } = await supabaseClient.from('coduri_reducere').update({ [field]: value }).eq('cod', cod);
+  if (inputEl) inputEl.disabled = false;
+  if (error) {
+    console.error(error);
+    alert('Nu am putut salva schimbarea — încearcă din nou.');
+    return false;
+  }
+  const row = DISC_CODES.find(r => r.cod === cod);
+  if (row) row[field] = value;
+  return true;
+}
+
+function renderDiscountCodes(){
+  document.getElementById('disc-count').textContent = DISC_CODES.length;
+  const wrap = document.getElementById('disc-list');
+  wrap.innerHTML = DISC_CODES.map(row => {
+    const usage = DISC_USAGE[row.cod] || 0;
+    const notaHtml = row.nota ? ` · ${escapeHtml(row.nota)}` : '';
+    return `
+    <div class="zone-row ${row.activ ? 'on' : ''}">
+      <div style="flex:1; min-width:0;">
+        <div style="font-weight:700; font-size:14.5px; color:var(--teal-deep);">${escapeHtml(row.cod)}</div>
+        <div style="font-size:11.5px; color:var(--ink-soft); margin-top:2px;">${escapeHtml(discTipDesc(row))} · folosit de ${usage}×${notaHtml}</div>
+      </div>
+      <input type="date" class="zone-judet-input" style="width:138px; flex-shrink:0;" data-disc-valabil-pana="${escapeHtml(row.cod)}" value="${row.valabil_pana || ''}" title="Valabil până la (gol = fără limită)">
+      <span class="zone-badge ${row.activ ? 'on' : 'off'}">${row.activ ? 'Activ' : 'Inactiv'}</span>
+      <label class="switch">
+        <input type="checkbox" data-disc-toggle="${escapeHtml(row.cod)}" ${row.activ ? 'checked' : ''}>
+        <span class="track"></span>
+      </label>
+      <button type="button" class="bo-copy" data-disc-delete="${escapeHtml(row.cod)}" title="Șterge codul" style="flex-shrink:0;">✕</button>
+    </div>`;
+  }).join('');
+
+  wrap.querySelectorAll('[data-disc-toggle]').forEach(input => {
+    input.addEventListener('change', async (e) => {
+      const cod = e.target.getAttribute('data-disc-toggle');
+      const activ = e.target.checked;
+      const ok = await saveDiscField(cod, 'activ', activ, e.target);
+      if (!ok) { e.target.checked = !activ; return; }
+      renderDiscountCodes();
+    });
+  });
+  wrap.querySelectorAll('[data-disc-valabil-pana]').forEach(input => {
+    input.addEventListener('change', async (e) => {
+      const cod = e.target.getAttribute('data-disc-valabil-pana');
+      await saveDiscField(cod, 'valabil_pana', e.target.value || null, e.target);
+    });
+  });
+  wrap.querySelectorAll('[data-disc-delete]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const cod = btn.getAttribute('data-disc-delete');
+      if (!confirm(`Ștergi definitiv codul ${cod}?`)) return;
+      btn.disabled = true;
+      const { error } = await supabaseClient.from('coduri_reducere').delete().eq('cod', cod);
+      btn.disabled = false;
+      if (error) { console.error(error); alert('Nu am putut șterge codul — încearcă din nou.'); return; }
+      DISC_CODES = DISC_CODES.filter(r => r.cod !== cod);
+      renderDiscountCodes();
+    });
+  });
+}
+
+document.getElementById('disc-add-btn').addEventListener('click', async () => {
+  const codInput = document.getElementById('disc-add-cod');
+  const tipInput = document.getElementById('disc-add-tip');
+  const valoareInput = document.getElementById('disc-add-valoare');
+  const valabilPanaInput = document.getElementById('disc-add-valabil-pana');
+  const notaInput = document.getElementById('disc-add-nota');
+  const errEl = document.getElementById('disc-add-error');
+  const btn = document.getElementById('disc-add-btn');
+  errEl.textContent = '';
+
+  const cod = codInput.value.trim().toUpperCase().replace(/\s+/g, '');
+  const valoare = parseFloat(valoareInput.value);
+  if (!cod) { errEl.textContent = 'Completează codul.'; return; }
+  if (DISC_CODES.some(r => r.cod === cod)) { errEl.textContent = 'Există deja un cod cu acest nume.'; return; }
+  if (!valoare || valoare <= 0) { errEl.textContent = 'Completează o valoare mai mare decât 0.'; return; }
+
+  btn.disabled = true;
+  const { data, error } = await supabaseClient.from('coduri_reducere')
+    .insert({
+      cod, tip: tipInput.value, valoare,
+      valabil_pana: valabilPanaInput.value || null,
+      nota: notaInput.value.trim() || null,
+    })
+    .select().single();
+  btn.disabled = false;
+  if (error) {
+    console.error(error);
+    errEl.textContent = 'Nu am putut salva codul nou — încearcă din nou.';
+    return;
+  }
+  DISC_CODES.unshift(data);
+  codInput.value = ''; valoareInput.value = ''; valabilPanaInput.value = ''; notaInput.value = '';
+  renderDiscountCodes();
+});
 
 function renderChips(){
   const counts = { toate: ROWS.length, nou: 0, publicat: 0, respins: 0 };
