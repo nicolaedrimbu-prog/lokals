@@ -85,7 +85,7 @@
         <div class="row" id="row-activat" style="display:none;"><span class="row-label">Activat la</span><span class="row-value" id="detail-activat">—</span></div>
         <div class="row" id="row-pret" style="display:none;"><span class="row-label" id="detail-pret-label">Preț curent</span><span class="row-value" id="detail-pret">—</span></div>
       </div>
-      <div id="plan-vat-note" style="display:none; font-size:11px; color:var(--ink-soft); margin-top:2px;">Preț fără TVA.</div>
+      <div id="plan-vat-note" style="display:none; font-size:11px; color:var(--ink-soft); margin-top:2px;">Preț cu TVA inclus (21%).</div>
 
       <div id="plan-cta-free" style="display:none; margin-top:18px;">
         <p style="font-size:12.5px; color:var(--ink-soft); line-height:1.5; margin:0 0 12px;">Ești pe planul Gratuit. Poți trece la Essential pentru personalizare completă a ghidului.</p>
@@ -130,7 +130,13 @@ function aptTierFor(count) { return APT_TIERS.find(t => count <= t.max); }
 function hotelPriceStandard(nrCamere) { return Math.min(Math.max(nrCamere * 1.00, 20), 100); }
 function hotelPriceAnual(nrCamere) { return Math.min(Math.max(nrCamere * 0.80, 16), 80); }
 function hotelPricePromo(nrCamere) { return Math.min(Math.max(nrCamere * 0.79, 15), 100); }
-function eur(n) { return n.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+// Ca și în preturi.html: APT_TIERS/hotelPrice* rămân fără TVA, eur() adaugă 21% și
+// rotunjește "frumos" în sus, la următorul preț terminat în ,99.
+const VAT_RATE = 1.21;
+function eur(net) {
+  const gross = Math.ceil(net * VAT_RATE + 0.01) - 0.01;
+  return gross.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 function portfolioSize(row) { return cazari.filter(r => r.tip === 'apartament' && r.grup_id === row.grup_id).length || 1; }
 
 // Fereastra promo ține exact 3 luni de la activare — după aceea tariful trece automat la standard.
