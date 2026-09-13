@@ -9,7 +9,7 @@
 <style>
   :root{
     --teal-deep:#10302B; --teal:#1A4A42; --gold:#C98A2C; --gold-soft:#E8CE9E;
-    --cream:#F7F2E8; --ink:#181E1B; --ink-soft:#5B6459; --line:#DCD5C6;
+    --cream:#F7F2E8; --ink:#181E1B; --ink-soft:#5B6459; --line:#DCD5C6; --sage:#C8CFC2;
   }
   *{box-sizing:border-box;}
   body{margin:0; background:#EFE9DA; font-family:'Inter', system-ui, sans-serif; color:var(--ink);}
@@ -19,26 +19,27 @@
   .back-link{font-size:13px; font-weight:600; color:var(--teal-deep); text-decoration:none;}
   .print-btn{background:var(--teal-deep); color:#fff; border:none; font-size:13.5px; font-weight:700; padding:10px 20px; border-radius:999px; cursor:pointer; font-family:inherit;}
 
-  .poster{width:794px; min-height:1123px; background:var(--cream); margin:0 auto 40px; box-shadow:0 10px 30px rgba(16,48,43,0.14);
+  .poster{width:794px; min-height:1123px; background:var(--teal-deep); margin:0 auto 40px; box-shadow:0 10px 30px rgba(16,48,43,0.14);
     display:flex; flex-direction:column; align-items:center; padding:64px 64px 56px; position:relative; overflow:hidden;}
-  .poster::before{content:''; position:absolute; top:0; left:0; right:0; height:14px; background:var(--teal-deep);}
-  .logo-row{display:flex; align-items:center; gap:10px; margin-bottom:52px;}
+  .logo-row{display:flex; align-items:center; gap:10px; margin-bottom:44px;}
   .logo-dot{width:26px; height:26px; border-radius:50%; background:var(--gold); position:relative; display:inline-block;}
   .logo-dot::after{content:''; position:absolute; inset:7px; border-radius:50%; background:var(--teal-deep);}
-  .logo-word{font-family:'Poppins', sans-serif; font-weight:700; color:var(--teal-deep); font-size:22px;}
-  .eyebrow{color:var(--gold); font-size:15px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; margin-bottom:14px;}
-  .headline{font-size:40px; font-weight:700; color:var(--teal-deep); text-align:center; line-height:1.15; margin-bottom:10px;}
-  .subline{font-size:16px; color:var(--ink-soft); text-align:center; max-width:520px; line-height:1.5; margin-bottom:44px;}
-  .qr-frame{background:#fff; border-radius:24px; padding:28px; box-shadow:0 10px 30px rgba(16,48,43,0.12); margin-bottom:36px;}
-  .qr-frame img{width:300px; height:300px; display:block;}
-  .prop-name{font-size:22px; font-weight:700; color:var(--teal-deep); text-align:center; margin-bottom:6px;}
-  .prop-zone{font-size:14px; color:var(--ink-soft); text-align:center; margin-bottom:40px;}
+  .logo-word{font-family:'Poppins', sans-serif; font-weight:700; color:#fff; font-size:22px;}
+  .eyebrow{color:var(--gold); font-size:14px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; margin-bottom:16px;}
+  .pill{display:inline-block; background:var(--cream); color:var(--teal-deep); font-weight:700; font-size:13px;
+    letter-spacing:.03em; padding:8px 20px; border-radius:999px; margin-bottom:22px;}
+  .headline{font-size:38px; font-weight:700; color:#fff; text-align:center; line-height:1.18; margin-bottom:14px;}
+  .subline{font-size:15.5px; color:var(--sage); text-align:center; max-width:480px; line-height:1.5; margin-bottom:40px;}
+  .qr-frame{background:var(--cream); border-radius:24px; padding:28px; box-shadow:0 10px 30px rgba(0,0,0,0.18); margin-bottom:28px;}
+  .qr-frame img{width:280px; height:280px; display:block;}
+  .scan-txt{font-size:16px; font-weight:700; color:#fff; text-align:center; margin-bottom:6px;}
+  .scan-sub{font-size:13px; color:var(--sage); text-align:center; font-style:italic; margin-bottom:40px;}
   .steps{display:flex; gap:28px; margin-top:auto; padding-top:16px;}
   .step{display:flex; flex-direction:column; align-items:center; text-align:center; width:150px;}
-  .step-num{width:30px; height:30px; border-radius:50%; background:var(--teal-deep); color:#fff; font-weight:700; font-size:14px;
+  .step-num{width:30px; height:30px; border-radius:50%; background:var(--gold); color:var(--teal-deep); font-weight:700; font-size:14px;
     display:flex; align-items:center; justify-content:center; margin-bottom:8px; font-family:'Fraunces', Georgia, serif;}
-  .step-txt{font-size:12.5px; color:var(--ink-soft); line-height:1.4;}
-  .footer{margin-top:32px; font-size:11.5px; color:var(--ink-soft); letter-spacing:.02em;}
+  .step-txt{font-size:12.5px; color:var(--sage); line-height:1.4;}
+  .footer{margin-top:32px; font-size:11.5px; color:var(--sage); letter-spacing:.02em; opacity:.8;}
 
   .state-msg{max-width:500px; margin:80px auto; text-align:center; color:var(--ink-soft); font-size:14px;}
 
@@ -64,14 +65,15 @@
     <span class="logo-dot"></span>
     <span class="logo-word">lokals</span>
   </div>
-  <div class="eyebrow">Ghidul tău de oaspeți</div>
-  <div class="headline serif">Bun venit!<br>Scanează și află tot ce-ți trebuie</div>
+  <div class="eyebrow" id="eyebrow-text">Ghidul gazdei</div>
+  <div class="pill" id="prop-name"></div>
+  <div class="headline serif" id="headline-text">Descoperă zona<br>ca un localnic.</div>
   <div class="subline">Ora de check-in, codul de acces, recomandările gazdei și afacerile locale de încredere din zonă — totul într-un singur loc, pe telefonul tău.</div>
   <div class="qr-frame">
     <img id="qr-img" src="" alt="Cod QR către ghidul de oaspeți">
   </div>
-  <div class="prop-name serif" id="prop-name"></div>
-  <div class="prop-zone" id="prop-zone"></div>
+  <div class="scan-txt">Scanează — e ghidul tău local</div>
+  <div class="scan-sub" id="scan-sub">—</div>
   <div class="steps">
     <div class="step">
       <div class="step-num">1</div>
@@ -93,9 +95,16 @@
 const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
 const SUPABASE_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
 
+const ZONA_LABELS = {
+  'rasnov': 'Râșnov', 'sacele-brasov': 'Săcele-Brașov', 'predeal-azuga': 'Predeal-Azuga',
+  'sinaia-busteni-poiana-tapului': 'Sinaia-Bușteni-Poiana Tapului', 'bran-moieciu-fundata': 'Bran-Moieciu-Fundata',
+  'zarnesti-poiana-marului': 'Zărnești-Poiana Mărului', 'fagaras-sambata-de-sus': 'Făgăraș-Sâmbăta de Sus',
+  'bunesti-viscri-saschiz-meschendorf': 'Bunești-Viscri-Saschiz-Meschendorf',
+  'covasna-targu-secuiesc-sfantu-gheorghe': 'Covasna-Tg. Secuiesc-Sf. Gheorghe',
+  'vama-buzaului-intorsura-buzaului': 'Vama Buzăului-Întorsura Buzăului', 'altele': 'zona ta',
+};
 function zonaLabel(z) {
-  const map = { 'rasnov': 'Râșnov', 'sacele-brasov': 'Săcele-Brașov' };
-  return map[(z || '').trim()] || (z || '');
+  return ZONA_LABELS[(z || '').trim()] || (z || 'zona ta');
 }
 
 async function init() {
@@ -119,11 +128,14 @@ async function init() {
   }
 
   const nume = row.nume_afisat || row.nume_afacere || 'Cazarea ta';
+  const zona = zonaLabel(row.zona);
   const guideUrl = `https://lokals.ro/ghid-oaspeti.html?apt=${encodeURIComponent(row.slug)}`;
 
-  document.getElementById('prop-name').textContent = nume;
-  document.getElementById('prop-zone').textContent = `${zonaLabel(row.zona)} · lokals.ro`;
-  document.getElementById('qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=0&data=${encodeURIComponent(guideUrl)}`;
+  document.getElementById('eyebrow-text').textContent = `Ghidul gazdei · ${zona}`;
+  document.getElementById('prop-name').textContent = nume.toUpperCase();
+  document.getElementById('headline-text').innerHTML = `Descoperă ${zona}<br>ca un localnic.`;
+  document.getElementById('scan-sub').textContent = `"${nume}"`;
+  document.getElementById('qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=0&data=${encodeURIComponent(guideUrl)}&color=16-48-43&bgcolor=247-242-232`;
   document.title = `Afiș QR — ${nume}`;
 
   document.getElementById('poster').style.display = '';
