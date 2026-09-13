@@ -1290,24 +1290,7 @@ function detailsHtml(r){
              <span class="track"></span>
            </label>
          </div>
-         <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--line);">
-           <div class="addon-row">
-             <div class="addon-info">
-               <div class="addon-title" style="font-size:13px;">Completare automată din email (Booking.com / Airbnb)</div>
-               <div class="addon-sub">Redirecționează emailul de confirmare rezervare către adresa de mai jos — AI-ul completează linkul de înregistrare</div>
-             </div>
-             <span class="addon-status ${raw.auto_trimite_din_email !== false ? 'on' : 'off'}">${raw.auto_trimite_din_email !== false ? 'Trimite automat' : 'Doar completează, fără trimitere'}</span>
-             <label class="switch">
-               <input type="checkbox" data-autoemail-toggle="${escapeHtml(r.id)}" ${raw.auto_trimite_din_email !== false ? 'checked' : ''}>
-               <span class="track"></span>
-             </label>
-           </div>
-           <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
-             <code style="background:var(--cream); padding:6px 10px; border-radius:6px; font-size:12.5px;">${escapeHtml(raw.slug)}@rezervari.lokals.ro</code>
-             <button class="bo-copy" type="button" onclick="boCopy('${escapeHtml(raw.slug)}@rezervari.lokals.ro', this)">Copiază</button>
-           </div>
-           <div class="addon-note">Comutatorul de mai sus decide ce se întâmplă odată ce AI-ul a extras datele din email: PORNIT — trimite automat linkul oaspetelui, fără să mai treci prin tab-ul „Înregistrări"; OPRIT — doar pregătește înregistrarea, tu o completezi/trimiți manual, ca acum. Poți opri oricând, dacă extragerea automată greșește des.</div>
-         </div>
+         <!-- Completare automată din email (Booking.com/Airbnb): ascunsă temporar — Booking.com nu include datele rezervării în corpul emailului (doar link către extranetul autentificat), deci AI-ul nu are ce extrage. Backend-ul (coloană auto_trimite_din_email, edge function receive-booking-email, toggle-ul de mai jos) rămâne intact pentru o eventuală reluare (ex. doar pentru Airbnb, dacă emailurile lor conțin datele). -->
        </div>`
     : '';
 
