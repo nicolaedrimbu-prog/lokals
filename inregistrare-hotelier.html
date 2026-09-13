@@ -126,7 +126,7 @@
 
 <main>
   <div id="form-stage">
-    <h1 class="hero-title">Ghidul turistic ajunge deja la oaspeții din Râșnov.</h1>
+    <h1 class="hero-title">Ghidul turistic ajunge deja la oaspeții tăi.</h1>
     <p class="hero-sub">Aduceți-l și în camerele voastre — gratuit. Codurile QR le puteți printa chiar acum, de pe telefon sau de la recepție.</p>
 
     <div class="stat-row">
@@ -162,6 +162,23 @@
 
       <label for="email">Email (folosit și pentru crearea contului)</label>
       <input type="email" id="email" required placeholder="ex. contact@pensiunea-mea.ro">
+
+      <label for="zona">Zona în care operați</label>
+      <select id="zona" required>
+        <option value="">Alege zona…</option>
+        <option value="rasnov">Râșnov</option>
+        <option value="sacele-brasov">Săcele-Brașov</option>
+        <option value="predeal-azuga">Predeal-Azuga</option>
+        <option value="sinaia-busteni-poiana-tapului">Sinaia-Bușteni</option>
+        <option value="bran-moieciu-fundata">Bran-Moieciu</option>
+        <option value="zarnesti-poiana-marului">Zărnești</option>
+        <option value="fagaras-sambata-de-sus">Făgăraș</option>
+        <option value="bunesti-viscri-saschiz-meschendorf">Viscri-Saschiz</option>
+        <option value="covasna-targu-secuiesc-sfantu-gheorghe">Covasna</option>
+        <option value="vama-buzaului-intorsura-buzaului">Vama Buzăului</option>
+        <option value="altele">Altă zonă din Brașov / împrejurimi</option>
+      </select>
+      <div class="hint">Momentan ghidul e live în Râșnov și Săcele-Brașov; pentru celelalte zone, profilul rămâne înregistrat și devine vizibil automat de îndată ce zona se activează.</div>
 
       <label for="adresa">Adresă completă (pentru expedierea afișelor)</label>
       <textarea id="adresa" required placeholder="ex. Str. Cetății nr. 12, Râșnov, jud. Brașov, cod poștal 505400"></textarea>
@@ -215,6 +232,13 @@
 const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
 const GUIDE_BASE = "https://lokals.ro/ghid-oaspeti.html?apt=";
+const ZONA_LABELS = {
+  'rasnov': 'Râșnov', 'sacele-brasov': 'Săcele-Brașov', 'predeal-azuga': 'Predeal-Azuga',
+  'sinaia-busteni-poiana-tapului': 'Sinaia-Bușteni', 'bran-moieciu-fundata': 'Bran-Moieciu',
+  'zarnesti-poiana-marului': 'Zărnești', 'fagaras-sambata-de-sus': 'Făgăraș',
+  'bunesti-viscri-saschiz-meschendorf': 'Viscri-Saschiz', 'covasna-targu-secuiesc-sfantu-gheorghe': 'Covasna',
+  'vama-buzaului-intorsura-buzaului': 'Vama Buzăului', 'altele': 'zona ta',
+};
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Hartă live: pe măsură ce hotelierul completează adresa, arătăm harta cu locația
@@ -321,16 +345,17 @@ async function insertOperator(baseSlug, row, attempt = 0) {
   throw new Error('save-failed');
 }
 
-function renderPoster(container, slug, displayName, tagline) {
+function renderPoster(container, slug, displayName, tagline, zona) {
   const guideUrl = GUIDE_BASE + slug;
+  const zonaLabel = ZONA_LABELS[zona] || 'zona ta';
   const wrap = document.createElement('div');
   wrap.className = 'poster-wrap';
   wrap.innerHTML = `
     <div class="poster">
       <span class="p-ring"></span><span class="p-wordmark">lokals</span>
-      <div class="p-eyebrow">GHIDUL GAZDEI · RÂȘNOV</div>
+      <div class="p-eyebrow">GHIDUL GAZDEI · ${zonaLabel.toUpperCase()}</div>
       <div class="p-pill">${displayName.toUpperCase()}</div>
-      <div class="p-headline">Descoperă Râșnovul<br>ca un localnic.</div>
+      <div class="p-headline">Descoperă ${zonaLabel}<br>ca un localnic.</div>
       <div class="p-sub">Scanează codul — recomandări reale, alese pentru tine.</div>
       <div class="p-qr-card"><div class="qr-holder"></div></div>
       <div class="p-scan-txt">Scanează — e ghidul tău local</div>
@@ -354,9 +379,10 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
   const telefon = document.getElementById('telefon').value.trim();
   const email = document.getElementById('email').value.trim();
   const adresa = document.getElementById('adresa').value.trim();
+  const zona = document.getElementById('zona').value;
 
-  if (!nume_afacere || !persoana_contact || !telefon || !email || !adresa) {
-    errorEl.textContent = 'Completează toate câmpurile obligatorii, inclusiv emailul și adresa.';
+  if (!nume_afacere || !persoana_contact || !telefon || !email || !adresa || !zona) {
+    errorEl.textContent = 'Completează toate câmpurile obligatorii, inclusiv zona, emailul și adresa.';
     return;
   }
 
@@ -400,9 +426,9 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
     if (tip === 'hotel') {
       const saved = await insertOperator(baseSlug, {
         grup_id, nume_afacere, nume_afisat: nume_afacere, tip: 'hotel',
-        persoana_contact, telefon, email: email || null, adresa, nr_camere, zona: 'rasnov',
+        persoana_contact, telefon, email: email || null, adresa, nr_camere, zona,
       });
-      renderPoster(posterContainer, saved.slug, nume_afacere, nume_afacere);
+      renderPoster(posterContainer, saved.slug, nume_afacere, nume_afacere, zona);
       savedCount = 1;
       singleSavedSlug = saved.slug;
       document.getElementById('success-sub').textContent =
@@ -412,9 +438,9 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
         const aptSlug = `${baseSlug}-${slugify(aptName)}`;
         const saved = await insertOperator(aptSlug, {
           grup_id, nume_afacere, nume_afisat: `${nume_afacere} — ${aptName}`, tip: 'apartament',
-          persoana_contact, telefon, email: email || null, adresa, nr_camere: 1, zona: 'rasnov',
+          persoana_contact, telefon, email: email || null, adresa, nr_camere: 1, zona,
         });
-        renderPoster(posterContainer, saved.slug, aptName, `${nume_afacere} — ${aptName}`);
+        renderPoster(posterContainer, saved.slug, aptName, `${nume_afacere} — ${aptName}`, zona);
         savedCount++;
       }
       document.getElementById('success-sub').textContent =
