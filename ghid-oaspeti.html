@@ -797,6 +797,7 @@ const I18N = {
       tabelServiciu: "Serviciu", tabelOrar: "Orar", tabelLocatie: "Locație", tabelTelefon: "Telefon",
       minibar: "Minibar", minibarPoza: "Poză preț",
       wifiConnect: "Scanează pentru conectare automată",
+      dataSosire: "Data sosirii", dataPlecare: "Data plecării",
     },
   },
   en: {
@@ -853,6 +854,7 @@ const I18N = {
       tabelServiciu: "Service", tabelOrar: "Hours", tabelLocatie: "Location", tabelTelefon: "Phone",
       minibar: "Minibar", minibarPoza: "Price list photo",
       wifiConnect: "Scan to connect automatically",
+      dataSosire: "Arrival date", dataPlecare: "Departure date",
     },
   },
 };
@@ -875,6 +877,16 @@ const FAC_ICONS = {
 };
 
 function fmt(s){ return (s || '').trim(); }
+
+// Data de sosire/plecare a sejurului validat (YYYY-MM-DD din inregistrari_oaspeti),
+// formatată pe limba curentă a ghidului — folosită doar în secțiunile Check-in/Check-out
+// când verificarea de identitate e activă și cazarea e pe Essential (vezi ghidUnlocked).
+function fmtStayDate(iso){
+  if (!iso) return '';
+  const d = new Date(iso + 'T00:00:00');
+  if (isNaN(d)) return '';
+  return d.toLocaleDateString(currentLang === 'en' ? 'en-GB' : 'ro-RO', { day: 'numeric', month: 'long', year: 'numeric' });
+}
 
 // ---------- Traducere automată a textelor introduse manual de gazde ----------
 // Etichetele fixe ale interfeței (I18N) sunt deja traduse static. Dar tot ce scrie
@@ -927,9 +939,20 @@ async function renderFacilitati() {
   // cand exista, are prioritate fata de codul general al cazarii.
   const codAccesEfectiv = (currentStay && currentStay.cod_acces) ? currentStay.cod_acces : checkin.cod_acces;
 
+  // Data de sosire/plecare a acestui sejur — doar cand verificarea de identitate e
+  // activata pentru cazare (inregistrare_activa) SI tier-ul e Essential (ghidUnlocked
+  // verifica live tier-ul din featuresMap) SI exista un sejur validat; altfel raman
+  // necompletate, exact ca inainte. Aceleasi doua conditii ca la cardul de bun venit.
+  const stayDatesUnlocked = currentOperator.inregistrare_activa === true
+    && ghidUnlocked('inregistrare_oaspeti')
+    && currentStay && currentStay.status === 'validat';
+  const dataSosireLabel = stayDatesUnlocked ? fmtStayDate(currentStay.check_in) : '';
+  const dataPlecareLabel = stayDatesUnlocked ? fmtStayDate(currentStay.check_out) : '';
+
   // are cazarea macar o informatie de afisat? altfel nu aratam sectiunea deloc
   const hasAny = currentOperator.adresa || currentOperator.foto_url || loc.gps || loc.parcare ||
     codAccesEfectiv || checkin.instructiuni || checkin.ora || checkin.unitate || checkout.ora || checkout.instructiuni ||
+    dataSosireLabel || dataPlecareLabel ||
     wifi.ssid || currentOperator.telefon || urgente.spital ||
     (Array.isArray(reguli.lista) && reguli.lista.filter(Boolean).length) || reguli.poza_url ||
     reguli.fumat !== undefined || reguli.animale !== undefined || reguli.liniste !== undefined || reguli.extra ||
@@ -966,9 +989,11 @@ async function renderFacilitati() {
 
   const sections = [];
 
-  // Check-in — campuri separate, in ordine: ora, cod de acces, camera/apartament, note optionale
-  if (checkin.ora || codAccesEfectiv || checkin.unitate || checkin.instructiuni || receptie.program) {
+  // Check-in — campuri separate, in ordine: data sosirii (doar sejur validat, Essential),
+  // ora generala, cod de acces, camera/apartament, note optionale
+  if (checkin.ora || codAccesEfectiv || checkin.unitate || checkin.instructiuni || receptie.program || dataSosireLabel) {
     let body = '';
+    if (dataSosireLabel) body += `<div class="ci-row"><div class="ci-label">${t.dataSosire}</div><div class="ci-value">${dataSosireLabel}</div></div>`;
     if (checkin.ora) body += `<div class="ci-row"><div class="stat-value">${fmt(checkin.ora)}</div></div>`;
     if (codAccesEfectiv) body += `<div class="ci-row"><div class="ci-label">${t.codAcces}</div><span class="fac-code-big">${fmt(codAccesEfectiv)}</span></div>`;
     if (checkin.locker_locatie || checkin.locker_numar) {
@@ -989,9 +1014,10 @@ async function renderFacilitati() {
     sections.push({ key: 'checkin', title: t.checkin, body });
   }
 
-  // Check-out
-  if (checkout.ora || checkout.instructiuni) {
+  // Check-out — data plecarii (doar sejur validat, Essential), apoi ora generala
+  if (checkout.ora || checkout.instructiuni || dataPlecareLabel) {
     let body = '';
+    if (dataPlecareLabel) body += `<div class="ci-row"><div class="ci-label">${t.dataPlecare}</div><div class="ci-value">${dataPlecareLabel}</div></div>`;
     if (checkout.ora) body += `<div class="ci-row"><div class="stat-value">${fmt(checkout.ora)}</div></div>`;
     if (checkout.instructiuni) body += `<div class="fac-row note-bullet">${tr(checkout.instructiuni)}</div>`;
     sections.push({ key: 'checkout', title: t.checkout, body });
