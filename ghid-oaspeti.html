@@ -323,17 +323,10 @@ const APT_NAMES = {
   ap6:    { name: 'Apartamentul 6 — The Nest Beneath the Citadel', zona: 'rasnov', telefon: '40751090407' },
   ap8:    { name: 'Apartamentul 8 — Hillside Haven', zona: 'rasnov', telefon: '40751090407' },
   ap9:    { name: 'Apartamentul 9 — Alpine Eden Hideaway', zona: 'rasnov', telefon: '40751090407' },
-  'demo-predeal':  { name: 'Demo — Ghid Lokal Predeal-Azuga', zona: 'predeal-azuga', telefon: '40751090407' },
-  'demo-sinaia':   { name: 'Demo — Ghid Lokal Sinaia-Bușteni', zona: 'sinaia-busteni-poiana-tapului', telefon: '40751090407' },
-  'demo-bran':     { name: 'Demo — Ghid Lokal Bran-Moieciu', zona: 'bran-moieciu-fundata', telefon: '40751090407' },
-  'demo-zarnesti': { name: 'Demo — Ghid Lokal Zărnești', zona: 'zarnesti-poiana-marului', telefon: '40751090407' },
-  'demo-fagaras':  { name: 'Demo — Ghid Lokal Făgăraș', zona: 'fagaras-sambata-de-sus', telefon: '40751090407' },
-  'demo-viscri':   { name: 'Demo — Ghid Lokal Viscri-Saschiz', zona: 'bunesti-viscri-saschiz-meschendorf', telefon: '40751090407' },
-  'demo-covasna':  { name: 'Demo — Ghid Lokal Covasna', zona: 'covasna-targu-secuiesc-sfantu-gheorghe', telefon: '40751090407' },
-  'demo-vama':     { name: 'Demo — Ghid Lokal Vama Buzăului', zona: 'vama-buzaului-intorsura-buzaului', telefon: '40751090407' },
-  'demo-rasnov':   { name: 'Exemplu — Apartament, Râșnov', zona: 'rasnov', telefon: '40751090407' },
-  'demo-sacele-brasov': { name: 'Exemplu — Cazare, Săcele-Brașov', zona: 'sacele-brasov', telefon: '40721372770' },
-  'demo-codlea':   { name: 'Demo — Ghid Lokal Codlea-Ghimbav-Cristian', zona: 'codlea-ghimbav-cristian', telefon: '40751090407' },
+  // Ghidurile "demo-*" (câte unul per zonă, de pe landing page) au acum rânduri reale în
+  // `operatori` (coloana este_demo=true) — editabile din panou-parteneri.html, secțiunea
+  // "Ghiduri demo" — și se rezolvă prin resolveOperator(), ca orice cazare reală. Nu mai
+  // trebuie definite aici static.
 };
 
 // Etichetă afișată (eyebrow) pentru fiecare zonă — încărcată din tabela Supabase

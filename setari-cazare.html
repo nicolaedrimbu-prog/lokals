@@ -131,7 +131,7 @@
 
   <div id="state-form" style="display:none;">
 
-    <a href="contul-meu.html" style="display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color:var(--ink-soft); text-decoration:none; margin-bottom:14px;">← Proprietățile mele</a>
+    <a href="contul-meu.html" id="back-link-cazare" style="display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color:var(--ink-soft); text-decoration:none; margin-bottom:14px;">← Proprietățile mele</a>
     <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px;">
       <div style="font-size:11px; font-weight:700; letter-spacing:.05em; color:var(--gold); text-transform:uppercase;">Cont hotelier</div>
       <a href="facturare.html" id="plan-badge" class="plan-badge">Gratuit</a>
@@ -841,6 +841,21 @@ async function loadCazari(email) {
   cazari = await res.json();
 }
 
+const ADMIN_EMAIL = "nicolae.drimbu@gmail.com";
+let isAdminDemoEdit = false;
+
+// Admin-ul (Nico) poate edita orice ghid DEMO (este_demo=true) direct printr-un link cu
+// ?slug=..., chiar dacă nu e o cazare legată de emailul lui — folosit din secțiunea
+// "Ghiduri demo" din panou-parteneri.html. Politica RLS "admin_full_update" de pe
+// operatori permite deja acest UPDATE; aici doar decidem ce rând se încarcă în formular.
+async function loadDemoBySlug(slug) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/operatori?slug=eq.${encodeURIComponent(slug)}&este_demo=is.true&select=*`, {
+    headers: { apikey: SUPABASE_KEY },
+  });
+  const rows = await res.json();
+  return (rows && rows[0]) || null;
+}
+
 async function init() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session || !session.user) {
@@ -851,15 +866,41 @@ async function init() {
   document.getElementById('header-auth-name').textContent = displayName(session.user);
 
   await loadCazari(session.user.email);
+  const requestedSlug = new URLSearchParams(window.location.search).get('slug');
+
+  if (requestedSlug && !cazari.some(r => r.slug === requestedSlug) && session.user.email === ADMIN_EMAIL) {
+    const demoRow = await loadDemoBySlug(requestedSlug);
+    if (demoRow) {
+      isAdminDemoEdit = true;
+      currentRow = demoRow;
+      renderAdminDemoBanner();
+      document.getElementById('apt-selector').innerHTML = '';
+      const backLink = document.getElementById('back-link-cazare');
+      backLink.href = 'panou-parteneri.html';
+      backLink.textContent = '← Panoul de parteneri';
+      fillForm(currentRow);
+      showState('state-form');
+      return;
+    }
+  }
+
   if (!cazari.length) {
     showState('state-nomatch');
     return;
   }
-  const requestedSlug = new URLSearchParams(window.location.search).get('slug');
   currentRow = (requestedSlug && cazari.find(r => r.slug === requestedSlug)) || cazari[0];
   renderAptSelector();
   fillForm(currentRow);
   showState('state-form');
+}
+
+function renderAdminDemoBanner() {
+  if (document.getElementById('admin-demo-banner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'admin-demo-banner';
+  banner.style.cssText = 'background:var(--gold-soft,#E8CE9E); color:#8F6222; font-size:12.5px; font-weight:600; padding:10px 14px; border-radius:10px; margin-bottom:14px;';
+  banner.textContent = '🧪 Editezi un ghid DEMO (vizibil public, pe landing page) — nu e o cazare reală, legată de un cont.';
+  document.getElementById('state-form').prepend(banner);
 }
 
 document.getElementById('header-logout-btn').addEventListener('click', async () => {

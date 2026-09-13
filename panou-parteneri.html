@@ -298,17 +298,11 @@
     </div>
 
     <div class="bo-section">
-      <div class="bo-title">🌍 Demo — pitch pentru gazde noi, alte zone <span class="count">8</span></div>
-      <table class="bo-table">
-        <tr><th>Zonă</th><th>Link demo</th><th></th></tr>
-        <tr><td><span class="bo-name">Predeal-Azuga</span></td><td><a class="bo-link" href="https://lokals.ro/ghid-oaspeti.html?apt=demo-predeal" target="_blank">…?apt=demo-predeal</a></td><td><button class="bo-copy" onclick="boCopy('https://lokals.ro/ghid-oaspeti.html?apt=demo-predeal', this)">Copiază</button></td></tr>
-        <tr><td><span class="bo-name">Sinaia-Bușteni</span></td><td><a class="bo-link" href="https://lokals.ro/ghid-oaspeti.html?apt=demo-sinaia" target="_blank">…?apt=demo-sinaia</a></td><td><button class="bo-copy" onclick="boCopy('https://lokals.ro/ghid-oaspeti.html?apt=demo-sinaia', this)">Copiază</button></td></tr>
-        <tr><td><span class="bo-name">Bran-Moieciu</span></td><td><a class="bo-link" href="https://lokals.ro/ghid-oaspeti.html?apt=demo-bran" target="_blank">…?apt=demo-bran</a></td><td><button class="bo-copy" onclick="boCopy('https://lokals.ro/ghid-oaspeti.html?apt=demo-bran', this)">Copiază</button></td></tr>
-        <tr><td><span class="bo-name">Zărnești</span></td><td><a class="bo-link" href="https://lokals.ro/ghid-oaspeti.html?apt=demo-zarnesti" target="_blank">…?apt=demo-zarnesti</a></td><td><button class="bo-copy" onclick="boCopy('https://lokals.ro/ghid-oaspeti.html?apt=demo-zarnesti', this)">Copiază</button></td></tr>
-        <tr><td><span class="bo-name">Făgăraș</span></td><td><a class="bo-link" href="https://lokals.ro/ghid-oaspeti.html?apt=demo-fagaras" target="_blank">…?apt=demo-fagaras</a></td><td><button class="bo-copy" onclick="boCopy('https://lokals.ro/ghid-oaspeti.html?apt=demo-fagaras', this)">Copiază</button></td></tr>
-        <tr><td><span class="bo-name">Viscri-Saschiz</span></td><td><a class="bo-link" href="https://lokals.ro/ghid-oaspeti.html?apt=demo-viscri" target="_blank">…?apt=demo-viscri</a></td><td><button class="bo-copy" onclick="boCopy('https://lokals.ro/ghid-oaspeti.html?apt=demo-viscri', this)">Copiază</button></td></tr>
-        <tr><td><span class="bo-name">Covasna</span></td><td><a class="bo-link" href="https://lokals.ro/ghid-oaspeti.html?apt=demo-covasna" target="_blank">…?apt=demo-covasna</a></td><td><button class="bo-copy" onclick="boCopy('https://lokals.ro/ghid-oaspeti.html?apt=demo-covasna', this)">Copiază</button></td></tr>
-        <tr><td><span class="bo-name">Vama Buzăului</span></td><td><a class="bo-link" href="https://lokals.ro/ghid-oaspeti.html?apt=demo-vama" target="_blank">…?apt=demo-vama</a></td><td><button class="bo-copy" onclick="boCopy('https://lokals.ro/ghid-oaspeti.html?apt=demo-vama', this)">Copiază</button></td></tr>
+      <div class="bo-title">🌍 Ghiduri demo — pitch pentru gazde noi <span class="count" id="demo-count">…</span></div>
+      <p class="lead" style="margin:-4px 0 14px; font-size:12.5px;">Ghidurile demo (câte unul pe zonă, plus cele 4 din comparația Gratuit/Essential de pe landing page) sunt acum cazări reale în baza de date (<code style="background:var(--cream); padding:1px 5px; border-radius:5px;">operatori</code>, marcate <code style="background:var(--cream); padding:1px 5px; border-radius:5px;">este_demo</code>) — poți schimba numele direct aici, sau apasă „Editează detalii" pentru poze, WiFi, reguli și restul informațiilor din ghid.</p>
+      <div id="demo-loading" style="text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Se încarcă...</div>
+      <table class="bo-table" id="demo-table" style="display:none;">
+        <tr><th>Zonă / plan</th><th>Nume afișat</th><th>Link demo</th><th></th></tr>
       </table>
     </div>
 
@@ -594,6 +588,7 @@ function enterPanel(email){
   loadZones();
   loadAfaceriGhid();
   loadRegistrations();
+  loadDemoGuides();
 }
 
 async function init(){
@@ -731,6 +726,74 @@ document.getElementById('zone-add-btn').addEventListener('click', async () => {
   judetInput.value = '';
   renderZones();
 });
+
+// ---------- Ghiduri demo (operatori.este_demo = true) ----------
+let DEMO_ROWS = [];
+
+const PLAN_DEMO_LABELS = {
+  'demo-apartament-gratuit': 'Comparație planuri · Apartament Gratuit',
+  'demo-apartament-essential': 'Comparație planuri · Apartament Essential',
+  'demo-hotel-gratuit': 'Comparație planuri · Hotel Gratuit',
+  'demo-hotel-essential': 'Comparație planuri · Hotel Essential',
+};
+
+function demoGroupLabel(row){
+  if (PLAN_DEMO_LABELS[row.slug]) return PLAN_DEMO_LABELS[row.slug];
+  return 'Zonă · ' + zonaLabel(row.zona);
+}
+
+async function loadDemoGuides(){
+  document.getElementById('demo-loading').style.display = 'block';
+  document.getElementById('demo-table').style.display = 'none';
+  const { data, error } = await supabaseClient.from('operatori').select('*').eq('este_demo', true).order('slug', { ascending: true });
+  document.getElementById('demo-loading').style.display = 'none';
+  if (error) { console.error(error); return; }
+  DEMO_ROWS = data || [];
+  renderDemoGuides();
+}
+
+async function saveDemoNume(id, nume, inputEl){
+  inputEl.disabled = true;
+  const { error } = await supabaseClient.from('operatori').update({ nume_afisat: nume }).eq('id', id);
+  inputEl.disabled = false;
+  if (error) {
+    console.error(error);
+    alert('Nu am putut salva numele — încearcă din nou.');
+    return false;
+  }
+  const r = DEMO_ROWS.find(rr => rr.id === id);
+  if (r) r.nume_afisat = nume;
+  return true;
+}
+
+function renderDemoGuides(){
+  document.getElementById('demo-count').textContent = DEMO_ROWS.length;
+  const table = document.getElementById('demo-table');
+  table.style.display = DEMO_ROWS.length ? '' : 'none';
+  const rowsHtml = DEMO_ROWS.map(r => {
+    const link = `https://lokals.ro/ghid-oaspeti.html?apt=${encodeURIComponent(r.slug)}`;
+    const editLink = `setari-cazare.html?slug=${encodeURIComponent(r.slug)}`;
+    return `
+      <tr>
+        <td><span class="bo-name">${escapeHtml(demoGroupLabel(r))}</span><div class="bo-sub">${escapeHtml(r.slug)}</div></td>
+        <td><input type="text" class="zone-name-input" data-demo-nume="${escapeHtml(r.id)}" value="${escapeHtml(r.nume_afisat || '')}" style="min-width:160px;"></td>
+        <td><a class="bo-link" href="${link}" target="_blank">…?apt=${escapeHtml(r.slug)}</a></td>
+        <td style="white-space:nowrap;">
+          <button class="bo-copy" onclick="boCopy('${link}', this)">Copiază</button>
+          <a class="bo-copy" style="text-decoration:none; display:inline-block;" href="${editLink}" target="_blank">Editează detalii →</a>
+        </td>
+      </tr>`;
+  }).join('');
+  table.innerHTML = '<tr><th>Zonă / plan</th><th>Nume afișat</th><th>Link demo</th><th></th></tr>' + rowsHtml;
+  table.querySelectorAll('[data-demo-nume]').forEach(input => {
+    input.addEventListener('change', async (e) => {
+      const id = e.target.getAttribute('data-demo-nume');
+      const nume = e.target.value.trim();
+      if (!nume) { const r = DEMO_ROWS.find(rr => rr.id === id); e.target.value = r ? (r.nume_afisat || '') : ''; return; }
+      await saveDemoNume(id, nume, e.target);
+    });
+  });
+}
 
 function renderChips(){
   const counts = { toate: ROWS.length, nou: 0, publicat: 0, respins: 0 };
