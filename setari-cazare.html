@@ -159,6 +159,25 @@
       </div>
     </div>
 
+    <!-- Mesaj de bun venit -->
+    <div class="card" id="card-bun-venit">
+      <div class="card-head">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9 6l9 -6"/><rect x="3" y="5" width="18" height="14" rx="2"/></svg>
+        <div class="card-title">Mesaj de bun venit</div>
+      </div>
+      <div class="hint" style="margin-top:-4px; margin-bottom:12px;">Numele oaspetelui e adăugat automat ("Bine ai venit, Maria!") — aici scrii doar mesajul de dedesubt și cum semnezi. Apare doar când verificarea identității oaspeților e activă (Contul meu) și există un sejur validat.</div>
+      <div class="field-group">
+        <label for="f-bunvenit-mesaj">Mesajul tău (opțional)</label>
+        <textarea id="f-bunvenit-mesaj" class="field" style="min-height:64px; resize:vertical;" placeholder="Ne bucurăm să te găzduim! Am pregătit acest ghid cu tot ce ai nevoie pentru sejurul tău."></textarea>
+        <div class="hint">Dacă lași câmpul gol, arătăm un mesaj generic de bun venit.</div>
+      </div>
+      <div class="field-group" style="margin-bottom:0;">
+        <label for="f-bunvenit-semnatura">Semnătura (opțional)</label>
+        <input id="f-bunvenit-semnatura" class="field" type="text" placeholder="ex. — Ana, gazda ta">
+        <div class="hint">Dacă lași câmpul gol, arătăm "— Gazda ta".</div>
+      </div>
+    </div>
+
     <!-- Locație & acces -->
     <div class="card">
       <div class="card-head">
@@ -692,7 +711,8 @@ function schedulePreview() {
 }
 
 // Câmpurile statice (nu cele generate dinamic pentru reguli/contacte, care au deja listener-ul lor)
-['f-checkin-ora', 'f-cod-locker', 'f-checkin-unitate', 'f-checkin', 'f-checkout-ora', 'f-checkout-reguli',
+['f-bunvenit-mesaj', 'f-bunvenit-semnatura',
+ 'f-checkin-ora', 'f-cod-locker', 'f-checkin-unitate', 'f-checkin', 'f-checkout-ora', 'f-checkout-reguli',
  'f-telefon', 'f-wifi-nume', 'f-wifi-parola'].forEach(id => {
   const el = document.getElementById(id);
   if (el) el.addEventListener('input', schedulePreview);
@@ -702,6 +722,7 @@ document.getElementById('f-whatsapp-activ').addEventListener('change', scheduleP
 function fillForm(row) {
   const f = row.facilitati_cazare || {};
   const loc = f.locatie || {};
+  const bunVenit = f.bun_venit || {};
   const checkin = f.checkin || {};
   const receptie = f.receptie || {};
   const checkout = f.checkout || {};
@@ -709,6 +730,9 @@ function fillForm(row) {
   const wifi = f.wifi || {};
   const urgente = f.urgente || {};
   const hotel = f.hotel || {};
+
+  document.getElementById('f-bunvenit-mesaj').value = bunVenit.mesaj || '';
+  document.getElementById('f-bunvenit-semnatura').value = bunVenit.semnatura || '';
 
   document.getElementById('f-adresa').value = row.adresa || '';
   document.getElementById('f-gps').value = loc.gps || '';
@@ -747,6 +771,10 @@ function fillForm(row) {
     document.getElementById(`f-contact-${i}`).value = contacteList[i - 1] || '';
   }
 
+  // Mesajul de bun venit personalizat (+ datele de sosire/plecare din ghid) presupun un
+  // sejur individual, cu un singur oaspete — nu are sens pe un view comun tuturor
+  // camerelor de hotel, așa că ascundem cardul complet la hotel (nu doar îl blocăm pe plan).
+  document.getElementById('card-bun-venit').style.display = (row.tip === 'hotel') ? 'none' : '';
   document.getElementById('card-hotel').style.display = (row.tip === 'hotel') ? '' : 'none';
   document.getElementById('f-rest-program').value = hotel.restaurant_program || '';
   document.getElementById('f-rest-loc').value = hotel.restaurant_locatie || '';
@@ -793,6 +821,7 @@ function fillForm(row) {
 // Sursa de adevar e tabela `features` (vezi lokals-features.js) — aici doar mapam
 // cardurile din formular la cheile din acel registru.
 const GATED_CARDS = [
+  { id: 'card-bun-venit', cheie: 'inregistrare_oaspeti', mesaj: 'Mesaj de bun venit personalizat — vizibil doar cu verificarea identității oaspeților activă.' },
   { id: 'card-reguli', cheie: 'reguli_casa', mesaj: 'Reguli ale casei configurabile, nu doar textul static din poster.' },
   { id: 'card-wifi', cheie: 'wifi', mesaj: 'Parolă WiFi și instrucțiuni de conectare, afișate direct în ghid.' },
   { id: 'subcard-contact-extins', cheie: 'contact_extins', mesaj: 'Contacte de urgență suplimentare, dincolo de butonul WhatsApp.' },
@@ -975,6 +1004,10 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     }
 
     const facilitati_cazare = {
+      bun_venit: {
+        mesaj: document.getElementById('f-bunvenit-mesaj').value.trim(),
+        semnatura: document.getElementById('f-bunvenit-semnatura').value.trim(),
+      },
       locatie: {
         gps: document.getElementById('f-gps').value.trim(),
         parcare: document.getElementById('f-parcare').value.trim(),
