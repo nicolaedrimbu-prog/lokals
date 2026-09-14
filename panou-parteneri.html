@@ -1425,6 +1425,12 @@ function renderAfgList(){
   document.getElementById('afg-empty').style.display = list.length ? 'none' : 'block';
   listEl.innerHTML = list.map(r => afgRowHtml(r)).join('');
 
+  // Contorul din titlu reflectă rezultatul filtrat curent (zonă/categorie/căutare), nu
+  // mereu totalul din bază — altfel arată mereu 180, indiferent ce filtru e aplicat.
+  const afgCountEl = document.getElementById('afg-count');
+  const noFilterActive = afgZonaFilter === 'toate' && afgCatFilter === 'toate' && !q;
+  afgCountEl.textContent = noFilterActive ? AFG_ROWS.length : `${list.length} / ${AFG_ROWS.length}`;
+
   listEl.querySelectorAll('[data-afg-toggle]').forEach(btn => {
     btn.addEventListener('click', () => {
       const details = document.getElementById('afg-details-' + btn.dataset.afgToggle);
