@@ -163,6 +163,18 @@
   .bo-note{background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px 18px; font-size:13px; color:var(--ink-soft); line-height:1.6;}
   .bo-note b{color:var(--ink);}
   .bo-note.warn{border-color:#EAD3B6; background:#FBF4E7;}
+
+  /* ---- Status clienți ---- */
+  .client-stats{display:flex; gap:10px; flex-wrap:wrap; margin:12px 0;}
+  .client-stat{background:var(--cream); border-radius:11px; padding:9px 14px; min-width:130px;}
+  .client-stat-label{font-size:10.5px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:var(--ink-soft);}
+  .client-stat-value{font-size:15px; font-weight:700; color:var(--teal-deep); margin-top:2px;}
+  .client-loc-row{display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid var(--line); border-radius:10px; margin-bottom:7px; font-size:12.5px;}
+  .client-loc-row .name{flex:1; font-weight:600; color:var(--teal-deep);}
+  .client-loc-row .meta{color:var(--ink-soft);}
+  .client-loc-row .unlink{background:transparent; border:1px solid var(--line); border-radius:8px; padding:4px 9px; font-size:11.5px; cursor:pointer; font-family:inherit; color:var(--brick);}
+  .client-assign-row{display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;}
+  .client-assign-row select{flex:1; min-width:180px; border:1.5px solid var(--line); border-radius:9px; padding:8px 10px; font-size:12.5px; font-family:inherit; background:#fff;}
 </style>
 </head>
 <body>
@@ -332,11 +344,21 @@
   </div>
   </div>
 
-  <!-- ===== Status clienți — urmează detaliile separat ===== -->
+  <!-- ===== Status clienți ===== -->
   <div class="tabpanel" id="tab-status-clienti">
   <div id="main">
     <h1 class="serif">Status clienți</h1>
-    <p class="lead">Secțiune nouă — urmează detaliile.</p>
+    <p class="lead" style="font-size:12.5px;">Un „client" poate avea mai multe locații (apartamente, hotel, afacere locală) sub același nume/firmă — leagă-le din cardul clientului. Plățile se înregistrează manual, la fel ca activarea planului Essential; din ele calculăm automat ultima plată, valoarea totală și estimăm următoarea plată.</p>
+
+    <div class="toolbar">
+      <input type="text" id="client-search" placeholder="Caută client după nume, email sau telefon...">
+      <button class="pbtn primary" id="client-btn-add">+ Client nou</button>
+    </div>
+    <div id="client-add-wrap" style="display:none; margin-bottom:16px;"></div>
+
+    <div id="client-loading" style="text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Se încarcă...</div>
+    <div id="client-empty" style="display:none; text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Niciun client încă — adaugă primul cu „+ Client nou".</div>
+    <div id="client-list" style="display:flex; flex-direction:column; gap:14px;"></div>
   </div>
   </div>
 
@@ -679,6 +701,7 @@ function enterPanel(email){
   loadRegistrations();
   loadDemoGuides();
   loadDiscountCodes();
+  loadClienti();
 }
 
 async function init(){
@@ -723,6 +746,7 @@ async function loadAll(){
   renderList();
   populateRegOperatorSelect();
   renderRegList();
+  renderClientiList(); // ROWS s-a schimbat — actualizează și listele de locații din Status clienți
 }
 
 // ---------- Zone pe landing page ----------
@@ -1013,6 +1037,396 @@ document.getElementById('disc-add-btn').addEventListener('click', async () => {
   DISC_CODES.unshift(data);
   codInput.value = ''; valoareInput.value = ''; valabilPanaInput.value = ''; notaInput.value = '';
   renderDiscountCodes();
+});
+
+// ---------- Status clienți ----------
+// Un "client" e o entitate nouă (tabelul clienti) care poate aduna sub același nume mai multe
+// locații — apartamente/hotel din `operatori` și afaceri din `afaceri_ghid` — prin coloana
+// client_id adăugată pe ambele tabele. Plățile (plati_abonament) se înregistrează manual de
+// admin, la fel cum se activează azi planul Essential — nu există facturare automată.
+let CLIENTI = [];
+let PLATI_ROWS = [];
+let clientSearch = '';
+
+function clientOperatori(clientId){
+  return ROWS.filter(r => r.source === 'operatori' && r.raw.client_id === clientId).map(r => r.raw);
+}
+function clientAfaceri(clientId){
+  return AFG_ROWS.filter(r => r.client_id === clientId);
+}
+function clientPlati(clientId){
+  return PLATI_ROWS.filter(p => p.client_id === clientId);
+}
+function unassignedOperatori(){
+  return ROWS.filter(r => r.source === 'operatori' && !r.raw.client_id).map(r => r.raw);
+}
+function unassignedAfaceri(){
+  return AFG_ROWS.filter(r => !r.client_id);
+}
+
+async function loadClienti(){
+  document.getElementById('client-loading').style.display = 'block';
+  const [clientiRes, platiRes] = await Promise.all([
+    supabaseClient.from('clienti').select('*').order('nume_client', { ascending: true }),
+    supabaseClient.from('plati_abonament').select('*').order('data_plata', { ascending: false }),
+  ]);
+  document.getElementById('client-loading').style.display = 'none';
+  if (clientiRes.error) {
+    console.error(clientiRes.error);
+    document.getElementById('client-list').innerHTML = `<p style="color:var(--brick); font-size:13px;">Nu am putut încărca — ${escapeHtml(clientiRes.error.message || '')}</p>`;
+    return;
+  }
+  CLIENTI = clientiRes.data || [];
+  PLATI_ROWS = (platiRes.data || []);
+  renderClientiList();
+}
+
+// Tipul unui client se calculează din locațiile legate — Apartament/Hotel/Afacere locală
+// dacă are un singur fel, "Mixt" dacă are mai multe (ex. hotel + restaurantul hotelului).
+function clientTip(opRows, afgRows){
+  const tipuri = new Set();
+  opRows.forEach(o => tipuri.add(o.tip === 'hotel' ? 'Hotel' : 'Apartament'));
+  if (afgRows.length) tipuri.add('Afacere locală');
+  if (tipuri.size > 1) return 'Mixt';
+  if (tipuri.size === 1) return Array.from(tipuri)[0];
+  return '—';
+}
+
+function addInterval(dateStr, ciclu){
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (isNaN(d)) return null;
+  if (ciclu === 'anual') d.setFullYear(d.getFullYear() + 1);
+  else d.setMonth(d.getMonth() + 1); // implicit lunar — și fallback pentru "per-cod" (fără sens real încă)
+  return d;
+}
+
+// Următoarea reînnoire pentru o locație: ultima plată înregistrată pentru ea + ciclu,
+// sau — dacă nu există nicio plată încă — data activării planului + ciclu.
+function locationNextRenewal(op){
+  if (op.tier !== 'essential') return null;
+  const platiLoc = PLATI_ROWS.filter(p => p.operator_id === op.id).sort((a, b) => new Date(b.data_plata) - new Date(a.data_plata));
+  const baza = platiLoc.length ? platiLoc[0].data_plata : op.tier_activat_la;
+  return addInterval(baza, op.tier_ciclu);
+}
+
+function renderClientiList(){
+  const q = clientSearch.trim().toLowerCase();
+  let list = CLIENTI.slice();
+  if (q) list = list.filter(c => (c.nume_client || '').toLowerCase().includes(q) || (c.email || '').toLowerCase().includes(q) || (c.telefon || '').toLowerCase().includes(q));
+
+  const listEl = document.getElementById('client-list');
+  document.getElementById('client-empty').style.display = list.length ? 'none' : 'block';
+  listEl.innerHTML = list.map(c => clientCardHtml(c)).join('');
+
+  listEl.querySelectorAll('[data-client-toggle-payform]').forEach(btn => {
+    btn.addEventListener('click', () => toggleClientPayForm(btn.dataset.clientTogglePayform));
+  });
+  listEl.querySelectorAll('[data-client-toggle-edit]').forEach(btn => {
+    btn.addEventListener('click', () => toggleClientEditForm(btn.dataset.clientToggleEdit));
+  });
+  listEl.querySelectorAll('[data-client-delete]').forEach(btn => {
+    btn.addEventListener('click', () => handleClientDelete(btn.dataset.clientDelete, btn));
+  });
+  listEl.querySelectorAll('[data-unlink-op]').forEach(btn => {
+    btn.addEventListener('click', () => handleUnlink('operatori', btn.dataset.unlinkOp, btn));
+  });
+  listEl.querySelectorAll('[data-unlink-afg]').forEach(btn => {
+    btn.addEventListener('click', () => handleUnlink('afaceri_ghid', btn.dataset.unlinkAfg, btn));
+  });
+  listEl.querySelectorAll('[data-assign-op-btn]').forEach(btn => {
+    btn.addEventListener('click', () => handleAssign('operatori', btn.dataset.assignOpBtn));
+  });
+  listEl.querySelectorAll('[data-assign-afg-btn]').forEach(btn => {
+    btn.addEventListener('click', () => handleAssign('afaceri_ghid', btn.dataset.assignAfgBtn));
+  });
+}
+
+function clientCardHtml(c){
+  const opRows = clientOperatori(c.id);
+  const afgRows = clientAfaceri(c.id);
+  const plati = clientPlati(c.id);
+  const tip = clientTip(opRows, afgRows);
+  const zone = Array.from(new Set(opRows.map(o => o.zona).concat(afgRows.flatMap(a => (a.zona || '').split(','))).map(z => (z || '').trim()).filter(Boolean)));
+
+  const ultimaPlata = plati.length ? plati[0] : null;
+  const valoareTotala = plati.reduce((sum, p) => sum + Number(p.suma || 0), 0);
+  const renewals = opRows.map(locationNextRenewal).filter(Boolean).sort((a, b) => a - b);
+  const urmatoareaPlata = renewals.length ? renewals[0] : null;
+
+  const locOpHtml = opRows.map(o => {
+    const renewal = locationNextRenewal(o);
+    const tierTxt = o.tier === 'essential' ? `Essential · ${o.tier_ciclu === 'anual' ? 'anual' : 'lunar'}` : 'Gratuit — fără abonament plătit';
+    return `
+      <div class="client-loc-row">
+        <span class="name">${escapeHtml(o.nume_afacere || '(fără nume)')} <span class="meta">· ${o.tip === 'hotel' ? 'Hotel' : 'Apartament'}</span></span>
+        <span class="meta">${escapeHtml(tierTxt)}</span>
+        <span class="meta">${o.tier_activat_la ? 'de la ' + fmtData(o.tier_activat_la) : ''}${renewal ? ' · reînnoire ~' + fmtData(renewal.toISOString()) : ''}</span>
+        <button type="button" class="unlink" data-unlink-op="${escapeHtml(o.id)}">Dezleagă</button>
+      </div>`;
+  }).join('');
+
+  const locAfgHtml = afgRows.map(a => `
+    <div class="client-loc-row">
+      <span class="name">${escapeHtml(a.nume || '(fără nume)')} <span class="meta">· Afacere locală</span></span>
+      <span class="meta">Beneficii pay-per-cod — urmează</span>
+      <button type="button" class="unlink" data-unlink-afg="${escapeHtml(a.id)}">Dezleagă</button>
+    </div>`).join('');
+
+  const unassignedOpOpts = unassignedOperatori().map(o => `<option value="${escapeHtml(o.id)}">${escapeHtml(o.nume_afacere)} (${o.tip === 'hotel' ? 'Hotel' : 'Apartament'})</option>`).join('');
+  const unassignedAfgOpts = unassignedAfaceri().map(a => `<option value="${escapeHtml(a.id)}">${escapeHtml(a.nume)}</option>`).join('');
+
+  const platiRowsHtml = plati.slice(0, 5).map(p => `
+    <div class="client-loc-row">
+      <span class="name">${fmtData(p.data_plata)}</span>
+      <span class="meta">${Number(p.suma).toFixed(2)} €${p.metoda ? ' · ' + escapeHtml(p.metoda) : ''}${p.nota ? ' · ' + escapeHtml(p.nota) : ''}</span>
+    </div>`).join('');
+
+  return `
+    <div class="prow" id="client-card-${escapeHtml(c.id)}">
+      <div class="prow-top">
+        <div class="picon" style="background:var(--gold-soft);">🏢</div>
+        <div class="pinfo">
+          <div class="pname-row">
+            <span class="pname serif">${escapeHtml(c.nume_client)}</span>
+            <span class="pbadge" style="background:var(--green-soft); color:var(--green);">${escapeHtml(tip)}</span>
+          </div>
+          <div class="pmeta">${escapeHtml(c.persoana_contact || '—')} &nbsp;·&nbsp; ${escapeHtml(c.email || '—')} &nbsp;·&nbsp; ${escapeHtml(c.telefon || '—')}${zone.length ? ' &nbsp;·&nbsp; ' + escapeHtml(zone.map(z => zonaLabel(z)).join(', ')) : ''}</div>
+        </div>
+        <div class="pactions">
+          <button class="pbtn" data-client-toggle-payform="${escapeHtml(c.id)}">+ Plată</button>
+          <button class="pbtn" data-client-toggle-edit="${escapeHtml(c.id)}">Editează</button>
+          <button class="pbtn brick" data-client-delete="${escapeHtml(c.id)}">Șterge</button>
+        </div>
+      </div>
+
+      <div class="client-stats">
+        <div class="client-stat"><div class="client-stat-label">Ultima plată</div><div class="client-stat-value">${ultimaPlata ? Number(ultimaPlata.suma).toFixed(2) + ' € · ' + fmtData(ultimaPlata.data_plata) : '—'}</div></div>
+        <div class="client-stat"><div class="client-stat-label">Următoarea plată (estimat)</div><div class="client-stat-value">${urmatoareaPlata ? fmtData(urmatoareaPlata.toISOString()) : '—'}</div></div>
+        <div class="client-stat"><div class="client-stat-label">Valoare totală plătită</div><div class="client-stat-value">${valoareTotala.toFixed(2)} €</div></div>
+      </div>
+
+      <div id="client-edit-wrap-${escapeHtml(c.id)}" style="display:none; margin:10px 0;"></div>
+      <div id="client-pay-wrap-${escapeHtml(c.id)}" style="display:none; margin:10px 0;"></div>
+
+      ${opRows.length || afgRows.length ? `<div style="margin-top:10px;"><div class="bo-title" style="margin-bottom:8px;">Abonamente în curs</div>${locOpHtml}${locAfgHtml}</div>` : ''}
+
+      <div class="client-assign-row">
+        <select data-assign-op-sel="${escapeHtml(c.id)}" id="assign-op-sel-${escapeHtml(c.id)}"><option value="">+ Leagă un apartament/hotel...</option>${unassignedOpOpts}</select>
+        <button type="button" class="pbtn" data-assign-op-btn="${escapeHtml(c.id)}">Leagă</button>
+        <select data-assign-afg-sel="${escapeHtml(c.id)}" id="assign-afg-sel-${escapeHtml(c.id)}"><option value="">+ Leagă o afacere locală...</option>${unassignedAfgOpts}</select>
+        <button type="button" class="pbtn" data-assign-afg-btn="${escapeHtml(c.id)}">Leagă</button>
+      </div>
+
+      ${plati.length ? `<div style="margin-top:10px;"><div class="bo-title" style="margin-bottom:8px;">Ultimele plăți</div>${platiRowsHtml}</div>` : ''}
+
+      ${c.nota ? `<div class="addon-note" style="margin-top:10px;">${escapeHtml(c.nota)}</div>` : ''}
+    </div>
+  `;
+}
+
+function toggleClientPayForm(clientId){
+  const wrap = document.getElementById('client-pay-wrap-' + clientId);
+  const isOpen = wrap.style.display !== 'none';
+  if (isOpen) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+  const opRows = clientOperatori(clientId);
+  wrap.innerHTML = `
+    <form data-client-pay-form="${escapeHtml(clientId)}" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:end; background:var(--cream); padding:14px; border-radius:12px;">
+      <div class="efield" style="grid-column:1/-1;">
+        <label>Locație (opțional)</label>
+        <select name="operator_id"><option value="">— fără locație specifică —</option>${opRows.map(o => `<option value="${escapeHtml(o.id)}">${escapeHtml(o.nume_afacere)}</option>`).join('')}</select>
+      </div>
+      <div class="efield"><label>Sumă (€)</label><input type="number" name="suma" step="0.01" min="0" required></div>
+      <div class="efield"><label>Data plății</label><input type="date" name="data_plata" value="${new Date().toISOString().slice(0,10)}" required></div>
+      <div class="efield"><label>Metodă</label><input type="text" name="metoda" placeholder="Transfer bancar / Card / BT ePOS"></div>
+      <div class="efield" style="grid-column:1/-1;"><label>Notă (opțional)</label><input type="text" name="nota"></div>
+      <div class="esave-row" style="grid-column:1/-1;">
+        <button type="submit" class="pbtn primary">Salvează plata</button>
+        <span class="esave-msg" id="client-pay-msg-${escapeHtml(clientId)}"></span>
+      </div>
+    </form>
+  `;
+  wrap.style.display = 'block';
+  // Formularul e injectat direct în wrap (nu via renderClientiList()), deci trebuie legat
+  // explicit aici — pasul de "bind" din renderClientiList() nu ajunge la el.
+  wrap.querySelector('[data-client-pay-form]').addEventListener('submit', (e) => { e.preventDefault(); handleAddPlata(e.target); });
+}
+
+async function handleAddPlata(form){
+  const clientId = form.dataset.clientPayForm;
+  const msgEl = document.getElementById('client-pay-msg-' + clientId);
+  const btn = form.querySelector('button[type="submit"]');
+  const operator_id = form.querySelector('[name="operator_id"]').value || null;
+  const suma = parseFloat(form.querySelector('[name="suma"]').value);
+  const data_plata = form.querySelector('[name="data_plata"]').value;
+  const metoda = form.querySelector('[name="metoda"]').value.trim() || null;
+  const nota = form.querySelector('[name="nota"]').value.trim() || null;
+  if (!suma || suma <= 0) { msgEl.className = 'esave-msg err'; msgEl.textContent = 'Completează o sumă validă.'; return; }
+
+  btn.disabled = true;
+  msgEl.className = 'esave-msg'; msgEl.textContent = '';
+  const { data, error } = await supabaseClient.from('plati_abonament')
+    .insert({ client_id: clientId, operator_id, suma, data_plata, metoda, nota })
+    .select().single();
+  btn.disabled = false;
+  if (error) {
+    console.error(error);
+    msgEl.className = 'esave-msg err';
+    msgEl.textContent = 'Nu am putut salva plata — încearcă din nou.';
+    return;
+  }
+  PLATI_ROWS.unshift(data);
+  PLATI_ROWS.sort((a, b) => new Date(b.data_plata) - new Date(a.data_plata));
+  renderClientiList();
+}
+
+function toggleClientEditForm(clientId){
+  const wrap = document.getElementById('client-edit-wrap-' + clientId);
+  const isOpen = wrap.style.display !== 'none';
+  if (isOpen) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+  const c = CLIENTI.find(cc => cc.id === clientId);
+  wrap.innerHTML = `
+    <form data-client-edit-form="${escapeHtml(clientId)}" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:end; background:var(--cream); padding:14px; border-radius:12px;">
+      <div class="efield"><label>Nume client / firmă</label><input type="text" name="nume_client" value="${escapeHtml(c.nume_client)}" required></div>
+      <div class="efield"><label>Persoană de contact</label><input type="text" name="persoana_contact" value="${escapeHtml(c.persoana_contact || '')}"></div>
+      <div class="efield"><label>Email</label><input type="email" name="email" value="${escapeHtml(c.email || '')}"></div>
+      <div class="efield"><label>Telefon</label><input type="tel" name="telefon" value="${escapeHtml(c.telefon || '')}"></div>
+      <div class="efield" style="grid-column:1/-1;"><label>Notă internă</label><input type="text" name="nota" value="${escapeHtml(c.nota || '')}"></div>
+      <div class="esave-row" style="grid-column:1/-1;">
+        <button type="submit" class="pbtn primary">Salvează</button>
+        <span class="esave-msg" id="client-edit-msg-${escapeHtml(clientId)}"></span>
+      </div>
+    </form>
+  `;
+  wrap.style.display = 'block';
+  // La fel ca la formularul de plată — injectat direct, trebuie legat explicit aici.
+  wrap.querySelector('[data-client-edit-form]').addEventListener('submit', (e) => { e.preventDefault(); handleClientEdit(e.target); });
+}
+
+async function handleClientEdit(form){
+  const clientId = form.dataset.clientEditForm;
+  const msgEl = document.getElementById('client-edit-msg-' + clientId);
+  const btn = form.querySelector('button[type="submit"]');
+  const payload = {
+    nume_client: form.querySelector('[name="nume_client"]').value.trim(),
+    persoana_contact: form.querySelector('[name="persoana_contact"]').value.trim() || null,
+    email: form.querySelector('[name="email"]').value.trim() || null,
+    telefon: form.querySelector('[name="telefon"]').value.trim() || null,
+    nota: form.querySelector('[name="nota"]').value.trim() || null,
+  };
+  if (!payload.nume_client) { msgEl.className = 'esave-msg err'; msgEl.textContent = 'Numele e obligatoriu.'; return; }
+
+  btn.disabled = true;
+  msgEl.className = 'esave-msg'; msgEl.textContent = '';
+  const { error } = await supabaseClient.from('clienti').update(payload).eq('id', clientId);
+  btn.disabled = false;
+  if (error) {
+    console.error(error);
+    msgEl.className = 'esave-msg err';
+    msgEl.textContent = 'Nu am putut salva — încearcă din nou.';
+    return;
+  }
+  const row = CLIENTI.find(c => c.id === clientId);
+  if (row) Object.assign(row, payload);
+  renderClientiList();
+}
+
+async function handleClientDelete(clientId, btn){
+  const c = CLIENTI.find(cc => cc.id === clientId);
+  if (!confirm(`Sigur ștergi clientul „${c ? c.nume_client : ''}"? Locațiile legate rămân, dar rămân neasignate; plățile înregistrate se șterg definitiv.`)) return;
+  btn.disabled = true;
+  const { error } = await supabaseClient.from('clienti').delete().eq('id', clientId);
+  btn.disabled = false;
+  if (error) { console.error(error); alert('Nu am putut șterge clientul — încearcă din nou.'); return; }
+  CLIENTI = CLIENTI.filter(cc => cc.id !== clientId);
+  PLATI_ROWS = PLATI_ROWS.filter(p => p.client_id !== clientId);
+  renderClientiList();
+}
+
+async function handleUnlink(table, id, btn){
+  btn.disabled = true;
+  const { error } = await supabaseClient.from(table).update({ client_id: null }).eq('id', id);
+  btn.disabled = false;
+  if (error) { console.error(error); alert('Nu am putut dezlega locația — încearcă din nou.'); return; }
+  if (table === 'operatori') {
+    const row = ROWS.find(r => r.source === 'operatori' && String(r.id) === String(id));
+    if (row) row.raw.client_id = null;
+  } else {
+    const row = AFG_ROWS.find(r => String(r.id) === String(id));
+    if (row) row.client_id = null;
+  }
+  renderClientiList();
+}
+
+async function handleAssign(table, clientId){
+  const selId = table === 'operatori' ? 'assign-op-sel-' + clientId : 'assign-afg-sel-' + clientId;
+  const sel = document.getElementById(selId);
+  const id = sel.value;
+  if (!id) return;
+  const { error } = await supabaseClient.from(table).update({ client_id: clientId }).eq('id', id);
+  if (error) { console.error(error); alert('Nu am putut lega locația — încearcă din nou.'); return; }
+  if (table === 'operatori') {
+    const row = ROWS.find(r => r.source === 'operatori' && String(r.id) === String(id));
+    if (row) row.raw.client_id = clientId;
+  } else {
+    const row = AFG_ROWS.find(r => String(r.id) === String(id));
+    if (row) row.client_id = clientId;
+  }
+  renderClientiList();
+}
+
+document.getElementById('client-search').addEventListener('input', (e) => { clientSearch = e.target.value; renderClientiList(); });
+
+document.getElementById('client-btn-add').addEventListener('click', () => {
+  const wrap = document.getElementById('client-add-wrap');
+  const isOpen = wrap.style.display !== 'none';
+  if (isOpen) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+  wrap.innerHTML = `
+    <div class="prow" style="border-color:var(--gold);">
+      <div class="pname serif" style="margin-bottom:10px;">Client nou</div>
+      <form id="client-add-form" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div class="efield"><label>Nume client / firmă</label><input type="text" name="nume_client" required></div>
+        <div class="efield"><label>Persoană de contact</label><input type="text" name="persoana_contact"></div>
+        <div class="efield"><label>Email</label><input type="email" name="email"></div>
+        <div class="efield"><label>Telefon</label><input type="tel" name="telefon"></div>
+        <div class="efield" style="grid-column:1/-1;"><label>Notă internă</label><input type="text" name="nota"></div>
+        <div class="esave-row" style="grid-column:1/-1;">
+          <button type="submit" class="pbtn primary">Adaugă clientul</button>
+          <span class="esave-msg" id="client-add-msg"></span>
+        </div>
+      </form>
+    </div>
+  `;
+  wrap.style.display = 'block';
+  document.getElementById('client-add-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const msgEl = document.getElementById('client-add-msg');
+    const btn = form.querySelector('button[type="submit"]');
+    const payload = {
+      nume_client: form.querySelector('[name="nume_client"]').value.trim(),
+      persoana_contact: form.querySelector('[name="persoana_contact"]').value.trim() || null,
+      email: form.querySelector('[name="email"]').value.trim() || null,
+      telefon: form.querySelector('[name="telefon"]').value.trim() || null,
+      nota: form.querySelector('[name="nota"]').value.trim() || null,
+    };
+    if (!payload.nume_client) { msgEl.className = 'esave-msg err'; msgEl.textContent = 'Numele e obligatoriu.'; return; }
+    btn.disabled = true;
+    msgEl.className = 'esave-msg'; msgEl.textContent = '';
+    const { data, error } = await supabaseClient.from('clienti').insert(payload).select().single();
+    btn.disabled = false;
+    if (error) {
+      console.error(error);
+      msgEl.className = 'esave-msg err';
+      msgEl.textContent = 'Nu am putut adăuga clientul — încearcă din nou.';
+      return;
+    }
+    CLIENTI.push(data);
+    CLIENTI.sort((a, b) => (a.nume_client || '').localeCompare(b.nume_client || '', 'ro'));
+    document.getElementById('client-add-wrap').style.display = 'none';
+    document.getElementById('client-add-wrap').innerHTML = '';
+    renderClientiList();
+  });
 });
 
 // Rândurile din domeniul activ al tab-ului comun (Apartamente/Hoteluri/Afaceri locale) —
@@ -1343,6 +1757,7 @@ async function loadAfaceriGhid(){
   document.getElementById('afg-count').textContent = AFG_ROWS.length;
   populateAfgFilters();
   renderAfgList();
+  renderClientiList(); // AFG_ROWS s-a schimbat — actualizează și listele de locații din Status clienți
 }
 
 function populateAfgFilters(){
