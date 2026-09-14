@@ -6,6 +6,7 @@
 <title>Afiș QR — Lokals</title>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Poppins:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="lokals-zones.js"></script>
 <style>
   :root{
@@ -32,7 +33,7 @@
   .headline{font-size:38px; font-weight:700; color:#fff; text-align:center; line-height:1.18; margin-bottom:14px;}
   .subline{font-size:15.5px; color:var(--sage); text-align:center; max-width:480px; line-height:1.5; margin-bottom:40px;}
   .qr-frame{background:var(--cream); border-radius:24px; padding:28px; box-shadow:0 10px 30px rgba(0,0,0,0.18); margin-bottom:28px;}
-  .qr-frame img{width:280px; height:280px; display:block;}
+  .qr-frame img, .qr-frame canvas{width:280px; height:280px; display:block;}
   .scan-txt{font-size:16px; font-weight:700; color:#fff; text-align:center; margin-bottom:6px;}
   .scan-sub{font-size:13px; color:var(--sage); text-align:center; font-style:italic; margin-bottom:40px;}
   .steps{display:flex; gap:28px; margin-top:auto; padding-top:16px;}
@@ -71,7 +72,7 @@
   <div class="headline serif" id="headline-text">Descoperă zona<br>ca un localnic.</div>
   <div class="subline">Ora de check-in, codul de acces, recomandările gazdei și afacerile locale de încredere din zonă — totul într-un singur loc, pe telefonul tău.</div>
   <div class="qr-frame">
-    <img id="qr-img" src="" alt="Cod QR către ghidul de oaspeți">
+    <div id="qr-holder"></div>
   </div>
   <div class="scan-txt">Scanează — e ghidul tău local</div>
   <div class="scan-sub" id="scan-sub">—</div>
@@ -127,7 +128,13 @@ async function init() {
   document.getElementById('prop-name').textContent = nume.toUpperCase();
   document.getElementById('headline-text').innerHTML = `Descoperă ${zona}<br>ca un localnic.`;
   document.getElementById('scan-sub').textContent = `"${nume}"`;
-  document.getElementById('qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=0&data=${encodeURIComponent(guideUrl)}&color=16-48-43&bgcolor=247-242-232`;
+  // Codul QR se generează direct în browser (biblioteca qrcodejs, ca peste tot în platformă —
+  // vezi ghid-oaspeti.html/inregistrare-hotelier.html) — nu mai depindem de un serviciu extern
+  // (api.qrserver.com), care putea pica sau bloca afișarea codului.
+  new QRCode(document.getElementById('qr-holder'), {
+    text: guideUrl, width: 280, height: 280,
+    colorDark: '#10302B', colorLight: '#F7F2E8',
+  });
   document.title = `Afiș QR — ${nume}`;
 
   document.getElementById('poster').style.display = '';
