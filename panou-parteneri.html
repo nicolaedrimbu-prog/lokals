@@ -2118,6 +2118,48 @@ function renderList(){
       populateRegOperatorSelect();
     });
   });
+  listEl.querySelectorAll('[data-preinreg-toggle]').forEach(input => {
+    input.addEventListener('change', async (e) => {
+      const id = e.target.getAttribute('data-preinreg-toggle');
+      const preinregistrare_activa = e.target.checked;
+      e.target.disabled = true;
+      const { error } = await supabaseClient.from('operatori').update({ preinregistrare_activa }).eq('id', id);
+      e.target.disabled = false;
+      if (error) {
+        console.error(error);
+        e.target.checked = !preinregistrare_activa;
+        alert('Nu am putut salva schimbarea — încearcă din nou.');
+        return;
+      }
+      const row = ROWS.find(r => r.source === 'operatori' && String(r.id) === String(id));
+      if (row) row.raw.preinregistrare_activa = preinregistrare_activa;
+      renderList();
+      const rowId = 'operatori-' + id;
+      const details = document.getElementById('details-' + rowId);
+      if (details) {
+        details.classList.add('open');
+        const toggleBtn = document.querySelector(`[data-toggle="${rowId}"]`);
+        if (toggleBtn) toggleBtn.textContent = 'Ascunde detalii';
+      }
+    });
+  });
+  listEl.querySelectorAll('[data-preinreg-selfcheckin-toggle]').forEach(input => {
+    input.addEventListener('change', async (e) => {
+      const id = e.target.getAttribute('data-preinreg-selfcheckin-toggle');
+      const preinregistrare_self_checkin = e.target.checked;
+      e.target.disabled = true;
+      const { error } = await supabaseClient.from('operatori').update({ preinregistrare_self_checkin }).eq('id', id);
+      e.target.disabled = false;
+      if (error) {
+        console.error(error);
+        e.target.checked = !preinregistrare_self_checkin;
+        alert('Nu am putut salva schimbarea — încearcă din nou.');
+        return;
+      }
+      const row = ROWS.find(r => r.source === 'operatori' && String(r.id) === String(id));
+      if (row) row.raw.preinregistrare_self_checkin = preinregistrare_self_checkin;
+    });
+  });
   listEl.querySelectorAll('[data-autoemail-toggle]').forEach(input => {
     input.addEventListener('change', async (e) => {
       const id = e.target.getAttribute('data-autoemail-toggle');
@@ -2208,6 +2250,8 @@ const OP_FIELDS = [
   { key: 'email', label: 'Email', type: 'email' },
   { key: 'adresa', label: 'Adresă', type: 'text', full: true },
   { key: 'nr_camere', label: 'Nr. camere/apartamente', type: 'number' },
+  { key: 'preinregistrare_contact_tip', label: 'Preînregistrare — canal notificare recepție', type: 'select', options: [['email','Email'],['whatsapp','WhatsApp']] },
+  { key: 'preinregistrare_contact_valoare', label: 'Preînregistrare — contact (email sau nr. WhatsApp)', type: 'text' },
 ];
 
 function fieldHtml(f, value){
@@ -2591,6 +2635,34 @@ function detailsHtml(r){
            </label>
          </div>
          <!-- Completare automată din email (Booking.com/Airbnb): ascunsă temporar — Booking.com nu include datele rezervării în corpul emailului (doar link către extranetul autentificat), deci AI-ul nu are ce extrage. Backend-ul (coloană auto_trimite_din_email, edge function receive-booking-email, toggle-ul de mai jos) rămâne intact pentru o eventuală reluare (ex. doar pentru Airbnb, dacă emailurile lor conțin datele). -->
+       </div>
+       <div class="addon-box" style="margin-top:10px;">
+         <div class="addon-row">
+           <div class="addon-icon">
+             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8F6222" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5L2 22l1.5 -5.5z"/></svg>
+           </div>
+           <div class="addon-info">
+             <div class="addon-title">Preînregistrare la check-in (fără personalizare — inclusiv hoteluri)</div>
+             <div class="addon-sub">Independent de „Înregistrare &amp; verificare identitate" de mai sus — nu blochează ghidul, doar adaugă un formular opțional în Evantai.</div>
+           </div>
+           <span class="addon-status ${raw.preinregistrare_activa ? 'on' : 'off'}">${raw.preinregistrare_activa ? 'Activ' : 'Inactiv'}</span>
+           <label class="switch">
+             <input type="checkbox" data-preinreg-toggle="${escapeHtml(r.id)}" ${raw.preinregistrare_activa ? 'checked' : ''}>
+             <span class="track"></span>
+           </label>
+         </div>
+         <div class="addon-row" style="margin-top:10px; padding-top:10px; border-top:1px solid var(--line);">
+           <div class="addon-info">
+             <div class="addon-title" style="font-size:13px;">Afișează codul de acces cameră (self check-in) după preînregistrare</div>
+             <div class="addon-sub">Reutilizează codul general de check-in setat mai sus, în „Cazare/Facilități".</div>
+           </div>
+           <span class="addon-status ${raw.preinregistrare_self_checkin ? 'on' : 'off'}">${raw.preinregistrare_self_checkin ? 'Activ' : 'Inactiv'}</span>
+           <label class="switch">
+             <input type="checkbox" data-preinreg-selfcheckin-toggle="${escapeHtml(r.id)}" ${raw.preinregistrare_self_checkin ? 'checked' : ''}>
+             <span class="track"></span>
+           </label>
+         </div>
+         ${raw.preinregistrare_activa ? `<div class="addon-note">Setează canalul și contactul de notificare mai jos, în formularul de editare. Link recepție (căutare cod / scanare QR): <a href="receptie-preinregistrari.html?operator=${escapeHtml(r.id)}" target="_blank" rel="noopener">receptie-preinregistrari.html?operator=${escapeHtml(r.id)}</a></div>` : ''}
        </div>`
     : '';
 

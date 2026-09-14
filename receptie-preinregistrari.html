@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Preînregistrări — Recepție Lokals</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --teal-deep:#10302B; --teal:#1A4A42; --gold:#C98A2C; --gold-soft:#E8CE9E;
+    --cream:#F7F2E8; --ink:#181E1B; --ink-soft:#5B6459; --line:#DCD5C6; --brick:#9C4536; --brick-soft:#F1E3DF;
+    --green:#3C6B3F; --green-soft:#E4EFE2;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--cream); color:var(--ink); font-family:'Inter', system-ui, sans-serif; min-height:100vh;}
+  .serif{font-family:'Fraunces', Georgia, serif;}
+
+  header{background:var(--teal-deep); padding:22px 20px 20px; text-align:center;}
+  header .wordmark{font-family:'Fraunces', Georgia, serif; font-weight:700; color:#fff; font-size:20px;}
+  header .tag{color:var(--gold-soft); font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin-top:4px;}
+
+  main{max-width:480px; margin:0 auto; padding:22px 18px 60px;}
+  .biz-name{font-family:'Fraunces', Georgia, serif; font-weight:700; font-size:20px; color:var(--teal-deep); text-align:center; margin-bottom:16px;}
+
+  .scan-card{background:#fff; border:1px solid var(--line); border-radius:16px; padding:16px 18px; margin-bottom:18px;}
+  .scan-card h3{font-size:14px; color:var(--teal-deep); margin:0 0 10px;}
+  .scan-frame{background:var(--cream); border-radius:12px; padding:10px; overflow:hidden; margin-bottom:10px;}
+  #reader{border-radius:8px; overflow:hidden;}
+  .manual-row{display:flex; gap:8px;}
+  #manual-code{flex:1; border:1.5px solid var(--line); border-radius:10px; padding:11px 13px; font-size:15px; font-family:'Inter', monospace; letter-spacing:2px; text-transform:uppercase; text-align:center; min-width:0;}
+  #manual-code:focus{outline:none; border-color:var(--teal);}
+  .btn-manual{background:var(--teal-deep); color:#fff; border:none; border-radius:10px; padding:0 16px; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;}
+  .lookup-error{color:var(--brick); font-size:12px; margin-top:8px; min-height:15px;}
+
+  .list-card{background:#fff; border:1px solid var(--line); border-radius:16px; padding:16px 18px;}
+  .list-card h3{font-size:13px; text-transform:uppercase; letter-spacing:.03em; color:var(--gold); margin:0 0 10px;}
+  .pending-item{display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); font-size:13px; cursor:pointer; background:none; border-left:none; border-right:none; border-top:none; width:100%; text-align:left; font-family:inherit; color:var(--ink);}
+  .pending-item:last-child{border-bottom:none;}
+  .pending-item .nume{font-weight:600; color:var(--teal-deep);}
+  .pending-item .meta{font-family:monospace; color:var(--ink-soft); font-size:11.5px;}
+  .pending-item .status-dot{width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px;}
+  .status-dot.trimis{background:var(--gold);}
+  .status-dot.procesat{background:var(--green);}
+  .empty-hint{color:var(--ink-soft); font-size:12.5px; text-align:center; padding:14px 0;}
+
+  #detail-overlay{position:fixed; inset:0; background:rgba(16,48,43,0.55); display:none; align-items:flex-start; justify-content:center; padding:30px 16px; overflow-y:auto; z-index:50;}
+  #detail-overlay.visible{display:flex;}
+  .detail-card{width:100%; max-width:440px; background:#fff; border-radius:18px; padding:24px 22px; box-shadow:0 20px 50px rgba(0,0,0,0.28);}
+  .detail-close{float:right; background:none; border:none; font-size:18px; color:var(--ink-soft); cursor:pointer;}
+  .guest-name{font-size:20px; font-weight:700; color:var(--teal-deep); font-family:'Fraunces', Georgia, serif;}
+  .guest-status{display:inline-block; font-size:10.5px; font-weight:700; padding:3px 10px; border-radius:999px; margin-left:8px; vertical-align:middle;}
+  .guest-status.trimis{background:var(--gold-soft); color:#8F6222;}
+  .guest-status.procesat{background:var(--green-soft); color:var(--green);}
+  .detail-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px 18px; margin-top:16px;}
+  .detail-field .lbl{font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-soft);}
+  .detail-field .val{font-size:14px; color:var(--ink); margin-top:2px; font-weight:600;}
+  .confirm-btn{margin-top:20px; width:100%; background:var(--teal-deep); color:#fff; border:none; font-weight:700; font-size:13.5px; padding:13px; border-radius:10px; cursor:pointer; font-family:inherit;}
+  .confirm-btn:disabled{background:var(--green-soft); color:var(--green); cursor:default;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wordmark">lokals</div>
+  <div class="tag">Recepție · Preînregistrări</div>
+</header>
+
+<main>
+  <div class="biz-name serif" id="biz-name">Se încarcă…</div>
+
+  <div class="scan-card">
+    <h3>Caută după cod</h3>
+    <div class="scan-frame"><div id="reader"></div></div>
+    <div class="manual-row">
+      <input type="text" id="manual-code" placeholder="ex. K7QX92" maxlength="8" autocomplete="off" autocapitalize="characters">
+      <button class="btn-manual" id="manual-submit">Caută</button>
+    </div>
+    <div class="lookup-error" id="lookup-error"></div>
+  </div>
+
+  <div class="list-card">
+    <h3>Preînregistrări recente</h3>
+    <div id="pending-list"><div class="empty-hint">Se încarcă…</div></div>
+  </div>
+</main>
+
+<div id="detail-overlay">
+  <div class="detail-card" id="detail-card"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script>
+const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
+
+const params = new URLSearchParams(window.location.search);
+const operatorId = (params.get('operator') || '').trim();
+
+async function sbFetch(path, options = {}) {
+  return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...options,
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': options.prefer || 'return=representation',
+      ...(options.headers || {}),
+    },
+  });
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function loadBusinessName() {
+  if (!operatorId) { document.getElementById('biz-name').textContent = 'Lipsește ?operator= din link'; return; }
+  try {
+    const res = await sbFetch(`operatori?id=eq.${encodeURIComponent(operatorId)}&select=nume_afisat,nume_afacere`);
+    const rows = await res.json();
+    document.getElementById('biz-name').textContent = (rows && rows[0]) ? (rows[0].nume_afisat || rows[0].nume_afacere) : 'Hotel necunoscut';
+  } catch (e) {
+    document.getElementById('biz-name').textContent = 'Hotel necunoscut';
+  }
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  return d;
+}
+
+async function loadPending() {
+  const wrap = document.getElementById('pending-list');
+  try {
+    const res = await sbFetch(`preinregistrari_hotel?operator_id=eq.${encodeURIComponent(operatorId)}&order=creat_la.desc&limit=30&select=*`);
+    const rows = await res.json();
+    if (!rows || !rows.length) {
+      wrap.innerHTML = '<div class="empty-hint">Nicio preînregistrare încă.</div>';
+      return;
+    }
+    wrap.innerHTML = rows.map(r => `
+      <button type="button" class="pending-item" data-code="${escapeHtml(r.cod_scurt)}">
+        <span><span class="status-dot ${r.status}"></span><span class="nume">${escapeHtml([r.prenume, r.nume].filter(Boolean).join(' ') || '(fără nume)')}</span></span>
+        <span class="meta">${escapeHtml(r.cod_scurt)}</span>
+      </button>
+    `).join('');
+    wrap.querySelectorAll('.pending-item').forEach(el => {
+      el.addEventListener('click', () => lookupCode(el.dataset.code, 'lista'));
+    });
+  } catch (e) {
+    wrap.innerHTML = '<div class="empty-hint">Nu am putut încărca lista.</div>';
+  }
+}
+
+function showDetail(row) {
+  const numeComplet = [row.prenume, row.nume].filter(Boolean).join(' ') || '(fără nume)';
+  const card = document.getElementById('detail-card');
+  card.innerHTML = `
+    <button class="detail-close" id="detail-close-btn">✕</button>
+    <div>
+      <span class="guest-name serif">${escapeHtml(numeComplet)}</span>
+      <span class="guest-status ${row.status}">${row.status === 'procesat' ? 'Procesat' : 'Trimis, neprocesat'}</span>
+    </div>
+    <div class="detail-grid">
+      <div class="detail-field"><div class="lbl">Cod</div><div class="val">${escapeHtml(row.cod_scurt)}</div></div>
+      <div class="detail-field"><div class="lbl">Act identitate</div><div class="val">${escapeHtml(row.tip_act || '—')}${row.act_serie_numar ? ' · ' + escapeHtml(row.act_serie_numar) : ''}</div></div>
+      <div class="detail-field"><div class="lbl">Check-in</div><div class="val">${fmtDate(row.check_in)}</div></div>
+      <div class="detail-field"><div class="lbl">Check-out</div><div class="val">${fmtDate(row.check_out)}</div></div>
+      <div class="detail-field"><div class="lbl">Nr. oaspeți</div><div class="val">${row.nr_oaspeti ?? '—'}</div></div>
+      <div class="detail-field"><div class="lbl">Telefon</div><div class="val">${escapeHtml(row.telefon || '—')}</div></div>
+      <div class="detail-field"><div class="lbl">Email</div><div class="val">${escapeHtml(row.email || '—')}</div></div>
+    </div>
+    <button class="confirm-btn" id="detail-confirm-btn" ${row.status === 'procesat' ? 'disabled' : ''}>${row.status === 'procesat' ? '✓ Deja procesat la recepție' : 'Confirmă check-in la recepție'}</button>
+  `;
+  document.getElementById('detail-overlay').classList.add('visible');
+  document.getElementById('detail-close-btn').addEventListener('click', hideDetail);
+  if (row.status !== 'procesat') {
+    document.getElementById('detail-confirm-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('detail-confirm-btn');
+      btn.disabled = true;
+      btn.textContent = 'Se confirmă…';
+      try {
+        const res = await sbFetch(`preinregistrari_hotel?id=eq.${encodeURIComponent(row.id)}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status: 'procesat', procesat_la: new Date().toISOString() }),
+        });
+        if (res.ok) {
+          row.status = 'procesat';
+          showDetail(row);
+          loadPending();
+        } else {
+          btn.disabled = false;
+          btn.textContent = 'Confirmă check-in la recepție';
+        }
+      } catch (e) {
+        btn.disabled = false;
+        btn.textContent = 'Confirmă check-in la recepție';
+      }
+    });
+  }
+}
+
+function hideDetail() {
+  document.getElementById('detail-overlay').classList.remove('visible');
+}
+
+async function lookupCode(rawCode, source) {
+  const errEl = document.getElementById('lookup-error');
+  errEl.textContent = '';
+  const code = (rawCode || '').trim().toUpperCase();
+  if (!code) return;
+  try {
+    const res = await sbFetch(`preinregistrari_hotel?operator_id=eq.${encodeURIComponent(operatorId)}&cod_scurt=eq.${encodeURIComponent(code)}&select=*`);
+    const rows = await res.json();
+    if (!rows || !rows.length) {
+      errEl.textContent = `Nu am găsit nicio preînregistrare cu codul „${code}" la acest hotel.`;
+      return;
+    }
+    if (source === 'scan') await stopScanner();
+    showDetail(rows[0]);
+  } catch (e) {
+    errEl.textContent = 'Eroare la căutare — încearcă din nou.';
+  }
+}
+
+document.getElementById('manual-submit').addEventListener('click', () => {
+  lookupCode(document.getElementById('manual-code').value, 'manual');
+});
+document.getElementById('manual-code').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('manual-submit').click();
+});
+
+let scanner;
+async function stopScanner() {
+  if (scanner) {
+    try { await scanner.stop(); } catch (e) {}
+    try { scanner.clear(); } catch (e) {}
+  }
+}
+function startScanner() {
+  scanner = new Html5Qrcode("reader");
+  scanner.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: { width: 220, height: 220 } },
+    (decodedText) => lookupCode(decodedText, 'scan'),
+    () => {}
+  ).catch(() => {});
+}
+
+loadBusinessName();
+loadPending();
+startScanner();
+</script>
+</body>
+</html>

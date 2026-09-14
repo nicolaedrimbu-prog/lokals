@@ -183,6 +183,27 @@
     padding:14px; font-size:14.5px; font-weight:700; cursor:pointer; font-family:inherit; margin-top:4px;}
   .rg-submit:disabled{opacity:.6; cursor:default;}
   .rg-error{color:var(--brick); font-size:12.5px; margin-top:8px; min-height:15px; text-align:center;}
+
+  /* ===== Preînregistrare hotel (Evantai, necondiționată) ===== */
+  .prb-field{margin-bottom:10px;}
+  .prb-field label{display:block; font-size:11px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.03em; margin-bottom:4px;}
+  .prb-field input, .prb-field select{width:100%; box-sizing:border-box; border:1.5px solid var(--line); border-radius:9px;
+    padding:9px 11px; font-size:13.5px; font-family:'Inter', sans-serif; color:var(--ink);}
+  .prb-row2{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .prb-photo-note{border:1.5px dashed var(--line); border-radius:10px; padding:11px; font-size:12px; color:var(--ink-soft); text-align:center; margin-bottom:12px; background:var(--bg);}
+  .prb-submit{display:block; width:100%; background:var(--spruce-deep); color:#fff; border:none; border-radius:11px;
+    padding:12px; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; margin-top:6px;}
+  .prb-submit:disabled{opacity:.6; cursor:default;}
+  .prb-note{font-size:11.5px; color:var(--ink-soft); line-height:1.5; margin:2px 0 12px;}
+  .prb-error{color:var(--brick); font-size:12px; margin-top:8px; min-height:15px;}
+  .prb-confirm{text-align:center;}
+  .prb-confirm .prb-qr-box{background:#fff; border-radius:14px; padding:14px; display:inline-block; margin:8px 0 10px; border:1px solid var(--line);}
+  .prb-code{font-family:monospace; font-size:19px; font-weight:700; color:var(--ink); letter-spacing:2px; background:var(--gold-soft); border-radius:8px; padding:6px 14px; display:inline-block; margin-bottom:8px;}
+  .prb-confirm p{font-size:12.5px; color:var(--ink-soft); line-height:1.5;}
+  .prb-access-code{background:var(--gold-soft); border-radius:12px; padding:12px 14px; margin-top:12px;}
+  .prb-access-code .lbl{font-size:10px; font-weight:700; color:#8F6222; text-transform:uppercase; letter-spacing:.03em; margin-bottom:4px;}
+  .prb-access-code .code{font-family:monospace; font-size:20px; font-weight:700; color:#8F6222; letter-spacing:2px;}
+  .prb-send-btn{display:inline-flex; align-items:center; gap:6px; margin-top:12px; background:var(--spruce-deep); color:#fff; border:none; border-radius:999px; padding:9px 16px; font-size:12.5px; font-weight:600; cursor:pointer; text-decoration:none; font-family:inherit;}
 </style>
 </head>
 <body>
@@ -586,6 +607,104 @@ async function submitRegistration(e) {
   }
 }
 
+// ===== Preînregistrare hotel (Evantai, necondiționată) =====
+async function submitPreinregistrare(e) {
+  e.preventDefault();
+  if (!currentOperator || !currentOperator.id) return;
+  const btn = document.getElementById('prb-submit-btn');
+  const errEl = document.getElementById('prb-form-error');
+  btn.disabled = true;
+  errEl.textContent = '';
+
+  const checkIn = document.getElementById('prb-checkin').value || null;
+  const checkOut = document.getElementById('prb-checkout').value || null;
+  if (checkIn && checkOut && checkOut <= checkIn) {
+    errEl.textContent = 'Data de check-out trebuie să fie după check-in.';
+    btn.disabled = false;
+    return;
+  }
+
+  const payload = {
+    operator_id: currentOperator.id,
+    prenume: document.getElementById('prb-prenume').value.trim(),
+    nume: document.getElementById('prb-nume').value.trim(),
+    tip_act: document.getElementById('prb-tip-act').value,
+    act_serie_numar: document.getElementById('prb-act-nr').value.trim() || null,
+    check_in: checkIn,
+    check_out: checkOut,
+    nr_oaspeti: Number(document.getElementById('prb-nr').value) || 1,
+    email: document.getElementById('prb-email').value.trim() || null,
+    telefon: document.getElementById('prb-telefon').value.trim() || null,
+    status: 'trimis',
+  };
+
+  let codScurt = randomCode(6);
+  let attempt = 0;
+  let saved = null;
+  while (attempt < 3 && !saved) {
+    const res = await sbFetch('preinregistrari_hotel', {
+      method: 'POST',
+      body: JSON.stringify({ ...payload, cod_scurt: codScurt }),
+    });
+    if (res.status === 201) {
+      saved = await res.json();
+    } else if (res.status === 409) {
+      codScurt = randomCode(6);
+      attempt++;
+    } else {
+      errEl.textContent = I18N[currentLang].fac.preinregErr;
+      btn.disabled = false;
+      return;
+    }
+  }
+  if (!saved) {
+    errEl.textContent = I18N[currentLang].fac.preinregErr;
+    btn.disabled = false;
+    return;
+  }
+
+  document.getElementById('preinreg-form-wrap').style.display = 'none';
+  document.getElementById('preinreg-confirm-wrap').style.display = 'block';
+  document.getElementById('preinreg-code-text').textContent = codScurt;
+  const qrHost = document.getElementById('preinreg-qr-holder');
+  qrHost.innerHTML = '';
+  new QRCode(qrHost, { text: codScurt, width: 150, height: 150, colorDark: '#20291F', colorLight: '#FBF8F1' });
+
+  // Codul de acces cameră (self check-in) — reutilizează codul general al cazării, ca la
+  // apartamente; afișat doar dacă hotelul a activat explicit self check-in-ul.
+  const checkinCfg = (currentOperator.facilitati_cazare || {}).checkin || {};
+  if (currentOperator.preinregistrare_self_checkin === true && checkinCfg.cod_acces) {
+    document.getElementById('preinreg-access-code').textContent = checkinCfg.cod_acces;
+    document.getElementById('preinreg-access-box').style.display = 'block';
+  }
+
+  renderPreinregSendButton(payload, codScurt);
+}
+
+function renderPreinregSendButton(payload, codScurt) {
+  const wrap = document.getElementById('preinreg-send-wrap');
+  const tip = currentOperator.preinregistrare_contact_tip;
+  const contact = fmt(currentOperator.preinregistrare_contact_valoare);
+  if (!tip || !contact) { wrap.innerHTML = ''; return; }
+
+  const numeComplet = [payload.prenume, payload.nume].filter(Boolean).join(' ');
+  const rezumat = [
+    `Preînregistrare — ${numeComplet || '(fără nume)'}`,
+    payload.check_in ? `Check-in: ${payload.check_in}` : null,
+    payload.check_out ? `Check-out: ${payload.check_out}` : null,
+    `Nr. oaspeți: ${payload.nr_oaspeti}`,
+    payload.telefon ? `Telefon: ${payload.telefon}` : null,
+    `Cod: ${codScurt}`,
+  ].filter(Boolean).join('\n');
+
+  if (tip === 'whatsapp') {
+    const phone = formatPhoneRo(contact);
+    wrap.innerHTML = `<a class="prb-send-btn" href="https://wa.me/${phone}?text=${encodeURIComponent(rezumat)}" target="_blank" rel="noopener">${I18N[currentLang].fac.preinregSendWhatsapp}</a>`;
+  } else {
+    wrap.innerHTML = `<a class="prb-send-btn" href="mailto:${encodeURIComponent(contact)}?subject=${encodeURIComponent('Preînregistrare — ' + (numeComplet || codScurt))}&body=${encodeURIComponent(rezumat)}">${I18N[currentLang].fac.preinregSendEmail}</a>`;
+  }
+}
+
 function randomCode(len = 6) {
   const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // fără 0/O/1/I, evită confuzii
   let out = "";
@@ -797,6 +916,22 @@ const I18N = {
       tabelServiciu: "Serviciu", tabelOrar: "Orar", tabelLocatie: "Locație", tabelTelefon: "Telefon",
       minibar: "Minibar", minibarPoza: "Poză preț",
       wifiConnect: "Scanează pentru conectare automată",
+      preinreg: "Înregistrare rapidă la check-in",
+      preinregBadge: "nou",
+      preinregIntro: "Completează datele înainte de sosire ca să scurtezi timpul la recepție. Este opțional — poți continua să răsfoiești ghidul oricând, cu sau fără să completezi acest formular.",
+      preinregPrenume: "Prenume", preinregNume: "Nume", preinregTipActLabel: "Act identitate",
+      preinregTipActCI: "Carte de identitate", preinregTipActPasaport: "Pașaport", preinregSerie: "Serie și număr act",
+      preinregCheckin: "Check-in", preinregCheckout: "Check-out", preinregNr: "Număr oaspeți",
+      preinregEmail: "Email", preinregTelefon: "Telefon",
+      preinregFotoNota: "📷 Încărcare poză act de identitate — disponibil în curând în această regiune.",
+      preinregSubmit: "Trimite înregistrarea",
+      preinregNote: "Datele se salvează în sistemul hotelului, pentru pregătirea check-in-ului. Poți trimite și o notificare directă recepției mai jos.",
+      preinregErr: "Nu am putut trimite înregistrarea — încearcă din nou.",
+      preinregOk: "Înregistrare trimisă cu succes ✓",
+      preinregShowCode: "Arată acest cod QR (sau codul) recepționerului la sosire — îi va afișa instant datele completate.",
+      preinregAccessLabel: "Cod acces cameră (self check-in)",
+      preinregSendEmail: "✉️ Trimite pe email recepției",
+      preinregSendWhatsapp: "💬 Trimite pe WhatsApp recepției",
     },
   },
   en: {
@@ -853,6 +988,22 @@ const I18N = {
       tabelServiciu: "Service", tabelOrar: "Hours", tabelLocatie: "Location", tabelTelefon: "Phone",
       minibar: "Minibar", minibarPoza: "Price list photo",
       wifiConnect: "Scan to connect automatically",
+      preinreg: "Quick check-in registration",
+      preinregBadge: "new",
+      preinregIntro: "Fill in your details before arrival to speed up check-in at the front desk. It's optional — you can keep browsing the guide any time, with or without filling this in.",
+      preinregPrenume: "First name", preinregNume: "Last name", preinregTipActLabel: "ID type",
+      preinregTipActCI: "ID card", preinregTipActPasaport: "Passport", preinregSerie: "ID / passport number",
+      preinregCheckin: "Check-in", preinregCheckout: "Check-out", preinregNr: "Number of guests",
+      preinregEmail: "Email", preinregTelefon: "Phone",
+      preinregFotoNota: "📷 ID/passport photo upload — coming soon to this region.",
+      preinregSubmit: "Submit registration",
+      preinregNote: "Your details are saved in the hotel's system to prepare your check-in. You can also send a direct notification to the front desk below.",
+      preinregErr: "We couldn't submit your registration — please try again.",
+      preinregOk: "Registration submitted successfully ✓",
+      preinregShowCode: "Show this QR code (or the code) to the receptionist on arrival — they'll instantly pull up your details.",
+      preinregAccessLabel: "Room access code (self check-in)",
+      preinregSendEmail: "✉️ Email the front desk",
+      preinregSendWhatsapp: "💬 WhatsApp the front desk",
     },
   },
 };
@@ -868,6 +1019,7 @@ const FAC_ICONS = {
   servicii: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#26382C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21v-14l8 -4v18"/><path d="M19 21v-10l-6 -4"/><path d="M9 9l0 .01"/><path d="M9 12l0 .01"/><path d="M9 15l0 .01"/><path d="M9 18l0 .01"/></svg>',
   contact: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9C4536" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 16v.01"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.871l-8.106 -13.534a1.914 1.914 0 0 0 -3.274 0z"/></svg>',
   feedback: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#26382C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-13a3 3 0 0 1 3 -3h10a3 3 0 0 1 3 3v6a3 3 0 0 1 -3 3h-9l-4 4z"/></svg>',
+  preinregistrare: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#26382C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5L2 22l1.5 -5.5z"/><path d="M13.5 6.5l4 4"/></svg>',
   whatsapp: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3C5B44" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"/></svg>',
   chevron: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B6459" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="fac-chevron"><path d="M6 9l6 6l6 -6"/></svg>',
   pin: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5B6459" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M17.657 16.657L13.414 20.9a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/></svg>',
@@ -949,6 +1101,10 @@ async function renderFacilitati() {
   const dataSosireLabel = stayDatesUnlocked ? fmtStayDate(currentStay.check_in) : '';
   const dataPlecareLabel = stayDatesUnlocked ? fmtStayDate(currentStay.check_out) : '';
 
+  // Preînregistrare (Evantai, necondiționată de gate-ul de personalizare) — activabilă
+  // per-cazare din panou-parteneri.html, relevantă mai ales pentru hoteluri.
+  const preinregActiva = currentOperator.preinregistrare_activa === true;
+
   // are cazarea macar o informatie de afisat? altfel nu aratam sectiunea deloc
   const hasAny = currentOperator.adresa || currentOperator.foto_url || loc.gps || loc.parcare ||
     codAccesEfectiv || checkin.instructiuni || checkin.ora || checkin.unitate || checkout.ora || checkout.instructiuni ||
@@ -956,7 +1112,8 @@ async function renderFacilitati() {
     wifi.ssid || currentOperator.telefon || urgente.spital ||
     (Array.isArray(reguli.lista) && reguli.lista.filter(Boolean).length) || reguli.poza_url ||
     reguli.fumat !== undefined || reguli.animale !== undefined || reguli.liniste !== undefined || reguli.extra ||
-    (isHotel && (hotel.restaurant_program || hotel.spa_program || hotel.fitness_program || hotel.mic_dejun_program || hotel.room_service || hotel.mesaj_management));
+    (isHotel && (hotel.restaurant_program || hotel.spa_program || hotel.fitness_program || hotel.mic_dejun_program || hotel.room_service || hotel.mesaj_management)) ||
+    preinregActiva;
   if (!hasAny) { wrap.style.display = 'none'; return; }
 
   wrap.style.display = '';
@@ -1016,6 +1173,58 @@ async function renderFacilitati() {
       body += `</div>`;
     }
     sections.push({ key: 'checkin', title: t.checkin, body });
+  }
+
+  // Preînregistrare — formular necondiționat, independent de sejurul validat/token-ul de
+  // personalizare. La submit: salvăm rândul în preinregistrari_hotel, generăm un cod scurt
+  // (afișat ca QR) pentru identificare rapidă la recepție, și — dacă hotelul a configurat
+  // un contact — pregătim o notificare (email/WhatsApp) precompletată către recepție.
+  if (preinregActiva) {
+    const body = `
+      <p>${t.preinregIntro}</p>
+      <div id="preinreg-form-wrap">
+        <form id="preinreg-form">
+          <div class="prb-row2">
+            <div class="prb-field"><label>${t.preinregPrenume}</label><input id="prb-prenume" required></div>
+            <div class="prb-field"><label>${t.preinregNume}</label><input id="prb-nume" required></div>
+          </div>
+          <div class="prb-row2">
+            <div class="prb-field">
+              <label>${t.preinregTipActLabel}</label>
+              <select id="prb-tip-act"><option value="CI">${t.preinregTipActCI}</option><option value="pasaport">${t.preinregTipActPasaport}</option></select>
+            </div>
+            <div class="prb-field"><label>${t.preinregSerie}</label><input id="prb-act-nr"></div>
+          </div>
+          <div class="prb-row2">
+            <div class="prb-field"><label>${t.preinregCheckin}</label><input id="prb-checkin" type="date"></div>
+            <div class="prb-field"><label>${t.preinregCheckout}</label><input id="prb-checkout" type="date"></div>
+          </div>
+          <div class="prb-row2">
+            <div class="prb-field"><label>${t.preinregNr}</label><input id="prb-nr" type="number" min="1" value="1"></div>
+            <div class="prb-field"><label>${t.preinregTelefon}</label><input id="prb-telefon" type="tel"></div>
+          </div>
+          <div class="prb-field"><label>${t.preinregEmail}</label><input id="prb-email" type="email"></div>
+          ${currentOperator.necesita_foto_id ? `<div class="prb-photo-note">${t.preinregFotoNota}</div>` : ''}
+          <div class="prb-note">${t.preinregNote}</div>
+          <button type="submit" class="prb-submit" id="prb-submit-btn">${t.preinregSubmit}</button>
+          <div class="prb-error" id="prb-form-error"></div>
+        </form>
+      </div>
+      <div id="preinreg-confirm-wrap" style="display:none;">
+        <div class="prb-confirm">
+          <p style="color:var(--spruce-deep); font-weight:700;">${t.preinregOk}</p>
+          <div class="prb-qr-box"><div id="preinreg-qr-holder"></div></div>
+          <div class="prb-code" id="preinreg-code-text">—</div>
+          <p>${t.preinregShowCode}</p>
+        </div>
+        <div class="prb-access-code" id="preinreg-access-box" style="display:none;">
+          <div class="lbl">${t.preinregAccessLabel}</div>
+          <div class="code" id="preinreg-access-code">—</div>
+        </div>
+        <div id="preinreg-send-wrap"></div>
+      </div>
+    `;
+    sections.push({ key: 'preinregistrare', title: t.preinreg, body, preinregBadge: t.preinregBadge });
   }
 
   // Check-out — data plecarii (doar sejur validat, Essential), apoi ora generala
@@ -1145,6 +1354,7 @@ async function renderFacilitati() {
           <div class="fac-title">${sec.title}</div>
         </div>
         ${sec.hotelBadge ? `<span class="fac-hotel-badge">HOTEL</span>` : ''}
+        ${sec.preinregBadge ? `<span class="fac-hotel-badge" style="background:var(--amber);">${sec.preinregBadge}</span>` : ''}
         ${FAC_ICONS.chevron}
       </div>
       <div class="fac-body">${sec.body}</div>
@@ -1156,6 +1366,11 @@ async function renderFacilitati() {
     if (sec.wifiPayload) {
       const qrHost = item.querySelector(`#${sec.wifiId}`);
       if (qrHost) new QRCode(qrHost, { text: sec.wifiPayload, width: 128, height: 128 });
+    }
+    if (sec.key === 'preinregistrare') {
+      const form = item.querySelector('#preinreg-form');
+      if (form) form.addEventListener('submit', submitPreinregistrare);
+      item.classList.add('open'); // deschis implicit — e utilitar, nu doar informativ
     }
   });
 
