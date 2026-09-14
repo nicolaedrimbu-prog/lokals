@@ -218,7 +218,11 @@
 
     <div class="toolbar">
       <div class="chips" id="chips"></div>
-      <div style="display:flex; gap:8px;">
+      <div style="display:flex; gap:14px; align-items:center;">
+        <label id="hide-demo-wrap" style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--ink-soft); font-weight:600; cursor:pointer; white-space:nowrap;">
+          <input type="checkbox" id="hide-demo-toggle">
+          Ascunde Demo
+        </label>
         <select id="sort" style="border:1.5px solid var(--line); border-radius:11px; padding:9px 12px; font-size:13.5px; font-family:inherit; background:#fff; color:var(--ink);">
           <option value="data-desc">Cele mai noi</option>
           <option value="data-asc">Cele mai vechi</option>
@@ -520,7 +524,14 @@ function updateCazariHeading(){
   document.getElementById('cazari-lead').textContent = t.lead;
   document.getElementById('footnote-source').textContent = t.sursa;
   document.getElementById('cazari-afg-section').style.display = window.currentDomain === 'afaceri' ? '' : 'none';
+  document.getElementById('hide-demo-wrap').style.display = window.currentDomain === 'afaceri' ? 'none' : 'flex';
 }
+
+document.getElementById('hide-demo-toggle').addEventListener('change', (e) => {
+  hideDemo = e.target.checked;
+  renderChips();
+  renderList();
+});
 
 document.querySelectorAll('.tabbtn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -592,6 +603,9 @@ let currentSort = 'data-desc';
 // Domeniul activ în tab-ul comun Apartamente/Hoteluri/Afaceri locale (tab-cazari) — setat de
 // tab-uri (data-domain pe butoane, vezi mai jos) și citit de renderList()/renderChips().
 window.currentDomain = 'apartament';
+// Ascunde din listă apartamentele/hotelurile marcate `este_demo` — relevant doar pentru
+// domeniile apartament/hotel (Afaceri locale nu are conceptul de "demo").
+let hideDemo = false;
 const STATUS_ORDER = { nou: 0, publicat: 1, respins: 2 };
 
 function showView(id){
@@ -1004,7 +1018,9 @@ document.getElementById('disc-add-btn').addEventListener('click', async () => {
 // Rândurile din domeniul activ al tab-ului comun (Apartamente/Hoteluri/Afaceri locale) —
 // toate filtrele (status, zonă, căutare) se aplică peste acest subset, nu peste ROWS întreg.
 function domainRows(){
-  return ROWS.filter(r => r.domain === window.currentDomain);
+  let rows = ROWS.filter(r => r.domain === window.currentDomain);
+  if (hideDemo && window.currentDomain !== 'afaceri') rows = rows.filter(r => !(r.raw && r.raw.este_demo));
+  return rows;
 }
 
 function renderChips(){
