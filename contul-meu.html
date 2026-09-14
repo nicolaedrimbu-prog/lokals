@@ -89,6 +89,7 @@
   .reg-contact{font-size:14px; font-weight:600; color:var(--ink); display:flex; align-items:center; gap:5px; white-space:nowrap;}
   .reg-meta-secondary{color:var(--ink-soft); font-size:11px; margin-top:4px;}
   .reg-actions{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; align-items:center;}
+  .reg-actions-divider{border-top:1px dashed var(--line); margin-top:10px; padding-top:9px;}
   .reg-btn{border:1.5px solid var(--line); background:#fff; color:var(--teal-deep); font-size:11.5px; font-weight:600; font-family:inherit; padding:6px 10px; border-radius:8px; cursor:pointer; text-decoration:none;}
   .reg-btn.primary{background:var(--teal-deep); color:#fff; border-color:var(--teal-deep);}
   .reg-btn.danger{border-color:#9C4536; color:#9C4536;}
@@ -555,13 +556,15 @@ function renderRegList(operatorId) {
       ` : ''}
       ${r.status === 'respins' && r.motiv_respingere ? `<div class="reg-meta" style="color:#9C4536;">Motiv respingere: ${escapeHtmlAcc(r.motiv_respingere)}</div>` : ''}
       <div class="reg-actions">
-        <button class="reg-btn" type="button" data-reg-copy="${link}">Copiază link</button>
-        <a class="reg-btn" style="text-decoration:none;" href="https://wa.me/?text=${waText}" target="_blank" rel="noopener">WhatsApp</a>
         ${r.status === 'asteptare_validare' ? `
           <button class="reg-btn primary" type="button" data-reg-approve="${r.id}">✓ Validează</button>
           <button class="reg-btn danger" type="button" data-reg-reject="${r.id}">Respinge</button>` : ''}
         <input type="text" class="reg-cod-input" placeholder="cod acces" value="${escapeHtmlAcc(r.cod_acces || '')}" data-reg-cod-input="${r.id}">
         <button class="reg-btn" type="button" data-reg-save-cod="${r.id}">Salvează codul</button>
+      </div>
+      <div class="reg-actions reg-actions-divider">
+        <button class="reg-btn" type="button" data-reg-copy="${link}">Copiază link</button>
+        <a class="reg-btn" style="text-decoration:none;" href="https://wa.me/?text=${waText}" target="_blank" rel="noopener">WhatsApp</a>
       </div>
       <div class="reg-msg" data-reg-row-msg="${r.id}"></div>
     </div>`;
