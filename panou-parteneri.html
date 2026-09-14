@@ -376,16 +376,6 @@
   <div class="tabpanel" id="tab-redeem">
   <div id="main">
     <h1 class="serif">Partners redeem</h1>
-    <p class="lead">Cum funcționează scanarea beneficiilor pentru partenerii din ghidul turistic.</p>
-    <div class="bo-note">
-      <b>Migrată pe lokals.ro</b> — <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">partner-redeem.html</code>, cu carduri QR noi (nedependente de domeniul vechi GitHub Pages). Nu există un link fix per afacere; fiecare partener are propriul link, în formatul:<br><br>
-      <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">https://lokals.ro/partner-redeem.html?business=<i>id-ul-afacerii</i></code><br><br>
-      <b>Exemplu, Peștera Valea Cetății:</b> <a class="bo-link" href="https://lokals.ro/partner-redeem.html?business=pestera-valea-cetatii" target="_blank">…/partner-redeem.html?business=pestera-valea-cetatii</a>
-      <button class="bo-copy" style="margin-left:8px;" onclick="boCopy('https://lokals.ro/partner-redeem.html?business=pestera-valea-cetatii', this)">Copiază</button><br><br>
-      Id-ul exact al fiecărei afaceri e păstrat ca și coloană <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">id</code> în tabelul <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">afaceri_ghid</code> (tab „Afaceri locale") — deschide detaliile unei afaceri acolo ca să vezi id-ul exact folosit în acest link. Cardurile QR fizice trebuie reprintate/redistribuite la toți partenerii, cu noile coduri.
-    </div>
-
-    <h2 class="serif" style="font-size:17px; color:var(--teal-deep); margin:26px 0 4px;">Statistici accesări beneficii</h2>
     <p class="lead" style="font-size:12.5px;">Fiecare scanare/introducere manuală a unui cod valid, confirmată de un partener — cu afacerea, apartamentul/hotelul oaspetelui, data și ora. Sumarele de mai jos se recalculează după intervalul, granularitatea și filtrele alese.</p>
 
     <div class="redeem-toolbar">
@@ -409,6 +399,14 @@
     <div class="redeem-export-row">
       <button class="pbtn" type="button" id="redeem-export-excel">⬇ Exportă Excel</button>
       <button class="pbtn" type="button" id="redeem-export-pdf">⬇ Exportă PDF</button>
+    </div>
+
+    <div class="bo-note" style="margin-bottom:22px;">
+      <b>Cum funcționează scanarea beneficiilor:</b> migrată pe lokals.ro — <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">partner-redeem.html</code>, cu carduri QR noi (nedependente de domeniul vechi GitHub Pages). Nu există un link fix per afacere; fiecare partener are propriul link, în formatul:<br><br>
+      <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">https://lokals.ro/partner-redeem.html?business=<i>id-ul-afacerii</i></code><br><br>
+      <b>Exemplu, Peștera Valea Cetății:</b> <a class="bo-link" href="https://lokals.ro/partner-redeem.html?business=pestera-valea-cetatii" target="_blank">…/partner-redeem.html?business=pestera-valea-cetatii</a>
+      <button class="bo-copy" style="margin-left:8px;" onclick="boCopy('https://lokals.ro/partner-redeem.html?business=pestera-valea-cetatii', this)">Copiază</button><br><br>
+      Id-ul exact al fiecărei afaceri e păstrat ca și coloană <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">id</code> în tabelul <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">afaceri_ghid</code> (tab „Afaceri locale") — deschide detaliile unei afaceri acolo ca să vezi id-ul exact folosit în acest link. Cardurile QR fizice trebuie reprintate/redistribuite la toți partenerii, cu noile coduri.
     </div>
 
     <div id="redeem-loading" style="text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Se încarcă...</div>
