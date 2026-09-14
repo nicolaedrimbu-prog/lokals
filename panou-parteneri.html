@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Panou parteneri — Lokals</title>
+<title>Panou administrare — Lokals</title>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -146,7 +146,7 @@
   .tabpanel.active{display:block;}
 
   /* ---- Back Office ---- */
-  #tab-backoffice #main{max-width:880px;}
+  #tab-demo #main, #tab-coduri #main, #tab-redeem #main, #tab-links #main, #tab-status-clienti #main{max-width:880px;}
   .bo-section{margin-bottom:30px;}
   .bo-title{font-size:12px; font-weight:700; color:var(--gold); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:8px;}
   .bo-title .count{background:var(--teal-deep); color:#fff; border-radius:999px; padding:1px 8px; font-size:11px;}
@@ -171,7 +171,7 @@
 <div class="state active" id="view-login">
   <div class="login-card">
     <div class="brand">lokals</div>
-    <h1>Panou parteneri</h1>
+    <h1>Panou administrare</h1>
     <p class="lead">Autentifică-te cu contul de administrator.</p>
     <form id="form-login">
       <label for="login-email">Email</label>
@@ -190,7 +190,7 @@
     <div class="left">
       <span class="logo">lokals</span>
       <span class="sep"></span>
-      <span class="title">Panou parteneri</span>
+      <span class="title">Panou administrare</span>
     </div>
     <div class="right">
       <span id="admin-email"></span>
@@ -199,15 +199,22 @@
   </div>
 
   <div id="tabbar">
-    <button class="tabbtn active" data-tab="tab-parteneri">Parteneri &amp; afaceri</button>
-    <button class="tabbtn" data-tab="tab-backoffice">Back Office</button>
-    <button class="tabbtn" data-tab="tab-inregistrari">Înregistrări</button>
+    <button class="tabbtn active" data-tab="tab-cazari" data-domain="apartament">Apartamente</button>
+    <button class="tabbtn" data-tab="tab-cazari" data-domain="hotel">Hoteluri</button>
+    <button class="tabbtn" data-tab="tab-cazari" data-domain="afaceri">Afaceri locale</button>
+    <button class="tabbtn" data-tab="tab-zone">Zone</button>
+    <button class="tabbtn" data-tab="tab-demo">Demo</button>
+    <button class="tabbtn" data-tab="tab-inregistrari">Înregistrări oaspeți</button>
+    <button class="tabbtn" data-tab="tab-coduri">Coduri Reducere</button>
+    <button class="tabbtn" data-tab="tab-redeem">Partners redeem</button>
+    <button class="tabbtn" data-tab="tab-status-clienti">Status clienți</button>
+    <button class="tabbtn" data-tab="tab-links">Links</button>
   </div>
 
-  <div class="tabpanel active" id="tab-parteneri">
+  <div class="tabpanel active" id="tab-cazari">
   <div id="main">
-    <h1 class="serif">Parteneri &amp; afaceri</h1>
-    <p class="lead">Toate afacerile înscrise în platformă. Publică un profil ca să apară live, imediat, în ghidul turistic.</p>
+    <h1 class="serif" id="cazari-title">Apartamente</h1>
+    <p class="lead" id="cazari-lead">Toate apartamentele înscrise în platformă. Publică un profil ca să apară live, imediat, în ghidul turistic.</p>
 
     <div class="toolbar">
       <div class="chips" id="chips"></div>
@@ -230,27 +237,109 @@
     <div id="empty" style="display:none;">Niciun rezultat pentru acest filtru.</div>
     <div id="list"></div>
 
-    <p id="footnote">Sursă: <strong>candidați parteneri</strong> + <strong>operatori cazare</strong> din baza de date — statusul de aici controlează direct ce apare în ghid.</p>
+    <p id="footnote">Sursă: <strong id="footnote-source">operatori cazare</strong> din baza de date — statusul de aici controlează direct ce apare în ghid.</p>
 
-    <div id="zone-section">
-      <h2 class="serif">Zone pe landing page</h2>
-      <p class="lead">Controlează ce zone apar active (clickabile) în bara „Vedeți ghidul, chiar acum” de pe pagina principală. O zonă inactivă apare listată, dar marcată „În curând”. Numele unei zone se editează direct în listă (click pe text) — schimbarea se aplică automat peste tot (formulare de înscriere, ghidul de oaspeți, afișul QR).</p>
-      <div id="zone-loading" style="text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Se încarcă...</div>
-      <div id="zone-list"></div>
-      <div class="zone-add-form">
-        <input type="text" id="zone-add-nume" placeholder="Nume zonă (ex. Brașov - Poiana Brașov)">
-        <input type="text" id="zone-add-judet" placeholder="Județ (opțional)" style="flex:0 0 140px;">
-        <button type="button" id="zone-add-btn">+ Adaugă zonă nouă</button>
-        <div class="zone-add-error" id="zone-add-error"></div>
+    <div id="cazari-afg-section" style="display:none; margin-top:44px; border-top:1px solid var(--line); padding-top:28px;">
+      <div class="bo-title">🗂️ Baza de date — afaceri locale (ghidul turistic) <span class="count" id="afg-count">…</span></div>
+      <p class="lead" style="margin:-4px 0 14px; font-size:12.5px;">Sursa afacerilor din ghidul turistic (tabelul <code style="background:var(--cream); padding:1px 5px; border-radius:5px;">afaceri_ghid</code> din Supabase) — a înlocuit vechiul Google Sheet, care nu mai e folosit. Modifică, adaugă sau dezactivează afaceri direct de aici.</p>
+
+      <div class="toolbar" style="margin-bottom:14px;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <select id="afg-zona-filter" style="border:1.5px solid var(--line); border-radius:11px; padding:9px 12px; font-size:13px; font-family:inherit; background:#fff; color:var(--ink);">
+            <option value="toate">Toate zonele</option>
+          </select>
+          <select id="afg-cat-filter" style="border:1.5px solid var(--line); border-radius:11px; padding:9px 12px; font-size:13px; font-family:inherit; background:#fff; color:var(--ink);">
+            <option value="toate">Toate categoriile</option>
+          </select>
+          <input type="text" id="afg-search" placeholder="Caută după nume..." style="border:1.5px solid var(--line); border-radius:11px; padding:9px 14px; font-size:13px; font-family:inherit; width:200px; background:#fff;">
+        </div>
+        <button class="pbtn primary" id="afg-btn-add">+ Adaugă afacere nouă</button>
       </div>
+
+      <div id="afg-add-wrap" style="display:none; margin-bottom:16px;"></div>
+
+      <div id="afg-loading" style="text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Se încarcă...</div>
+      <div id="afg-empty" style="display:none; text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Niciun rezultat pentru acest filtru.</div>
+      <div id="afg-list" style="display:flex; flex-direction:column; gap:10px;"></div>
     </div>
   </div>
   </div>
 
-  <!-- ===== Back Office — toate link-urile într-un singur loc ===== -->
-  <div class="tabpanel" id="tab-backoffice">
+  <!-- ===== Zone pe landing page ===== -->
+  <div class="tabpanel" id="tab-zone">
   <div id="main">
-    <h1 class="serif">Back Office</h1>
+    <h1 class="serif">Zone</h1>
+    <p class="lead">Controlează ce zone apar active (clickabile) în bara „Vedeți ghidul, chiar acum” de pe pagina principală. O zonă inactivă apare listată, dar marcată „În curând”. Numele unei zone se editează direct în listă (click pe text) — schimbarea se aplică automat peste tot (formulare de înscriere, ghidul de oaspeți, afișul QR).</p>
+    <div id="zone-loading" style="text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Se încarcă...</div>
+    <div id="zone-list"></div>
+    <div class="zone-add-form">
+      <input type="text" id="zone-add-nume" placeholder="Nume zonă (ex. Brașov - Poiana Brașov)">
+      <input type="text" id="zone-add-judet" placeholder="Județ (opțional)" style="flex:0 0 140px;">
+      <button type="button" id="zone-add-btn">+ Adaugă zonă nouă</button>
+      <div class="zone-add-error" id="zone-add-error"></div>
+    </div>
+  </div>
+  </div>
+
+  <!-- ===== Demo ===== -->
+  <div class="tabpanel" id="tab-demo">
+  <div id="main">
+    <h1 class="serif">Demo</h1>
+    <p class="lead" style="font-size:12.5px;">Ghidurile demo (câte unul pe zonă, plus cele 4 din comparația Gratuit/Essential de pe landing page) sunt acum cazări reale în baza de date (<code style="background:var(--cream); padding:1px 5px; border-radius:5px;">operatori</code>, marcate <code style="background:var(--cream); padding:1px 5px; border-radius:5px;">este_demo</code>) — poți schimba numele direct aici, sau apasă „Editează detalii" pentru poze, WiFi, reguli și restul informațiilor din ghid.</p>
+    <div class="bo-title">🌍 Ghiduri demo — pitch pentru gazde noi <span class="count" id="demo-count">…</span></div>
+    <div id="demo-loading" style="text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Se încarcă...</div>
+    <table class="bo-table" id="demo-table" style="display:none;">
+      <tr><th>Zonă / plan</th><th>Nume afișat</th><th>Link demo</th><th></th></tr>
+    </table>
+  </div>
+  </div>
+
+  <!-- ===== Coduri Reducere ===== -->
+  <div class="tabpanel" id="tab-coduri">
+  <div id="main">
+    <h1 class="serif">Coduri Reducere</h1>
+    <p class="lead" style="font-size:12.5px;">Reduceri „punctuale” pe care le acorzi manual, în afara ofertei generale cu primele 3 luni la preț redus (care rămâne calculată automat, ca până acum). Codurile sunt mereu procentuale. Data introdusă e data până la care codul e aplicabil (gol = fără limită) — după ea, codul nu se mai poate folosi. Dezactivează un cod oricând ca să nu mai poată fi aplicat.</p>
+    <div class="bo-title">🎟️ Coduri de reducere <span class="count" id="disc-count">…</span></div>
+    <div id="disc-loading" style="text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Se încarcă...</div>
+    <div id="disc-list"></div>
+    <div class="zone-add-form" id="disc-add-form">
+      <input type="text" id="disc-add-cod" placeholder="Cod (ex. SACELE20)" style="flex:1 1 140px; text-transform:uppercase;">
+      <input type="number" id="disc-add-valoare" placeholder="Procent reducere (%)" min="0" max="100" step="1" style="flex:0 0 150px;">
+      <input type="date" id="disc-add-valabil-pana" style="flex:0 0 150px;" title="Aplicabil până la (opțional — gol = fără limită)">
+      <input type="text" id="disc-add-nota" placeholder="Notă internă (opțional)" style="flex:1 1 160px;">
+      <button type="button" id="disc-add-btn">+ Adaugă cod</button>
+      <div class="zone-add-error" id="disc-add-error"></div>
+    </div>
+  </div>
+  </div>
+
+  <!-- ===== Partners redeem ===== -->
+  <div class="tabpanel" id="tab-redeem">
+  <div id="main">
+    <h1 class="serif">Partners redeem</h1>
+    <p class="lead">Cum funcționează scanarea beneficiilor pentru partenerii din ghidul turistic.</p>
+    <div class="bo-note">
+      <b>Migrată pe lokals.ro</b> — <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">partner-redeem.html</code>, cu carduri QR noi (nedependente de domeniul vechi GitHub Pages). Nu există un link fix per afacere; fiecare partener are propriul link, în formatul:<br><br>
+      <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">https://lokals.ro/partner-redeem.html?business=<i>id-ul-afacerii</i></code><br><br>
+      <b>Exemplu, Peștera Valea Cetății:</b> <a class="bo-link" href="https://lokals.ro/partner-redeem.html?business=pestera-valea-cetatii" target="_blank">…/partner-redeem.html?business=pestera-valea-cetatii</a>
+      <button class="bo-copy" style="margin-left:8px;" onclick="boCopy('https://lokals.ro/partner-redeem.html?business=pestera-valea-cetatii', this)">Copiază</button><br><br>
+      Id-ul exact al fiecărei afaceri e păstrat ca și coloană <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">id</code> în tabelul <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">afaceri_ghid</code> (tab „Afaceri locale") — deschide detaliile unei afaceri acolo ca să vezi id-ul exact folosit în acest link. Cardurile QR fizice trebuie reprintate/redistribuite la toți partenerii, cu noile coduri.
+    </div>
+  </div>
+  </div>
+
+  <!-- ===== Status clienți — urmează detaliile separat ===== -->
+  <div class="tabpanel" id="tab-status-clienti">
+  <div id="main">
+    <h1 class="serif">Status clienți</h1>
+    <p class="lead">Secțiune nouă — urmează detaliile.</p>
+  </div>
+  </div>
+
+  <!-- ===== Links ===== -->
+  <div class="tabpanel" id="tab-links">
+  <div id="main">
+    <h1 class="serif">Links</h1>
     <p class="lead">Toate link-urile de care ai nevoie, într-un singur loc. Verificate pe domeniul curent lokals.ro — copiază, distribuie, deschide.</p>
 
     <div class="bo-section">
@@ -298,30 +387,6 @@
     </div>
 
     <div class="bo-section">
-      <div class="bo-title">🌍 Ghiduri demo — pitch pentru gazde noi <span class="count" id="demo-count">…</span></div>
-      <p class="lead" style="margin:-4px 0 14px; font-size:12.5px;">Ghidurile demo (câte unul pe zonă, plus cele 4 din comparația Gratuit/Essential de pe landing page) sunt acum cazări reale în baza de date (<code style="background:var(--cream); padding:1px 5px; border-radius:5px;">operatori</code>, marcate <code style="background:var(--cream); padding:1px 5px; border-radius:5px;">este_demo</code>) — poți schimba numele direct aici, sau apasă „Editează detalii" pentru poze, WiFi, reguli și restul informațiilor din ghid.</p>
-      <div id="demo-loading" style="text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Se încarcă...</div>
-      <table class="bo-table" id="demo-table" style="display:none;">
-        <tr><th>Zonă / plan</th><th>Nume afișat</th><th>Link demo</th><th></th></tr>
-      </table>
-    </div>
-
-    <div class="bo-section">
-      <div class="bo-title">🎟️ Coduri de reducere <span class="count" id="disc-count">…</span></div>
-      <p class="lead" style="margin:-4px 0 14px; font-size:12.5px;">Reduceri „punctuale” pe care le acorzi manual, în afara ofertei generale cu primele 3 luni la preț redus (care rămâne calculată automat, ca până acum). Codurile sunt mereu procentuale. Data introdusă e data până la care codul e aplicabil (gol = fără limită) — după ea, codul nu se mai poate folosi. Dezactivează un cod oricând ca să nu mai poată fi aplicat.</p>
-      <div id="disc-loading" style="text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Se încarcă...</div>
-      <div id="disc-list"></div>
-      <div class="zone-add-form" id="disc-add-form">
-        <input type="text" id="disc-add-cod" placeholder="Cod (ex. SACELE20)" style="flex:1 1 140px; text-transform:uppercase;">
-        <input type="number" id="disc-add-valoare" placeholder="Procent reducere (%)" min="0" max="100" step="1" style="flex:0 0 150px;">
-        <input type="date" id="disc-add-valabil-pana" style="flex:0 0 150px;" title="Aplicabil până la (opțional — gol = fără limită)">
-        <input type="text" id="disc-add-nota" placeholder="Notă internă (opțional)" style="flex:1 1 160px;">
-        <button type="button" id="disc-add-btn">+ Adaugă cod</button>
-        <div class="zone-add-error" id="disc-add-error"></div>
-      </div>
-    </div>
-
-    <div class="bo-section">
       <div class="bo-title">✍️ Înscriere — hotelieri &amp; parteneri noi</div>
       <table class="bo-table">
         <tr><th>Ce e</th><th>Link</th><th></th></tr>
@@ -331,7 +396,7 @@
           <td><button class="bo-copy" onclick="boCopy('https://lokals.ro/inregistrare-hotelier.html', this)">Copiază</button></td>
         </tr>
         <tr>
-          <td><span class="bo-name">Auto-înscriere parteneri</span><div class="bo-sub">Formular public — scrie direct în tabelul candidați_parteneri (vezi tab „Parteneri &amp; afaceri")</div></td>
+          <td><span class="bo-name">Auto-înscriere parteneri</span><div class="bo-sub">Formular public — scrie direct în tabelul candidați_parteneri (vezi tab „Afaceri locale")</div></td>
           <td><a class="bo-link" href="https://lokals.ro/inregistrare-partener.html" target="_blank">lokals.ro/inregistrare-partener.html</a></td>
           <td><button class="bo-copy" onclick="boCopy('https://lokals.ro/inregistrare-partener.html', this)">Copiază</button></td>
         </tr>
@@ -373,50 +438,15 @@
     </div>
 
     <div class="bo-section">
-      <div class="bo-title">🗂️ Baza de date — afaceri locale (ghidul turistic) <span class="count" id="afg-count">…</span></div>
-      <p class="lead" style="margin:-4px 0 14px; font-size:12.5px;">Sursa afacerilor din ghidul turistic (tabelul <code style="background:var(--cream); padding:1px 5px; border-radius:5px;">afaceri_ghid</code> din Supabase) — a înlocuit vechiul Google Sheet, care nu mai e folosit. Modifică, adaugă sau dezactivează afaceri direct de aici.</p>
-
-      <div class="toolbar" style="margin-bottom:14px;">
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <select id="afg-zona-filter" style="border:1.5px solid var(--line); border-radius:11px; padding:9px 12px; font-size:13px; font-family:inherit; background:#fff; color:var(--ink);">
-            <option value="toate">Toate zonele</option>
-          </select>
-          <select id="afg-cat-filter" style="border:1.5px solid var(--line); border-radius:11px; padding:9px 12px; font-size:13px; font-family:inherit; background:#fff; color:var(--ink);">
-            <option value="toate">Toate categoriile</option>
-          </select>
-          <input type="text" id="afg-search" placeholder="Caută după nume..." style="border:1.5px solid var(--line); border-radius:11px; padding:9px 14px; font-size:13px; font-family:inherit; width:200px; background:#fff;">
-        </div>
-        <button class="pbtn primary" id="afg-btn-add">+ Adaugă afacere nouă</button>
-      </div>
-
-      <div id="afg-add-wrap" style="display:none; margin-bottom:16px;"></div>
-
-      <div id="afg-loading" style="text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Se încarcă...</div>
-      <div id="afg-empty" style="display:none; text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Niciun rezultat pentru acest filtru.</div>
-      <div id="afg-list" style="display:flex; flex-direction:column; gap:10px;"></div>
-    </div>
-
-    <div class="bo-section">
-      <div class="bo-title">🎁 Scanare beneficii — parteneri</div>
-      <div class="bo-note">
-        <b>Migrată pe lokals.ro</b> — <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">partner-redeem.html</code>, cu carduri QR noi (nedependente de domeniul vechi GitHub Pages). Nu există un link fix per afacere; fiecare partener are propriul link, în formatul:<br><br>
-        <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">https://lokals.ro/partner-redeem.html?business=<i>id-ul-afacerii</i></code><br><br>
-        <b>Exemplu, Peștera Valea Cetății:</b> <a class="bo-link" href="https://lokals.ro/partner-redeem.html?business=pestera-valea-cetatii" target="_blank">…/partner-redeem.html?business=pestera-valea-cetatii</a>
-        <button class="bo-copy" style="margin-left:8px;" onclick="boCopy('https://lokals.ro/partner-redeem.html?business=pestera-valea-cetatii', this)">Copiază</button><br><br>
-        Id-ul exact al fiecărei afaceri e păstrat ca și coloană <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">id</code> în tabelul <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">afaceri_ghid</code> (secțiunea „🗂️ Baza de date" de mai sus) — deschide detaliile unei afaceri acolo ca să vezi id-ul exact folosit în acest link. Cardurile QR fizice trebuie reprintate/redistribuite la toți partenerii, cu noile coduri.
-      </div>
-    </div>
-
-    <div class="bo-section">
       <div class="bo-title">⚠️ De verificat cu tine</div>
       <div class="bo-note warn">
         <b>1. Formularul Google vechi</b> (forms.gle/UaGDwVYVR5HRf4gm6) — l-am înlocuit cu <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">inregistrare-partener.html</code> de mai sus, care scrie direct în baza de date curentă (tabelul acesta din panou); formularul Google separat probabil nu mai e conectat la nimic, dar n-am verificat direct — spune-mi dacă încă îl folosești.<br><br>
-        <b>2. Baza de date afaceri din Google Sheets</b> — <u>migrată</u>: toate cele 180 de afaceri sunt acum în tabelul <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">afaceri_ghid</code> din Supabase, iar ghidul (ghid-oaspeti.html) citește deja de acolo, nu mai din Sheet. Le poți edita din secțiunea „🗂️ Baza de date" de mai sus. Sheet-ul vechi poate fi arhivat/uitat — id-urile din el (folosite și la scanarea de beneficii, vezi mai jos) s-au păstrat exact, ca și coloană <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">id</code> în tabelul nou.<br><br>
-        <b>3. Pagina de scanare beneficii</b> — <u>migrată</u> pe lokals.ro (vezi secțiunea „🎁 Scanare beneficii" de mai sus). Cardurile QR fizice existente la parteneri trebuie reprintate cu noile coduri, care duc direct pe lokals.ro.
+        <b>2. Baza de date afaceri din Google Sheets</b> — <u>migrată</u>: toate cele 180 de afaceri sunt acum în tabelul <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">afaceri_ghid</code> din Supabase, iar ghidul (ghid-oaspeti.html) citește deja de acolo, nu mai din Sheet. Le poți edita din tab-ul „Afaceri locale". Sheet-ul vechi poate fi arhivat/uitat — id-urile din el (folosite și la scanarea de beneficii, vezi mai jos) s-au păstrat exact, ca și coloană <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">id</code> în tabelul nou.<br><br>
+        <b>3. Pagina de scanare beneficii</b> — <u>migrată</u> pe lokals.ro (vezi tab-ul „Partners redeem"). Cardurile QR fizice existente la parteneri trebuie reprintate cu noile coduri, care duc direct pe lokals.ro.
       </div>
     </div>
 
-    <p id="footnote">lokals.ro · Back Office generat pentru uz intern</p>
+    <p id="footnote-links" style="text-align:center; font-size:12px; color:var(--ink-soft); margin-top:28px;">lokals.ro · Links generate pentru uz intern</p>
   </div>
   </div>
 
@@ -424,7 +454,7 @@
   <div class="tabpanel" id="tab-inregistrari">
   <div id="main">
     <h1 class="serif">Înregistrări oaspeți</h1>
-    <p class="lead">Verificare de identitate înainte de check-in, configurabilă per proprietate — activeaz-o din fișa fiecărei cazări (tab „Parteneri &amp; afaceri"). Genereză un link nou pentru fiecare rezervare, trimite-l oaspetelui, apoi validează sau respinge datele completate.</p>
+    <p class="lead">Verificare de identitate înainte de check-in, configurabilă per proprietate — activeaz-o din fișa fiecărei cazări (tab „Apartamente" sau „Hoteluri"). Genereză un link nou pentru fiecare rezervare, trimite-l oaspetelui, apoi validează sau respinge datele completate.</p>
 
     <div class="bo-section">
       <div class="bo-title">✉️ Generează link nou de înregistrare</div>
@@ -475,12 +505,39 @@ function boCopy(text, btn){
     setTimeout(() => { btn.textContent = original; }, 1500);
   });
 }
+// Titlu/lead/sursă afișate în tab-ul comun Apartamente/Hoteluri/Afaceri locale (tab-cazari),
+// pe baza domeniului ales — vezi și renderList()/renderChips() mai jos, care filtrează ROWS
+// după window.currentDomain înainte de orice alt filtru (status, zonă, căutare).
+const DOMAIN_TEXT = {
+  apartament: { title: 'Apartamente', lead: 'Toate apartamentele înscrise în platformă. Publică un profil ca să apară live, imediat, în ghidul turistic.', sursa: 'operatori cazare' },
+  hotel: { title: 'Hoteluri', lead: 'Toate hotelurile înscrise în platformă. Publică un profil ca să apară live, imediat, în ghidul turistic.', sursa: 'operatori cazare' },
+  afaceri: { title: 'Afaceri locale', lead: 'Cereri de parteneriat primite, plus baza de date completă a afacerilor locale afișate în ghidul turistic.', sursa: 'candidați parteneri' },
+};
+
+function updateCazariHeading(){
+  const t = DOMAIN_TEXT[window.currentDomain] || DOMAIN_TEXT.apartament;
+  document.getElementById('cazari-title').textContent = t.title;
+  document.getElementById('cazari-lead').textContent = t.lead;
+  document.getElementById('footnote-source').textContent = t.sursa;
+  document.getElementById('cazari-afg-section').style.display = window.currentDomain === 'afaceri' ? '' : 'none';
+}
+
 document.querySelectorAll('.tabbtn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tabbtn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tabpanel').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById(btn.dataset.tab).classList.add('active');
+    if (btn.dataset.domain) {
+      window.currentDomain = btn.dataset.domain;
+      currentFilter = 'toate';
+      currentZonaFilter = 'toate';
+      const searchEl = document.getElementById('search');
+      if (searchEl) searchEl.value = '';
+      updateCazariHeading();
+      renderChips();
+      renderList();
+    }
   });
 });
 </script>
@@ -532,6 +589,9 @@ const REQUESTED_FILTER = new URLSearchParams(window.location.search).get('filter
 let currentFilter = ['toate', 'nou', 'publicat', 'respins'].includes(REQUESTED_FILTER) ? REQUESTED_FILTER : 'toate';
 let currentZonaFilter = 'toate';
 let currentSort = 'data-desc';
+// Domeniul activ în tab-ul comun Apartamente/Hoteluri/Afaceri locale (tab-cazari) — setat de
+// tab-uri (data-domain pe butoane, vezi mai jos) și citit de renderList()/renderChips().
+window.currentDomain = 'apartament';
 const STATUS_ORDER = { nou: 0, publicat: 1, respins: 2 };
 
 function showView(id){
@@ -632,6 +692,7 @@ async function loadAll(){
     icon: CAT_ICON[r.categorie] || '📍',
     zona: r.zona, email: r.email, data: r.created_at, status: r.status || 'nou',
     foto: (r.poza_url || '').trim() || null, raw: r,
+    domain: 'afaceri', // candidați parteneri = tab "Afaceri locale"
   }));
   const op = (opRes.data || []).map(r => ({
     source: 'operatori', id: r.id, nume: r.nume_afacere,
@@ -639,6 +700,7 @@ async function loadAll(){
     icon: '🛏️',
     zona: r.zona, email: r.email, data: r.created_at, status: r.status || 'nou',
     foto: (r.foto_url || '').trim() || null, raw: r,
+    domain: r.tip === 'hotel' ? 'hotel' : 'apartament', // tab "Hoteluri" vs "Apartamente"
   }));
 
   ROWS = cand.concat(op).sort((a, b) => new Date(b.data) - new Date(a.data));
@@ -939,9 +1001,16 @@ document.getElementById('disc-add-btn').addEventListener('click', async () => {
   renderDiscountCodes();
 });
 
+// Rândurile din domeniul activ al tab-ului comun (Apartamente/Hoteluri/Afaceri locale) —
+// toate filtrele (status, zonă, căutare) se aplică peste acest subset, nu peste ROWS întreg.
+function domainRows(){
+  return ROWS.filter(r => r.domain === window.currentDomain);
+}
+
 function renderChips(){
-  const counts = { toate: ROWS.length, nou: 0, publicat: 0, respins: 0 };
-  ROWS.forEach(r => { counts[r.status] = (counts[r.status] || 0) + 1; });
+  const base = domainRows();
+  const counts = { toate: base.length, nou: 0, publicat: 0, respins: 0 };
+  base.forEach(r => { counts[r.status] = (counts[r.status] || 0) + 1; });
   const defs = [
     ['toate', 'Toate'], ['nou', 'În așteptare'], ['publicat', 'Publicate'], ['respins', 'Respinse'],
   ];
@@ -957,9 +1026,9 @@ function renderChips(){
 
   // Chip-uri de zonă — construite dinamic din zonele prezente în date, ca lista să rămână
   // corectă și dacă apar zone noi (vezi și expansion-zones — zone noi).
-  const zoneCounts = { toate: ROWS.length };
+  const zoneCounts = { toate: base.length };
   const zoneOrder = [];
-  ROWS.forEach(r => {
+  base.forEach(r => {
     const z = (r.zona || '').trim() || '—';
     if (!(z in zoneCounts)) { zoneCounts[z] = 0; zoneOrder.push(z); }
     zoneCounts[z]++;
@@ -991,7 +1060,8 @@ function sortRows(list){
 
 function renderList(){
   const q = document.getElementById('search').value.trim().toLowerCase();
-  let list = currentFilter === 'toate' ? ROWS : ROWS.filter(r => r.status === currentFilter);
+  const base = domainRows();
+  let list = currentFilter === 'toate' ? base : base.filter(r => r.status === currentFilter);
   if (currentZonaFilter !== 'toate') list = list.filter(r => ((r.zona || '').trim() || '—') === currentZonaFilter);
   if (q) list = list.filter(r => (r.nume || '').toLowerCase().includes(q) || (r.email || '').toLowerCase().includes(q));
   list = sortRows(list);
