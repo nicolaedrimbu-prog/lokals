@@ -1466,9 +1466,42 @@ async function init() {
   await loadStay();
   await Promise.all([resolveOperator(), loadFeaturesMap(), loadZonesMap()]);
   if (!stayToken && gateRequired()) { await resolveActiveStay(); }
+  logAccesare(); // apt/currentZona/currentOperator sunt finale aici — nu blocam randarea paginii
   await applyRegistrationGate();
   setLang('ro');
   loadPlaces();
+}
+
+// ---------- Jurnal accesări (pentru tab-ul "Statistici accesări" din panoul de administrare) ----------
+// O accesare = un vizitator unic (id anonim salvat local) care deschide ghidul unei camere/unități
+// într-o zi. Nu contorizăm linkul general (fără ?apt=) — acela se urmărește separat cu Google Analytics.
+function getVizitatorId() {
+  try {
+    let id = localStorage.getItem('lokal_visitor_id');
+    if (!id) {
+      id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('v-' + Date.now() + '-' + Math.random().toString(36).slice(2));
+      localStorage.setItem('lokal_visitor_id', id);
+    }
+    return id;
+  } catch (e) {
+    return 'v-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+  }
+}
+
+async function logAccesare() {
+  if (!apt || apt === 'general') return;
+  try {
+    await sbFetch('accesari_ghid', {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=ignore-duplicates' },
+      body: JSON.stringify({
+        apt,
+        zona: currentZona || null,
+        operator_id: (currentOperator && currentOperator.id) || null,
+        vizitator_id: getVizitatorId(),
+      }),
+    });
+  } catch (e) { /* jurnalul de acces nu trebuie sa blocheze ghidul */ }
 }
 
 async function loadFeaturesMap() {

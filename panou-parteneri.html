@@ -146,7 +146,7 @@
   .tabpanel.active{display:block;}
 
   /* ---- Back Office ---- */
-  #tab-demo #main, #tab-coduri #main, #tab-redeem #main, #tab-links #main, #tab-status-clienti #main{max-width:880px;}
+  #tab-demo #main, #tab-coduri #main, #tab-redeem #main, #tab-links #main, #tab-status-clienti #main, #tab-statistici #main{max-width:880px;}
   .bo-section{margin-bottom:30px;}
   .bo-title{font-size:12px; font-weight:700; color:var(--gold); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:8px;}
   .bo-title .count{background:var(--teal-deep); color:#fff; border-radius:999px; padding:1px 8px; font-size:11px;}
@@ -175,6 +175,19 @@
   .client-loc-row .unlink{background:transparent; border:1px solid var(--line); border-radius:8px; padding:4px 9px; font-size:11.5px; cursor:pointer; font-family:inherit; color:var(--brick);}
   .client-assign-row{display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;}
   .client-assign-row select{flex:1; min-width:180px; border:1.5px solid var(--line); border-radius:9px; padding:8px 10px; font-size:12.5px; font-family:inherit; background:#fff;}
+  .stat-daterange{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px;}
+  .stat-daterange label{font-size:12px; color:var(--ink-soft); display:flex; align-items:center; gap:6px;}
+  .stat-daterange input[type="date"]{border:1.5px solid var(--line); border-radius:9px; padding:7px 10px; font-size:12.5px; font-family:inherit; background:#fff;}
+  .stat-section-label{font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); margin:18px 0 8px;}
+  .stat-section-label:first-of-type{margin-top:0;}
+  .stat-row{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 14px; border:1px solid var(--line); border-radius:11px; margin-bottom:8px; background:var(--cream);}
+  .stat-row .name{font-weight:600; font-size:13px; color:var(--teal-deep);}
+  .stat-row .meta{font-size:11.5px; color:var(--ink-soft); margin-top:1px;}
+  .stat-row .count{font-family:monospace; font-size:18px; font-weight:700; color:var(--teal-deep); flex-shrink:0;}
+  .stat-total{display:flex; align-items:center; justify-content:space-between; background:var(--teal-deep); color:#fff; border-radius:11px; padding:12px 16px; margin-top:12px;}
+  .stat-total .count{color:#fff; font-family:monospace; font-size:20px; font-weight:700;}
+  .stat-legacy{margin-top:28px; padding-top:18px; border-top:1px solid var(--line);}
+  .stat-legacy .stat-row{background:transparent;}
 </style>
 </head>
 <body>
@@ -220,6 +233,7 @@
     <button class="tabbtn" data-tab="tab-coduri">Coduri Reducere</button>
     <button class="tabbtn" data-tab="tab-redeem">Partners redeem</button>
     <button class="tabbtn" data-tab="tab-status-clienti">Status clienți</button>
+    <button class="tabbtn" data-tab="tab-statistici">Statistici accesări</button>
     <button class="tabbtn" data-tab="tab-links">Links</button>
   </div>
 
@@ -359,6 +373,30 @@
     <div id="client-loading" style="text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Se încarcă...</div>
     <div id="client-empty" style="display:none; text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Niciun client încă — adaugă primul cu „+ Client nou".</div>
     <div id="client-list" style="display:flex; flex-direction:column; gap:14px;"></div>
+  </div>
+  </div>
+
+  <!-- ===== Statistici accesări ===== -->
+  <div class="tabpanel" id="tab-statistici">
+  <div id="main">
+    <h1 class="serif">Statistici accesări</h1>
+    <p class="lead" style="font-size:12.5px;">Câte scanări unice ale codului QR a avut fiecare cameră/unitate, într-un interval de date. O accesare = un vizitator distinct, o dată pe zi (reîncărcările din aceeași zi nu se mai adaugă). Accesările prin linkul general (fără cod de cameră) nu sunt incluse aici — acelea se urmăresc separat, din Google Analytics.</p>
+
+    <div class="stat-daterange">
+      <label>De la <input type="date" id="stat-from"></label>
+      <label>Până la <input type="date" id="stat-to"></label>
+      <button class="pbtn" id="stat-btn-refresh">Actualizează</button>
+    </div>
+
+    <div id="stat-loading" style="text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Se încarcă...</div>
+    <div id="stat-empty" style="display:none; text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Niciun cod QR scanat în intervalul selectat.</div>
+    <div id="stat-list"></div>
+
+    <div class="stat-legacy">
+      <p class="stat-section-label">Total istoric (înainte de jurnalul nou, fără detaliu pe zile)</p>
+      <div id="stat-legacy-loading" style="font-size:12.5px; color:var(--ink-soft);">Se încarcă...</div>
+      <div id="stat-legacy-list"></div>
+    </div>
   </div>
   </div>
 
@@ -702,6 +740,8 @@ function enterPanel(email){
   loadDemoGuides();
   loadDiscountCodes();
   loadClienti();
+  loadStatistici();
+  loadStatisticiLegacy();
 }
 
 async function init(){
@@ -747,6 +787,7 @@ async function loadAll(){
   populateRegOperatorSelect();
   renderRegList();
   renderClientiList(); // ROWS s-a schimbat — actualizează și listele de locații din Status clienți
+  renderStatistici(); // ROWS s-a schimbat — actualizează numele/zona locațiilor din Statistici accesări
 }
 
 // ---------- Zone pe landing page ----------
@@ -1428,6 +1469,132 @@ document.getElementById('client-btn-add').addEventListener('click', () => {
     renderClientiList();
   });
 });
+
+// ---------- Statistici accesări (jurnal nou, cu filtru de dată) ----------
+// Apartamentele "vechi" (dinainte de lokals.ro), fără rând în operatori — nume/zonă hardcodate,
+// la fel ca în statistici-ghid.html și în ghid-oaspeti.html (APT_NAMES).
+const STAT_APT_LEGACY = {
+  ap5:    { nume: 'Apartamentul 5', zona: 'rasnov' },
+  ap12:   { nume: 'Apartamentul 12', zona: 'rasnov' },
+  sacele: { nume: 'Family House (Săcele)', zona: 'sacele-brasov' },
+  ap6:    { nume: 'Apartamentul 6', zona: 'rasnov' },
+  ap8:    { nume: 'Apartamentul 8', zona: 'rasnov' },
+  ap9:    { nume: 'Apartamentul 9', zona: 'rasnov' },
+};
+
+function statResolveApt(apt){
+  const opRow = ROWS.find(r => r.raw && r.raw.slug === apt && r.domain !== 'afaceri');
+  if (opRow) {
+    return {
+      nume: opRow.nume || apt,
+      zona: opRow.zona || '—',
+      tip: opRow.domain === 'hotel' ? 'Hotel' : 'Apartament',
+      demo: !!(opRow.raw && opRow.raw.este_demo),
+    };
+  }
+  const legacy = STAT_APT_LEGACY[apt];
+  if (legacy) return { nume: legacy.nume, zona: legacy.zona, tip: 'Apartament', demo: false };
+  return { nume: apt, zona: '—', tip: '—', demo: apt.startsWith('demo-') };
+}
+
+function statDefaultRange(){
+  const to = new Date();
+  const from = new Date(); from.setDate(from.getDate() - 29);
+  const fmt = (d) => d.toISOString().slice(0, 10);
+  return { from: fmt(from), to: fmt(to) };
+}
+
+let STAT_LAST_ROWS = null; // ultimele rânduri accesari_ghid încărcate pentru intervalul curent —
+                            // reținute ca să putem re-randa cu nume corecte odată ce ROWS (operatori) e gata.
+
+async function loadStatistici(){
+  const fromEl = document.getElementById('stat-from');
+  const toEl = document.getElementById('stat-to');
+  if (!fromEl.value || !toEl.value) {
+    const def = statDefaultRange();
+    fromEl.value = fromEl.value || def.from;
+    toEl.value = toEl.value || def.to;
+  }
+  const loadingEl = document.getElementById('stat-loading');
+  const emptyEl = document.getElementById('stat-empty');
+  const listEl = document.getElementById('stat-list');
+  loadingEl.style.display = 'block';
+  emptyEl.style.display = 'none';
+  listEl.innerHTML = '';
+
+  const fromIso = fromEl.value + 'T00:00:00.000Z';
+  // "Până la" e inclusiv toată ziua respectivă.
+  const toDate = new Date(toEl.value + 'T00:00:00.000Z'); toDate.setUTCDate(toDate.getUTCDate() + 1);
+  const toIso = toDate.toISOString();
+
+  const { data, error } = await supabaseClient.from('accesari_ghid')
+    .select('apt')
+    .gte('created_at', fromIso)
+    .lt('created_at', toIso);
+
+  loadingEl.style.display = 'none';
+  if (error) { console.error(error); listEl.innerHTML = '<p class="stat-row" style="color:var(--brick);">Nu am putut încărca statisticile.</p>'; return; }
+
+  STAT_LAST_ROWS = data || [];
+  renderStatistici();
+}
+
+function renderStatistici(){
+  if (STAT_LAST_ROWS === null) return; // nimic încărcat încă
+  const emptyEl = document.getElementById('stat-empty');
+  const listEl = document.getElementById('stat-list');
+  const rows = STAT_LAST_ROWS;
+  if (!rows.length) { emptyEl.style.display = 'block'; listEl.innerHTML = ''; return; }
+  emptyEl.style.display = 'none';
+
+  const counts = {};
+  rows.forEach(r => { counts[r.apt] = (counts[r.apt] || 0) + 1; });
+
+  const entries = Object.keys(counts).map(apt => ({ apt, count: counts[apt], info: statResolveApt(apt) }))
+    .sort((a, b) => b.count - a.count);
+
+  const total = entries.reduce((sum, e) => sum + e.count, 0);
+
+  listEl.innerHTML = entries.map(e => `
+    <div class="stat-row">
+      <div>
+        <div class="name">${escapeHtml(e.info.nume)}${e.info.demo ? ' <span style="font-size:10.5px; color:var(--ink-soft);">(demo)</span>' : ''}</div>
+        <div class="meta">${escapeHtml(e.info.tip)} · ${escapeHtml(e.info.zona)} · <code>${escapeHtml(e.apt)}</code></div>
+      </div>
+      <div class="count">${e.count}</div>
+    </div>
+  `).join('') + `<div class="stat-total"><div>Total accesări în interval</div><div class="count">${total}</div></div>`;
+}
+
+// Totalul istoric, dinainte de jurnalul nou — păstrat separat, fără filtru de dată
+// (contorul countapi nu a reținut niciodată timestamp per scanare).
+async function loadStatisticiLegacy(){
+  const loadingEl = document.getElementById('stat-legacy-loading');
+  const listEl = document.getElementById('stat-legacy-list');
+  loadingEl.style.display = 'block';
+  listEl.innerHTML = '';
+  try {
+    const legacyEntries = Object.keys(STAT_APT_LEGACY).map(slug => ({ slug, ...STAT_APT_LEGACY[slug] }));
+    const opEntries = ROWS.filter(r => r.domain === 'hotel' || r.domain === 'apartament').map(r => ({ slug: r.raw.slug, nume: r.nume, zona: r.zona }));
+    const all = legacyEntries.concat(opEntries);
+    const counts = await Promise.all(all.map(a => {
+      const prefix = legacyEntries.includes(a) ? 'ghid-rasnov' : 'lokals';
+      return fetch(`https://countapi.mileshilliard.com/api/v1/get/${prefix}-${a.slug}`).then(r => r.json()).then(d => d.value ?? null).catch(() => null);
+    }));
+    loadingEl.style.display = 'none';
+    const valid = all.map((a, i) => ({ ...a, count: counts[i] })).filter(a => a.count !== null && a.count > 0).sort((a, b) => b.count - a.count);
+    if (!valid.length) { listEl.innerHTML = '<p style="font-size:12.5px; color:var(--ink-soft);">Niciun total istoric disponibil.</p>'; return; }
+    const legacyTotal = valid.reduce((sum, a) => sum + a.count, 0);
+    listEl.innerHTML = valid.map(a => `
+      <div class="stat-row"><div><div class="name">${escapeHtml(a.nume || a.slug)}</div><div class="meta">${escapeHtml(a.zona || '—')}</div></div><div class="count">${a.count}</div></div>
+    `).join('') + `<div class="stat-total"><div>Total istoric</div><div class="count">${legacyTotal}</div></div>`;
+  } catch (e) {
+    loadingEl.style.display = 'none';
+    listEl.innerHTML = '<p style="font-size:12.5px; color:var(--ink-soft);">Totalul istoric nu a putut fi încărcat.</p>';
+  }
+}
+
+document.getElementById('stat-btn-refresh').addEventListener('click', loadStatistici);
 
 // Rândurile din domeniul activ al tab-ului comun (Apartamente/Hoteluri/Afaceri locale) —
 // toate filtrele (status, zonă, căutare) se aplică peste acest subset, nu peste ROWS întreg.
