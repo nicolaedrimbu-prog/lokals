@@ -188,6 +188,35 @@
   .stat-total .count{color:#fff; font-family:monospace; font-size:20px; font-weight:700;}
   .stat-legacy{margin-top:28px; padding-top:18px; border-top:1px solid var(--line);}
   .stat-legacy .stat-row{background:transparent;}
+
+  /* ===== Statistici Partners redeem ===== */
+  .redeem-toolbar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; background:var(--cream); border:1px solid var(--line); border-radius:12px; padding:11px 13px; margin-bottom:10px;}
+  .redeem-toolbar label{font-size:11.5px; color:var(--ink-soft); display:flex; align-items:center; gap:6px;}
+  .redeem-toolbar input[type="date"], .redeem-toolbar select{border:1.5px solid var(--line); border-radius:8px; padding:6px 9px; font-size:12.5px; font-family:inherit; background:#fff;}
+  .redeem-group-toggle{display:flex; border:1.5px solid var(--line); border-radius:999px; overflow:hidden;}
+  .redeem-group-toggle button{border:none; background:#fff; color:var(--ink-soft); font-size:12px; font-weight:600; padding:6px 13px; cursor:pointer; font-family:inherit;}
+  .redeem-group-toggle button.active{background:var(--teal-deep); color:#fff;}
+  .redeem-export-row{display:flex; gap:8px; margin-bottom:18px;}
+  .redeem-stat-cards{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px;}
+  .redeem-stat-card{flex:1; min-width:140px; background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px 14px;}
+  .redeem-stat-card .label{font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); font-weight:700;}
+  .redeem-stat-card .value{font-size:22px; font-weight:700; color:var(--teal-deep); margin-top:3px; font-family:'Fraunces', Georgia, serif;}
+  .redeem-pivot-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  @media (max-width:760px){ .redeem-pivot-grid{grid-template-columns:1fr;} }
+  .redeem-pivot-card{background:#fff; border:1px solid var(--line); border-radius:12px; padding:13px 15px; overflow-x:auto;}
+  .redeem-pivot-card h3{font-size:13px; margin:0 0 9px; color:var(--teal-deep);}
+  .redeem-pivot-card table, .redeem-detail-wrap table{width:100%; border-collapse:collapse; font-size:11.5px;}
+  .redeem-pivot-card th, .redeem-pivot-card td, .redeem-detail-wrap th, .redeem-detail-wrap td{padding:6px 8px; text-align:left; white-space:nowrap;}
+  .redeem-pivot-card thead th, .redeem-detail-wrap thead th{color:var(--ink-soft); font-weight:700; font-size:10px; text-transform:uppercase; letter-spacing:.02em; border-bottom:1.5px solid var(--line);}
+  .redeem-pivot-card tbody tr, .redeem-detail-wrap tbody tr{border-bottom:1px solid var(--line);}
+  .redeem-pivot-card tbody tr:last-of-type, .redeem-detail-wrap tbody tr:last-of-type{border-bottom:none;}
+  .redeem-pivot-card td.count, .redeem-pivot-card th.count{text-align:right; font-family:monospace;}
+  .redeem-pivot-card tr.total-row{font-weight:700; color:var(--teal-deep); background:var(--cream);}
+  .redeem-pivot-card tr.total-row td{border-top:1.5px solid var(--line);}
+  .redeem-detail-wrap{background:#fff; border:1px solid var(--line); border-radius:12px; padding:13px 15px; overflow-x:auto; margin-top:16px;}
+  .redeem-source-chip{font-size:9.5px; font-weight:700; padding:2px 7px; border-radius:999px;}
+  .redeem-source-chip.scan{background:#E4EFE2; color:#3C6B3F;}
+  .redeem-source-chip.manual{background:var(--gold-soft); color:#8F6222;}
 </style>
 </head>
 <body>
@@ -354,6 +383,62 @@
       <b>Exemplu, Peștera Valea Cetății:</b> <a class="bo-link" href="https://lokals.ro/partner-redeem.html?business=pestera-valea-cetatii" target="_blank">…/partner-redeem.html?business=pestera-valea-cetatii</a>
       <button class="bo-copy" style="margin-left:8px;" onclick="boCopy('https://lokals.ro/partner-redeem.html?business=pestera-valea-cetatii', this)">Copiază</button><br><br>
       Id-ul exact al fiecărei afaceri e păstrat ca și coloană <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">id</code> în tabelul <code style="background:var(--cream); padding:2px 6px; border-radius:5px;">afaceri_ghid</code> (tab „Afaceri locale") — deschide detaliile unei afaceri acolo ca să vezi id-ul exact folosit în acest link. Cardurile QR fizice trebuie reprintate/redistribuite la toți partenerii, cu noile coduri.
+    </div>
+
+    <h2 class="serif" style="font-size:17px; color:var(--teal-deep); margin:26px 0 4px;">Statistici accesări beneficii</h2>
+    <p class="lead" style="font-size:12.5px;">Fiecare scanare/introducere manuală a unui cod valid, confirmată de un partener — cu afacerea, apartamentul/hotelul oaspetelui, data și ora. Sumarele de mai jos se recalculează după intervalul, granularitatea și filtrele alese.</p>
+
+    <div class="redeem-toolbar">
+      <label>De la <input type="date" id="redeem-from"></label>
+      <label>Până la <input type="date" id="redeem-to"></label>
+      <div class="redeem-group-toggle" id="redeem-group">
+        <button type="button" data-g="zi">Zi</button>
+        <button type="button" data-g="saptamana" class="active">Săptămână</button>
+        <button type="button" data-g="luna">Lună</button>
+        <button type="button" data-g="an">An</button>
+      </div>
+    </div>
+    <div class="redeem-toolbar">
+      <label>Tip cazare <select id="redeem-tip-cazare"><option value="">Toate</option><option value="apartament">Apartament</option><option value="hotel">Hotel</option></select></label>
+      <label>Regiune <select id="redeem-regiune"><option value="">Toate</option></select></label>
+      <label>Apartament/Hotel <select id="redeem-apt"><option value="">Toate</option></select></label>
+      <span style="width:1px; height:22px; background:var(--line);"></span>
+      <label>Tip afacere <select id="redeem-categorie"><option value="">Toate</option></select></label>
+      <label>Afacere <select id="redeem-biz"><option value="">Toate</option></select></label>
+    </div>
+    <div class="redeem-export-row">
+      <button class="pbtn" type="button" id="redeem-export-excel">⬇ Exportă Excel</button>
+      <button class="pbtn" type="button" id="redeem-export-pdf">⬇ Exportă PDF</button>
+    </div>
+
+    <div id="redeem-loading" style="text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Se încarcă...</div>
+
+    <div id="redeem-report" style="display:none;">
+      <div class="redeem-stat-cards">
+        <div class="redeem-stat-card"><div class="label">Total scanări în interval</div><div class="value" id="redeem-c-total">0</div></div>
+        <div class="redeem-stat-card"><div class="label">Afaceri distincte</div><div class="value" id="redeem-c-biz">0</div></div>
+        <div class="redeem-stat-card"><div class="label">Apartamente/hoteluri distincte</div><div class="value" id="redeem-c-apt">0</div></div>
+      </div>
+
+      <div class="redeem-pivot-grid">
+        <div class="redeem-pivot-card">
+          <h3>După apartament / hotel</h3>
+          <table id="redeem-pivot-apt"><thead></thead><tbody></tbody></table>
+        </div>
+        <div class="redeem-pivot-card">
+          <h3>După afacere</h3>
+          <table id="redeem-pivot-biz"><thead></thead><tbody></tbody></table>
+        </div>
+      </div>
+
+      <div class="redeem-detail-wrap">
+        <p class="stat-section-label">Jurnal detaliat (cele mai recente 50, sortate descrescător)</p>
+        <table>
+          <thead><tr><th>Afacere</th><th>Apartament / Hotel</th><th>Data</th><th>Ora</th><th>Sursă</th></tr></thead>
+          <tbody id="redeem-detail-body"></tbody>
+        </table>
+      </div>
+      <div id="redeem-empty" style="display:none; text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Nicio scanare în intervalul/filtrele selectate.</div>
     </div>
   </div>
   </div>
@@ -614,6 +699,9 @@ document.querySelectorAll('.tabbtn').forEach(btn => {
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 // Prindere globală de erori: dacă ceva pică în script, mesajul apare direct pe pagină
 // (mai simplu decât să deschizi consola browserului) în loc să pară că "nu se întâmplă nimic".
@@ -742,6 +830,7 @@ function enterPanel(email){
   loadClienti();
   loadStatistici();
   loadStatisticiLegacy();
+  loadRedeemStats();
 }
 
 async function init(){
@@ -788,6 +877,7 @@ async function loadAll(){
   renderRegList();
   renderClientiList(); // ROWS s-a schimbat — actualizează și listele de locații din Status clienți
   renderStatistici(); // ROWS s-a schimbat — actualizează numele/zona locațiilor din Statistici accesări
+  populateRedeemSelects(); renderRedeemReport(); // ROWS s-a schimbat — actualizează lista de apartamente/hoteluri din Statistici Partners redeem
 }
 
 // ---------- Zone pe landing page ----------
@@ -800,6 +890,7 @@ async function loadZones(){
   if (error) { console.error(error); return; }
   ZONES = data || [];
   renderZones();
+  populateRedeemSelects(); // ZONES s-a schimbat — actualizează filtrul de regiune din Statistici Partners redeem
 }
 
 async function saveZoneField(slug, field, value, inputEl){
@@ -1596,6 +1687,257 @@ async function loadStatisticiLegacy(){
 
 document.getElementById('stat-btn-refresh').addEventListener('click', loadStatistici);
 
+// ---------- Statistici Partners redeem (fiecare scanare a unui cod valid) ----------
+let REDEMPTIONS_RAW = null; // rânduri brute din `redemptions`, o dată încărcate
+let GUEST_CODES_MAP = {};   // guest_codes.id -> { apt, apt_name }
+let redeemGroup = 'saptamana';
+
+async function loadRedeemStats(){
+  const loadingEl = document.getElementById('redeem-loading');
+  loadingEl.style.display = 'block';
+  loadingEl.textContent = 'Se încarcă...';
+  document.getElementById('redeem-report').style.display = 'none';
+
+  const [redRes, codesRes] = await Promise.all([
+    supabaseClient.from('redemptions').select('id,code_id,business_id,redeemed_at,source').order('redeemed_at', { ascending: false }),
+    supabaseClient.from('guest_codes').select('id,apt,apt_name'),
+  ]);
+  if (redRes.error || codesRes.error) {
+    console.error(redRes.error || codesRes.error);
+    loadingEl.textContent = 'Nu am putut încărca statisticile.';
+    return;
+  }
+  GUEST_CODES_MAP = {};
+  (codesRes.data || []).forEach(gc => { GUEST_CODES_MAP[gc.id] = gc; });
+  REDEMPTIONS_RAW = redRes.data || [];
+
+  const fromEl = document.getElementById('redeem-from');
+  const toEl = document.getElementById('redeem-to');
+  if (!fromEl.value) { const d = new Date(); d.setDate(d.getDate() - 29); fromEl.value = d.toISOString().slice(0, 10); }
+  if (!toEl.value) { toEl.value = new Date().toISOString().slice(0, 10); }
+
+  loadingEl.style.display = 'none';
+  document.getElementById('redeem-report').style.display = 'block';
+  populateRedeemSelects();
+  renderRedeemReport();
+}
+
+// Toate slug-urile de apartament/hotel cunoscute — cele cu rând în `operatori`, plus
+// apartamentele „vechi" (STAT_APT_LEGACY, definite mai sus pentru Statistici accesări).
+function redeemAllAptSlugs(){
+  const set = new Set(Object.keys(STAT_APT_LEGACY));
+  ROWS.filter(r => r.domain === 'apartament' || r.domain === 'hotel').forEach(r => { if (r.raw && r.raw.slug) set.add(r.raw.slug); });
+  return Array.from(set);
+}
+
+// Populează select-urile o singură dată (nu le reconstruim la fiecare re-render, ca să nu
+// pierdem selecția curentă a lui Nico) — apelată din nou de fiecare dată când ROWS/AFG_ROWS/ZONES
+// se schimbă, de vreme ce la intrarea în panou încărcarea acestor liste rulează în paralel.
+function populateRedeemSelects(){
+  if (REDEMPTIONS_RAW === null) return; // raportul nu s-a încărcat încă
+  const regSel = document.getElementById('redeem-regiune');
+  if (regSel.options.length <= 1 && ZONES && ZONES.length) {
+    ZONES.forEach(z => { const o = document.createElement('option'); o.value = z.slug; o.textContent = z.nume; regSel.appendChild(o); });
+  }
+  const aptSel = document.getElementById('redeem-apt');
+  if (aptSel.options.length <= 1 && ROWS && ROWS.length) {
+    redeemAllAptSlugs().forEach(slug => {
+      const info = statResolveApt(slug);
+      const o = document.createElement('option'); o.value = slug; o.textContent = info.nume;
+      o.dataset.tip = info.tip === 'Hotel' ? 'hotel' : 'apartament'; o.dataset.zona = info.zona;
+      aptSel.appendChild(o);
+    });
+  }
+  const catSel = document.getElementById('redeem-categorie');
+  if (catSel.options.length <= 1) {
+    Object.keys(CATEGORII).forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = CATEGORII[c]; catSel.appendChild(o); });
+  }
+  const bizSel = document.getElementById('redeem-biz');
+  if (bizSel.options.length <= 1 && AFG_ROWS && AFG_ROWS.length) {
+    AFG_ROWS.slice().sort((a, b) => (a.nume || '').localeCompare(b.nume || '', 'ro')).forEach(b => {
+      const o = document.createElement('option'); o.value = b.id; o.textContent = b.nume;
+      o.dataset.categorie = b.categorie || ''; o.dataset.zona = b.zona || '';
+      bizSel.appendChild(o);
+    });
+  }
+}
+
+// "Tip cazare" și "Regiune" restrâng lista din care poți alege un apartament/hotel; "Tip afacere"
+// restrânge lista de afaceri — exact cum a cerut Nico, ca să nu navigheze prin liste foarte mari.
+function refreshRedeemDependentSelects(){
+  const tipCazare = document.getElementById('redeem-tip-cazare').value;
+  const regiune = document.getElementById('redeem-regiune').value;
+  const aptSel = document.getElementById('redeem-apt');
+  Array.from(aptSel.options).forEach(o => {
+    if (!o.value) return;
+    o.hidden = (tipCazare && o.dataset.tip !== tipCazare) || (regiune && o.dataset.zona !== regiune);
+  });
+  if (aptSel.value && aptSel.selectedOptions[0] && aptSel.selectedOptions[0].hidden) aptSel.value = '';
+
+  const categorie = document.getElementById('redeem-categorie').value;
+  const bizSel = document.getElementById('redeem-biz');
+  Array.from(bizSel.options).forEach(o => {
+    if (!o.value) return;
+    o.hidden = categorie && o.dataset.categorie !== categorie;
+  });
+  if (bizSel.value && bizSel.selectedOptions[0] && bizSel.selectedOptions[0].hidden) bizSel.value = '';
+}
+
+function redeemEnrich(r){
+  const gc = GUEST_CODES_MAP[r.code_id];
+  const aptSlug = gc ? gc.apt : null;
+  const aptInfo = aptSlug ? statResolveApt(aptSlug) : { nume: (gc && gc.apt_name) || '—', zona: '—', tip: '—' };
+  const biz = AFG_ROWS.find(b => String(b.id) === String(r.business_id));
+  return {
+    dt: new Date(r.redeemed_at),
+    source: r.source || 'scan',
+    aptSlug, aptNume: aptInfo.nume, aptTip: aptInfo.tip === 'Hotel' ? 'hotel' : 'apartament', aptZona: aptInfo.zona,
+    bizId: r.business_id, bizNume: biz ? biz.nume : r.business_id, bizCategorie: biz ? biz.categorie : null,
+  };
+}
+
+function redeemIsoWeek(d){
+  const dt = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = (dt.getUTCDay() + 6) % 7;
+  dt.setUTCDate(dt.getUTCDate() - dayNum + 3);
+  const firstThursday = new Date(Date.UTC(dt.getUTCFullYear(), 0, 4));
+  const weekNum = 1 + Math.round(((dt - firstThursday) / 86400000 - 3 + ((firstThursday.getUTCDay() + 6) % 7)) / 7);
+  return `S${String(weekNum).padStart(2, '0')} ${dt.getUTCFullYear()}`;
+}
+function redeemPeriodKey(d, g){
+  if (g === 'zi') return d.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit' });
+  if (g === 'saptamana') return redeemIsoWeek(d);
+  if (g === 'luna') return d.toLocaleDateString('ro-RO', { month: 'short', year: '2-digit' });
+  return String(d.getFullYear());
+}
+function fmtOra(d){ return d.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }); }
+
+function filteredRedeemEvents(){
+  if (REDEMPTIONS_RAW === null) return [];
+  const fromEl = document.getElementById('redeem-from');
+  const toEl = document.getElementById('redeem-to');
+  const from = new Date(fromEl.value + 'T00:00:00');
+  const to = new Date(toEl.value + 'T23:59:59');
+  const tipCazare = document.getElementById('redeem-tip-cazare').value;
+  const regiune = document.getElementById('redeem-regiune').value;
+  const aptSlug = document.getElementById('redeem-apt').value;
+  const categorie = document.getElementById('redeem-categorie').value;
+  const bizId = document.getElementById('redeem-biz').value;
+
+  return REDEMPTIONS_RAW.map(redeemEnrich).filter(e => {
+    if (e.dt < from || e.dt > to) return false;
+    if (tipCazare && e.aptTip !== tipCazare) return false;
+    if (regiune && e.aptZona !== regiune) return false;
+    if (aptSlug && e.aptSlug !== aptSlug) return false;
+    if (categorie && e.bizCategorie !== categorie) return false;
+    if (bizId && String(e.bizId) !== String(bizId)) return false;
+    return true;
+  });
+}
+
+function renderRedeemPivot(tableId, keyFn, labelHeader, rows){
+  const periods = [];
+  const seen = new Set();
+  rows.slice().sort((a, b) => a.dt - b.dt).forEach(e => {
+    const p = redeemPeriodKey(e.dt, redeemGroup);
+    if (!seen.has(p)) { seen.add(p); periods.push(p); }
+  });
+  const shownPeriods = periods.slice(-8); // ultimele 8 perioade, ca să nu se lățească nesfârșit (confirmat cu Nico)
+
+  const entities = [...new Set(rows.map(keyFn))].sort((a, b) => a.localeCompare(b, 'ro'));
+  const counts = {};
+  entities.forEach(ent => { counts[ent] = {}; shownPeriods.forEach(p => counts[ent][p] = 0); });
+  rows.forEach(e => {
+    const p = redeemPeriodKey(e.dt, redeemGroup);
+    const key = keyFn(e);
+    if (counts[key] && shownPeriods.includes(p)) counts[key][p]++;
+  });
+
+  const table = document.getElementById(tableId);
+  table.querySelector('thead').innerHTML = `<tr><th>${escapeHtml(labelHeader)}</th>${shownPeriods.map(p => `<th class="count">${escapeHtml(p)}</th>`).join('')}<th class="count">Total</th></tr>`;
+  const totalsByPeriod = {}; shownPeriods.forEach(p => totalsByPeriod[p] = 0);
+  let grandTotal = 0;
+  table.querySelector('tbody').innerHTML = entities.map(ent => {
+    const rowTotal = shownPeriods.reduce((s, p) => s + counts[ent][p], 0);
+    grandTotal += rowTotal;
+    shownPeriods.forEach(p => totalsByPeriod[p] += counts[ent][p]);
+    return `<tr><td>${escapeHtml(ent)}</td>${shownPeriods.map(p => `<td class="count">${counts[ent][p] || ''}</td>`).join('')}<td class="count"><b>${rowTotal}</b></td></tr>`;
+  }).join('') + `<tr class="total-row"><td>Total</td>${shownPeriods.map(p => `<td class="count">${totalsByPeriod[p]}</td>`).join('')}<td class="count">${grandTotal}</td></tr>`;
+}
+
+function renderRedeemReport(){
+  if (REDEMPTIONS_RAW === null) return;
+  refreshRedeemDependentSelects();
+  const rows = filteredRedeemEvents();
+
+  document.getElementById('redeem-c-total').textContent = rows.length;
+  document.getElementById('redeem-c-biz').textContent = new Set(rows.map(e => e.bizNume)).size;
+  document.getElementById('redeem-c-apt').textContent = new Set(rows.map(e => e.aptNume)).size;
+
+  renderRedeemPivot('redeem-pivot-apt', e => e.aptNume, 'Apartament / Hotel', rows);
+  renderRedeemPivot('redeem-pivot-biz', e => e.bizNume, 'Afacere', rows);
+
+  const detailEl = document.getElementById('redeem-detail-body');
+  const emptyEl = document.getElementById('redeem-empty');
+  const detail = rows.slice().sort((a, b) => b.dt - a.dt).slice(0, 50);
+  emptyEl.style.display = rows.length ? 'none' : 'block';
+  detailEl.innerHTML = detail.map(e => `
+    <tr>
+      <td>${escapeHtml(e.bizNume)}</td>
+      <td>${escapeHtml(e.aptNume)}</td>
+      <td>${fmtData(e.dt.toISOString())}</td>
+      <td>${fmtOra(e.dt)}</td>
+      <td><span class="redeem-source-chip ${e.source}">${e.source === 'scan' ? '📷 scanat' : '✍️ manual'}</span></td>
+    </tr>
+  `).join('');
+}
+
+// ---- export Excel / PDF (exportă exact ce e filtrat/vizibil în raport) ----
+function redeemExportRows(){
+  return filteredRedeemEvents().slice().sort((a, b) => b.dt - a.dt).map(e => ({
+    'Afacere': e.bizNume, 'Apartament/Hotel': e.aptNume,
+    'Data': fmtData(e.dt.toISOString()), 'Ora': fmtOra(e.dt),
+    'Sursă': e.source === 'scan' ? 'scanat' : 'manual',
+  }));
+}
+
+document.getElementById('redeem-export-excel').addEventListener('click', () => {
+  if (typeof XLSX === 'undefined') { alert('Biblioteca de export Excel nu s-a încărcat — verifică conexiunea la internet și reîncearcă.'); return; }
+  const rows = redeemExportRows();
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Jurnal detaliat');
+  XLSX.writeFile(wb, `statistici-redeem-${document.getElementById('redeem-from').value}_${document.getElementById('redeem-to').value}.xlsx`);
+});
+
+document.getElementById('redeem-export-pdf').addEventListener('click', () => {
+  if (typeof jspdf === 'undefined') { alert('Biblioteca de export PDF nu s-a încărcat — verifică conexiunea la internet și reîncearcă.'); return; }
+  const { jsPDF } = jspdf;
+  const doc = new jsPDF();
+  const from = document.getElementById('redeem-from').value, to = document.getElementById('redeem-to').value;
+  doc.setFontSize(14); doc.text('Statistici Partners redeem', 14, 16);
+  doc.setFontSize(10); doc.text(`${from} — ${to}`, 14, 22);
+  doc.autoTable({
+    startY: 28,
+    head: [['Afacere', 'Apartament/Hotel', 'Data', 'Ora', 'Sursă']],
+    body: redeemExportRows().map(r => [r['Afacere'], r['Apartament/Hotel'], r['Data'], r['Ora'], r['Sursă']]),
+    styles: { fontSize: 8 },
+    headStyles: { fillColor: [16, 48, 43] },
+  });
+  doc.save(`statistici-redeem-${from}_${to}.pdf`);
+});
+
+document.getElementById('redeem-group').addEventListener('click', (e) => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  document.querySelectorAll('#redeem-group button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  redeemGroup = btn.getAttribute('data-g');
+  renderRedeemReport();
+});
+['redeem-from', 'redeem-to', 'redeem-tip-cazare', 'redeem-regiune', 'redeem-apt', 'redeem-categorie', 'redeem-biz'].forEach(id => {
+  document.getElementById(id).addEventListener('change', renderRedeemReport);
+});
+
 // Rândurile din domeniul activ al tab-ului comun (Apartamente/Hoteluri/Afaceri locale) —
 // toate filtrele (status, zonă, căutare) se aplică peste acest subset, nu peste ROWS întreg.
 function domainRows(){
@@ -1925,6 +2267,7 @@ async function loadAfaceriGhid(){
   populateAfgFilters();
   renderAfgList();
   renderClientiList(); // AFG_ROWS s-a schimbat — actualizează și listele de locații din Status clienți
+  populateRedeemSelects(); renderRedeemReport(); // AFG_ROWS s-a schimbat — actualizează lista de afaceri din Statistici Partners redeem
 }
 
 function populateAfgFilters(){
