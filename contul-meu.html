@@ -199,9 +199,14 @@ const BILLING_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none
 const COPY_ICON = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8v-2a2 2 0 0 0 -2 -2h-8a2 2 0 0 0 -2 2v8a2 2 0 0 0 2 2h2"/></svg>';
 const SAVE_ICON = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12"/><path d="M8 12l4 4 4 -4"/><path d="M4 20h16"/></svg>';
 const BACK_ICON = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>';
+const PRINT_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8v-4a1 1 0 0 0 -1 -1h-8a1 1 0 0 0 -1 1v4"/><path d="M17 17h1a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2h-14a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h1"/><rect x="7" y="13" width="10" height="8" rx="1"/></svg>';
 
 function guideUrl(slug) {
   return `https://lokals.ro/ghid-oaspeti.html?apt=${encodeURIComponent(slug)}`;
+}
+
+function receptieUrl(operatorId) {
+  return `https://lokals.ro/receptie-preinregistrari.html?operator=${encodeURIComponent(operatorId)}`;
 }
 
 const REGISTRATION_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h1"/><path d="M9 13h6"/><path d="M9 17h6"/></svg>';
@@ -277,8 +282,13 @@ function renderCazari(rows, unreadCounts) {
         ${isEssential ? `
           <button class="action-btn" type="button" style="position:relative;" data-action="reginfo" data-op-id="${row.id}">${REGISTRATION_ICON} Înregistrare oaspeți${regPending ? `<span class="fb-badge">${regPending}</span>` : ''}</button>
         ` : ''}
+        ${row.tip === 'hotel' && row.preinregistrare_activa ? `
+          <button class="action-btn" type="button" data-action="copy-receptie" data-id="${row.id}">${COPY_ICON} <span data-copy-receptie-label="${row.id}">Copiază link recepție</span></button>
+          <button class="action-btn" type="button" data-action="print-receptie-qr" data-id="${row.id}">${PRINT_ICON} Printează cod QR</button>
+        ` : ''}
       </div>
       ${row.inregistrare_activa ? `<div class="reg-note">🔒 Verificare identitate activă — „Vezi ghidul” și „Distribuie” arată automat ghidul oaspetelui validat azi. Exportul PDF e dezactivat (nu poate cere verificarea identității).</div>` : ''}
+      ${row.tip === 'hotel' && !row.preinregistrare_activa ? `<div class="reg-note">🧾 Preînregistrare recepție — dezactivată. Odată activată din panoul administratorului, poți copia link-ul de recepție și printa afișul cu cod QR pentru front-desk.</div>` : ''}
       ${isEssential ? `<div class="reg-panel" id="reg-panel-${row.id}"></div>` : ''}
     `;
     wrap.appendChild(card);
@@ -370,6 +380,26 @@ document.getElementById('list-cazari').addEventListener('click', (e) => {
 
   if (action === 'qr') {
     window.open(`afis-qr.html?slug=${encodeURIComponent(slug)}`, '_blank');
+    return;
+  }
+
+  if (action === 'copy-receptie') {
+    const id = btn.dataset.id;
+    const value = receptieUrl(id);
+    const label = btn.querySelector(`[data-copy-receptie-label]`);
+    const restore = () => { if (label) label.textContent = 'Copiază link recepție'; };
+    const showCopied = () => { if (label) label.textContent = 'Copiat!'; setTimeout(restore, 1600); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(value).then(showCopied).catch(() => alert(value));
+    } else {
+      alert(value);
+    }
+    return;
+  }
+
+  if (action === 'print-receptie-qr') {
+    const id = btn.dataset.id;
+    window.open(`receptie-qr-print.html?operator=${encodeURIComponent(id)}`, '_blank');
     return;
   }
 
