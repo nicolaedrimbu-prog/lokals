@@ -302,6 +302,12 @@
       <div class="bo-title">🗂️ Baza de date — afaceri locale (ghidul turistic) <span class="count" id="afg-count">…</span></div>
       <p class="lead" style="margin:-4px 0 14px; font-size:12.5px;">Sursa afacerilor din ghidul turistic (tabelul <code style="background:var(--cream); padding:1px 5px; border-radius:5px;">afaceri_ghid</code> din Supabase) — a înlocuit vechiul Google Sheet, care nu mai e folosit. Modifică, adaugă sau dezactivează afaceri direct de aici.</p>
 
+      <div id="revend-section" style="display:none; margin-bottom:26px;">
+        <div class="bo-title" style="font-size:14px;">🔗 Revendicări de asociere în așteptare <span class="count" id="revend-count">…</span></div>
+        <p class="lead" style="margin:-2px 0 12px; font-size:12.5px;">Cineva care s-a înscris prin formularul de parteneri a spus că una din afacerile de mai jos (fără email încă) e a lui. Aprobă doar dacă ești sigur că e chiar afacerea lui — asta îi completează emailul pe afacere și îi permite să o gestioneze din contul lui.</p>
+        <div id="revend-list" style="display:flex; flex-direction:column; gap:10px;"></div>
+      </div>
+
       <div class="toolbar" style="margin-bottom:14px;">
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <select id="afg-zona-filter" style="border:1.5px solid var(--line); border-radius:11px; padding:9px 12px; font-size:13px; font-family:inherit; background:#fff; color:var(--ink);">
@@ -311,6 +317,9 @@
             <option value="toate">Toate categoriile</option>
           </select>
           <input type="text" id="afg-search" placeholder="Caută după nume..." style="border:1.5px solid var(--line); border-radius:11px; padding:9px 14px; font-size:13px; font-family:inherit; width:200px; background:#fff;">
+          <label style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--ink-soft); border:1.5px solid var(--line); border-radius:11px; padding:8px 12px; cursor:pointer; background:#fff;">
+            <input type="checkbox" id="afg-no-email-filter" style="margin:0;"> Fără email <span id="afg-no-email-count" class="count" style="margin-left:2px;"></span>
+          </label>
         </div>
         <button class="pbtn primary" id="afg-btn-add">+ Adaugă afacere nouă</button>
       </div>
@@ -2310,6 +2319,7 @@ async function loadAfaceriGhid(){
   renderAfgList();
   renderClientiList(); // AFG_ROWS s-a schimbat — actualizează și listele de locații din Status clienți
   populateRedeemSelects(); renderRedeemReport(); // AFG_ROWS s-a schimbat — actualizează lista de afaceri din Statistici Partners redeem
+  loadRevendicari(); // are nevoie de AFG_ROWS deja încărcat, ca să arate numele afacerii revendicate
 }
 
 function populateAfgFilters(){
@@ -2383,10 +2393,15 @@ function afgRowHtml(r){
 
 function renderAfgList(){
   const q = (document.getElementById('afg-search').value || '').trim().toLowerCase();
+  const noEmailOnly = document.getElementById('afg-no-email-filter').checked;
   let list = AFG_ROWS.slice();
   if (afgZonaFilter !== 'toate') list = list.filter(r => (r.zona || '').split(',').map(z => z.trim()).includes(afgZonaFilter));
   if (afgCatFilter !== 'toate') list = list.filter(r => r.categorie === afgCatFilter);
   if (q) list = list.filter(r => (r.nume || '').toLowerCase().includes(q) || (r.id || '').toLowerCase().includes(q));
+  if (noEmailOnly) list = list.filter(r => !r.email);
+
+  const noEmailTotal = AFG_ROWS.filter(r => !r.email).length;
+  document.getElementById('afg-no-email-count').textContent = noEmailTotal ? `(${noEmailTotal})` : '';
 
   const listEl = document.getElementById('afg-list');
   document.getElementById('afg-empty').style.display = list.length ? 'none' : 'block';
@@ -2496,14 +2511,26 @@ async function handleAfgDelete(id, btn){
 document.getElementById('afg-zona-filter').addEventListener('change', (e) => { afgZonaFilter = e.target.value; renderAfgList(); });
 document.getElementById('afg-cat-filter').addEventListener('change', (e) => { afgCatFilter = e.target.value; renderAfgList(); });
 document.getElementById('afg-search').addEventListener('input', renderAfgList);
+document.getElementById('afg-no-email-filter').addEventListener('change', renderAfgList);
 
 document.getElementById('afg-btn-add').addEventListener('click', () => {
   const wrap = document.getElementById('afg-add-wrap');
   const isOpen = wrap.style.display !== 'none';
   if (isOpen) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+  const candidaturi = ROWS.filter(r => r.source === 'candidati_parteneri');
+  const candidatOptions = candidaturi.map(r => `<option value="${escapeHtml(r.id)}">${escapeHtml(r.nume)} — ${escapeHtml(r.email || 'fără email')}</option>`).join('');
   wrap.innerHTML = `
     <div class="prow" style="border-color:var(--gold);">
       <div class="pname serif" style="margin-bottom:10px;">Afacere nouă</div>
+      ${candidaturi.length ? `
+      <div class="efield" style="margin-bottom:14px; padding-bottom:14px; border-bottom:1px dashed var(--line);">
+        <label for="afg-prefill-candidat">Preia date dintr-o candidatură existentă (opțional)</label>
+        <select id="afg-prefill-candidat">
+          <option value="">— Alege o candidatură ca să precompletezi câmpurile —</option>
+          ${candidatOptions}
+        </select>
+      </div>
+      ` : ''}
       <form id="afg-add-form">
         <div class="efield">
           <label for="afg-new-id">Id (identificator unic, ex: dino-parc — folosit și în link-ul de scanare beneficii)</label>
@@ -2518,6 +2545,31 @@ document.getElementById('afg-btn-add').addEventListener('click', () => {
     </div>
   `;
   wrap.style.display = 'block';
+  const prefillSelect = document.getElementById('afg-prefill-candidat');
+  if (prefillSelect) {
+    prefillSelect.addEventListener('change', () => {
+      const candId = prefillSelect.value;
+      if (!candId) return;
+      const cand = candidaturi.find(r => String(r.id) === String(candId));
+      if (!cand) return;
+      const raw = cand.raw || {};
+      const setVal = (key, val) => {
+        const el = document.getElementById('afg-new-' + key);
+        if (el && val != null && val !== '') el.value = val;
+      };
+      setVal('nume', raw.nume_afacere);
+      setVal('email', raw.email);
+      setVal('persoana_contact', raw.persoana_contact);
+      setVal('telefon', raw.telefon);
+      setVal('descriere', raw.descriere);
+      setVal('website', raw.website);
+      setVal('facebook', raw.facebook);
+      setVal('instagram', raw.instagram);
+      setVal('categorie', raw.categorie);
+      setVal('zona', raw.zona);
+      if (raw.interesat_beneficiu && raw.beneficiu_propus) setVal('beneficiu', raw.beneficiu_propus);
+    });
+  }
   document.getElementById('afg-add-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = e.target;
@@ -2546,6 +2598,101 @@ document.getElementById('afg-btn-add').addEventListener('click', () => {
     renderAfgList();
   });
 });
+
+// ---------- Revendicări de asociere afacere (din inregistrare-partener.html) ----------
+let REVEND_ROWS = [];
+
+async function loadRevendicari(){
+  const { data, error } = await supabaseClient
+    .from('revendicari_afaceri')
+    .select('*')
+    .eq('status', 'in_asteptare')
+    .order('creat_la', { ascending: false });
+  if (error) { console.error(error); return; }
+  REVEND_ROWS = data || [];
+  renderRevendicariList();
+}
+
+function revendItemHtml(r){
+  const afacere = AFG_ROWS.find(a => String(a.id) === String(r.afacere_id));
+  const numeAfacere = afacere ? afacere.nume : `(afacere ștearsă — id: ${r.afacere_id})`;
+  return `
+    <div class="prow" data-revend-row="${escapeHtml(r.id)}">
+      <div class="prow-top">
+        <div class="picon" style="background:var(--gold-soft);">🔗</div>
+        <div class="pinfo">
+          <div class="pname-row"><span class="pname serif">${escapeHtml(numeAfacere)}</span></div>
+          <div class="pmeta">Revendicată de ${escapeHtml(r.persoana_contact || '—')} · ${escapeHtml(r.email)}${r.telefon ? ' · ' + escapeHtml(r.telefon) : ''}</div>
+        </div>
+        <div class="pactions">
+          <button class="pbtn primary" data-revend-approve="${escapeHtml(r.id)}">Aprobă</button>
+          <button class="pbtn brick" data-revend-reject="${escapeHtml(r.id)}">Respinge</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderRevendicariList(){
+  const section = document.getElementById('revend-section');
+  const listEl = document.getElementById('revend-list');
+  if (!REVEND_ROWS.length) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  document.getElementById('revend-count').textContent = REVEND_ROWS.length;
+  listEl.innerHTML = REVEND_ROWS.map(revendItemHtml).join('');
+  listEl.querySelectorAll('[data-revend-approve]').forEach(btn => {
+    btn.addEventListener('click', () => handleRevendicareApprove(btn.getAttribute('data-revend-approve'), btn));
+  });
+  listEl.querySelectorAll('[data-revend-reject]').forEach(btn => {
+    btn.addEventListener('click', () => handleRevendicareReject(btn.getAttribute('data-revend-reject'), btn));
+  });
+}
+
+async function handleRevendicareApprove(id, btn){
+  const revend = REVEND_ROWS.find(r => String(r.id) === String(id));
+  if (!revend) return;
+  btn.disabled = true;
+  // Completăm emailul pe afacere doar dacă încă n-are unul — nu suprascriem o afacere deja
+  // asociată, chiar dacă a mai ajuns o revendicare pentru ea între timp.
+  const { error: afgErr } = await supabaseClient
+    .from('afaceri_ghid')
+    .update({ email: revend.email, persoana_contact: revend.persoana_contact, telefon: revend.telefon })
+    .eq('id', revend.afacere_id)
+    .is('email', null);
+  if (afgErr) {
+    console.error(afgErr);
+    alert('Nu am putut actualiza afacerea. Încearcă din nou.');
+    btn.disabled = false;
+    return;
+  }
+  const { error: revendErr } = await supabaseClient
+    .from('revendicari_afaceri')
+    .update({ status: 'aprobat', procesat_la: new Date().toISOString() })
+    .eq('id', id);
+  if (revendErr) console.error(revendErr);
+
+  const afgRow = AFG_ROWS.find(a => String(a.id) === String(revend.afacere_id));
+  if (afgRow) { afgRow.email = revend.email; afgRow.persoana_contact = revend.persoana_contact; afgRow.telefon = revend.telefon; }
+  REVEND_ROWS = REVEND_ROWS.filter(r => String(r.id) !== String(id));
+  renderRevendicariList();
+  renderAfgList();
+}
+
+async function handleRevendicareReject(id, btn){
+  btn.disabled = true;
+  const { error } = await supabaseClient
+    .from('revendicari_afaceri')
+    .update({ status: 'respins', procesat_la: new Date().toISOString() })
+    .eq('id', id);
+  if (error) {
+    console.error(error);
+    alert('Nu am putut respinge. Încearcă din nou.');
+    btn.disabled = false;
+    return;
+  }
+  REVEND_ROWS = REVEND_ROWS.filter(r => String(r.id) !== String(id));
+  renderRevendicariList();
+}
 
 function detailsHtml(r){
   const raw = r.raw;

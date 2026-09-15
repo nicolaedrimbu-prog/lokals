@@ -156,6 +156,11 @@
       <a class="add-btn" href="inregistrare-partener.html">+ Adaugă o afacere parteneră nouă</a>
     </div>
 
+    <div id="section-afaceri-active" style="display:none;">
+      <div class="section-label">Afacerile mele active în ghid</div>
+      <div id="list-afaceri-active"></div>
+    </div>
+
   </div>
 
 </main>
@@ -207,6 +212,10 @@ function guideUrl(slug) {
 
 function receptieUrl(operatorId) {
   return `https://lokals.ro/receptie-preinregistrari.html?operator=${encodeURIComponent(operatorId)}`;
+}
+
+function afacereUrl(afacereId) {
+  return `https://lokals.ro/partner-redeem.html?business=${encodeURIComponent(afacereId)}`;
 }
 
 const REGISTRATION_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h1"/><path d="M9 13h6"/><path d="M9 17h6"/></svg>';
@@ -712,6 +721,59 @@ function renderAfaceri(rows) {
   });
 }
 
+function renderAfaceriActive(rows) {
+  const wrap = document.getElementById('list-afaceri-active');
+  wrap.innerHTML = '';
+  rows.forEach(row => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    const thumb = row.poza_1 ? `<img src="${row.poza_1}" alt="">` : AFACERE_ICON;
+    const eligible = row.activ === true && !!row.beneficiu;
+    card.innerHTML = `
+      <div class="card-main" style="cursor:default;">
+        <div class="card-thumb">${thumb}</div>
+        <div class="card-info">
+          <div class="card-name">${escapeHtmlAcc(row.nume)}</div>
+          <div class="card-sub">${escapeHtmlAcc(row.categorie || '')}${row.categorie && row.zona ? ' · ' : ''}${escapeHtmlAcc(row.zona || '')}</div>
+          <span class="badge badge-afacere">${escapeHtmlAcc(row.categorie || 'Afacere')}</span>
+        </div>
+      </div>
+      ${eligible ? `
+      <div class="card-actions">
+        <button class="action-btn" type="button" data-action="copy-afacere" data-id="${row.id}">${COPY_ICON} <span data-copy-afacere-label="${row.id}">Copiază link scanare</span></button>
+        <button class="action-btn" type="button" data-action="print-afacere-qr" data-id="${row.id}">${PRINT_ICON} Printează cod QR</button>
+      </div>` : `
+      <div class="reg-note">🧾 Scanare beneficii — ${!row.activ ? 'afacerea nu e încă activă în ghid.' : 'nu ai încă un beneficiu setat pentru clienți.'} Scrie-ne ca să activăm asta, apoi vei putea printa aici codul QR pentru casă/recepție.</div>`}
+    `;
+    wrap.appendChild(card);
+  });
+}
+
+document.getElementById('list-afaceri-active').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  const id = btn.dataset.id;
+  const action = btn.dataset.action;
+
+  if (action === 'copy-afacere') {
+    const value = afacereUrl(id);
+    const label = btn.querySelector(`[data-copy-afacere-label]`);
+    const restore = () => { if (label) label.textContent = 'Copiază link scanare'; };
+    const showCopied = () => { if (label) label.textContent = 'Copiat!'; setTimeout(restore, 1600); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(value).then(showCopied).catch(() => alert(value));
+    } else {
+      alert(value);
+    }
+    return;
+  }
+
+  if (action === 'print-afacere-qr') {
+    window.open(`afacere-qr-print.html?afacere=${encodeURIComponent(id)}`, '_blank');
+    return;
+  }
+});
+
 async function init() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session || !session.user) {
@@ -722,14 +784,16 @@ async function init() {
   const email = session.user.email;
   CURRENT_EMAIL = email;
 
-  const [cazariRes, afaceriRes] = await Promise.all([
+  const [cazariRes, afaceriRes, afaceriActiveRes] = await Promise.all([
     fetch(`${SUPABASE_URL}/rest/v1/operatori?email=eq.${encodeURIComponent(email)}&select=*&order=created_at.desc`, { headers: { apikey: SUPABASE_KEY } }),
     fetch(`${SUPABASE_URL}/rest/v1/candidati_parteneri?email=eq.${encodeURIComponent(email)}&select=*&order=created_at.desc`, { headers: { apikey: SUPABASE_KEY } }),
+    fetch(`${SUPABASE_URL}/rest/v1/afaceri_ghid?email=eq.${encodeURIComponent(email)}&select=id,nume,categorie,zona,activ,beneficiu,poza_1&order=nume.asc`, { headers: { apikey: SUPABASE_KEY } }),
   ]);
   const cazari = await cazariRes.json();
   const afaceri = await afaceriRes.json();
+  const afaceriActive = afaceriActiveRes.ok ? await afaceriActiveRes.json() : [];
 
-  if (!cazari.length && !afaceri.length) {
+  if (!cazari.length && !afaceri.length && !afaceriActive.length) {
     showState('state-empty');
     return;
   }
@@ -764,6 +828,10 @@ async function init() {
   if (afaceri.length) {
     document.getElementById('section-afaceri').style.display = '';
     renderAfaceri(afaceri);
+  }
+  if (afaceriActive.length) {
+    document.getElementById('section-afaceri-active').style.display = '';
+    renderAfaceriActive(afaceriActive);
   }
   showState('state-form');
 }

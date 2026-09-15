@@ -72,6 +72,22 @@
     font-size:12.5px; color:var(--ink-soft); margin:0 0 18px; line-height:1.5;}
   .auth-banner b{color:var(--ink);}
   .auth-banner a{color:var(--teal-deep); font-weight:600; text-decoration:underline; cursor:pointer;}
+
+  /* ===== Sugestie de asociere cu o afacere deja existentă în ghid ===== */
+  #match-wrap{display:none; margin-top:8px; margin-bottom:6px; background:var(--cream); border:1.5px solid var(--line); border-radius:12px; padding:12px 14px;}
+  #match-wrap.visible{display:block;}
+  .match-title{font-size:12.5px; font-weight:700; color:var(--teal-deep); margin-bottom:8px;}
+  .match-item{display:flex; align-items:center; justify-content:space-between; gap:10px; background:#fff; border:1px solid var(--line); border-radius:10px; padding:9px 11px; margin-bottom:6px;}
+  .match-item:last-child{margin-bottom:0;}
+  .match-item-name{font-size:13px; font-weight:600; color:var(--ink);}
+  .match-item-meta{font-size:11px; color:var(--ink-soft); margin-top:1px;}
+  .match-item-btn{flex-shrink:0; background:var(--teal-deep); color:#fff; border:none; border-radius:999px; padding:7px 12px; font-size:11.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;}
+  .match-dismiss{display:block; text-align:center; font-size:11.5px; color:var(--ink-soft); margin-top:6px; cursor:pointer; text-decoration:underline; background:none; border:none; font-family:inherit; width:100%;}
+  #match-confirmed{display:none; margin-top:8px; margin-bottom:6px; background:var(--green-soft); border:1.5px solid var(--green); border-radius:12px; padding:11px 14px; align-items:center; justify-content:space-between; gap:10px;}
+  #match-confirmed.visible{display:flex;}
+  #match-confirmed .txt{font-size:12.5px; color:var(--green); line-height:1.45;}
+  #match-confirmed .txt b{display:block; font-size:13.5px; margin-bottom:1px;}
+  #match-confirmed .clear-btn{flex-shrink:0; background:none; border:none; color:var(--green); font-size:18px; cursor:pointer; line-height:1; padding:0 2px;}
 </style>
 </head>
 <body>
@@ -89,7 +105,16 @@
     </div>
     <form id="signup-form">
       <label for="nume_afacere">Numele afacerii</label>
-      <input type="text" id="nume_afacere" required placeholder="ex. Restaurant Cetate">
+      <input type="text" id="nume_afacere" required placeholder="ex. Restaurant Cetate" autocomplete="off">
+      <div id="match-wrap">
+        <div class="match-title">Am găsit afaceri asemănătoare deja în ghid — una dintre ele e a ta?</div>
+        <div id="match-list"></div>
+        <button type="button" class="match-dismiss" id="match-dismiss-btn">Niciuna dintre acestea, e o afacere nouă</button>
+      </div>
+      <div id="match-confirmed">
+        <div class="txt"><b>✓ Legată de o afacere existentă</b><span id="match-confirmed-name"></span> — confirmăm manual asocierea înainte să apară modificările.</div>
+        <button type="button" class="clear-btn" id="match-clear-btn" title="Anulează legătura">✕</button>
+      </div>
       <label for="persoana_contact">Persoana de contact</label>
       <input type="text" id="persoana_contact" required placeholder="ex. Maria Ionescu">
       <label for="telefon">Telefon (WhatsApp)</label>
@@ -264,6 +289,65 @@ async function uploadPhoto(file, numeAfacere) {
   if (!res.ok) return null;
   return `${SUPABASE_URL}/storage/v1/object/public/afaceri-poze/${path}`;
 }
+// ---------- Sugestie de asociere cu o afacere deja existentă (fără email încă) ----------
+// Scop: multe din cele 180 de afaceri deja publicate în ghid nu au un email asociat — nu au
+// fost înscrise prin acest formular, ci adăugate direct de admin. Când proprietarul lor real
+// completează acest formular mai târziu, îi arătăm afacerile asemănătoare ca nume și îl lăsăm
+// să se "lege" de una — validarea finală (schimbarea efectivă a emailului pe afacere) rămâne
+// mereu manuală, din panoul de administrare. Pasul e complet opțional, nu blochează trimiterea.
+let claimedAfacere = null; // { id, nume } sau null
+
+function escapeHtmlPartener(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function setClaimedAfacere(match) {
+  claimedAfacere = match;
+  document.getElementById('match-wrap').classList.remove('visible');
+  const confirmedEl = document.getElementById('match-confirmed');
+  if (match) {
+    document.getElementById('match-confirmed-name').textContent = ` „${match.nume}”`;
+    confirmedEl.classList.add('visible');
+  } else {
+    confirmedEl.classList.remove('visible');
+  }
+}
+
+async function searchSimilarAfaceri(query) {
+  const wrap = document.getElementById('match-wrap');
+  const listEl = document.getElementById('match-list');
+  if (claimedAfacere || query.trim().length < 3) { wrap.classList.remove('visible'); return; }
+  try {
+    const res = await sbFetch(`afaceri_ghid?nume=ilike.*${encodeURIComponent(query.trim())}*&email=is.null&select=id,nume,zona,categorie&limit=5`, { method: 'GET' });
+    const rows = await res.json();
+    if (!rows || !rows.length) { wrap.classList.remove('visible'); return; }
+    listEl.innerHTML = rows.map(r => `
+      <div class="match-item">
+        <div><div class="match-item-name">${escapeHtmlPartener(r.nume)}</div><div class="match-item-meta">${escapeHtmlPartener(r.zona || '')}</div></div>
+        <button type="button" class="match-item-btn" data-match-id="${escapeHtmlPartener(r.id)}" data-match-nume="${escapeHtmlPartener(r.nume)}">Da, e afacerea mea</button>
+      </div>
+    `).join('');
+    listEl.querySelectorAll('[data-match-id]').forEach(btn => {
+      btn.addEventListener('click', () => setClaimedAfacere({ id: btn.dataset.matchId, nume: btn.dataset.matchNume }));
+    });
+    wrap.classList.add('visible');
+  } catch (e) { /* sugestia e un extra — formularul rămâne funcțional fără ea */ }
+}
+
+(function attachMatchSearch() {
+  const input = document.getElementById('nume_afacere');
+  let timer = null;
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    const value = input.value;
+    timer = setTimeout(() => searchSimilarAfaceri(value), 500);
+  });
+})();
+document.getElementById('match-dismiss-btn').addEventListener('click', () => {
+  document.getElementById('match-wrap').classList.remove('visible');
+});
+document.getElementById('match-clear-btn').addEventListener('click', () => setClaimedAfacere(null));
+
 // ---------- teme de interes (chips) ----------
 document.querySelectorAll('#theme-grid .theme-chip input').forEach(cb => {
   cb.addEventListener('change', () => {
@@ -322,7 +406,25 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
     }),
   });
   if (res.status === 201) {
-    document.getElementById('success-sub').textContent = `„${nume_afacere}” a fost trimis spre verificare.`;
+    const insertedRows = await res.json().catch(() => null);
+    const candidatId = (insertedRows && insertedRows[0] && insertedRows[0].id) || null;
+
+    // Dacă a confirmat că e o afacere deja existentă în ghid, trimitem și o revendicare de
+    // asociere — un extra, nu blochează succesul înscrierii dacă eșuează dintr-un motiv oarecare.
+    if (claimedAfacere) {
+      try {
+        await sbFetch('revendicari_afaceri', {
+          method: 'POST',
+          body: JSON.stringify({
+            afacere_id: claimedAfacere.id, email, persoana_contact, telefon, candidat_id: candidatId,
+          }),
+        });
+      } catch (e) { /* candidatura tot a fost trimisă — revendicarea e un pas suplimentar, opțional */ }
+    }
+
+    document.getElementById('success-sub').textContent = claimedAfacere
+      ? `„${nume_afacere}” a fost trimis spre verificare — am trimis și cererea de asociere cu „${claimedAfacere.nume}”, pe care o confirmăm manual.`
+      : `„${nume_afacere}” a fost trimis spre verificare.`;
     document.getElementById('form-stage').classList.add('hidden');
     document.getElementById('success-stage').classList.add('visible');
     const accountLink = document.getElementById('account-link');
