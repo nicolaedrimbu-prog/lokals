@@ -320,6 +320,9 @@
           <label style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--ink-soft); border:1.5px solid var(--line); border-radius:11px; padding:8px 12px; cursor:pointer; background:#fff;">
             <input type="checkbox" id="afg-no-email-filter" style="margin:0;"> Fără email <span id="afg-no-email-count" class="count" style="margin-left:2px;"></span>
           </label>
+          <label style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--ink-soft); border:1.5px solid var(--line); border-radius:11px; padding:8px 12px; cursor:pointer; background:#fff;">
+            <input type="checkbox" id="afg-archived-filter" style="margin:0;"> 🗄 Arhivă <span id="afg-archived-count" class="count" style="margin-left:2px;"></span>
+          </label>
         </div>
         <button class="pbtn primary" id="afg-btn-add">+ Adaugă afacere nouă</button>
       </div>
@@ -742,17 +745,18 @@ const CATEGORII = {
 };
 const CAT_ICON = { aventura:"🧗", cultura:"🏛️", wellness:"💆", gastro:"🍽️", livrare:"🚚", producatori:"🌾", facilitare:"🔗" };
 
-const STATUS_LABEL = { nou: "În așteptare", publicat: "Publicat · live în ghid", respins: "Respins" };
+const STATUS_LABEL = { nou: "În așteptare", publicat: "Publicat · live în ghid", respins: "Respins", arhivat: "Arhivat" };
 const STATUS_COLOR = {
   nou: { bg: "var(--gold-soft)", fg: "#8F6222" },
   publicat: { bg: "var(--green-soft)", fg: "var(--green)" },
   respins: { bg: "#F1E3DF", fg: "var(--brick)" },
+  arhivat: { bg: "var(--line)", fg: "var(--ink-soft)" },
 };
 
 let ROWS = [];       // { source: 'candidati_parteneri'|'operatori', id, nume, categorieLabel, zona, email, data, status, foto, raw }
 // Filtrul poate fi precompletat din link (ex. ?filter=nou din emailul de notificare admin)
 const REQUESTED_FILTER = new URLSearchParams(window.location.search).get('filter');
-let currentFilter = ['toate', 'nou', 'publicat', 'respins'].includes(REQUESTED_FILTER) ? REQUESTED_FILTER : 'toate';
+let currentFilter = ['toate', 'nou', 'publicat', 'respins', 'arhivat'].includes(REQUESTED_FILTER) ? REQUESTED_FILTER : 'toate';
 let currentZonaFilter = 'toate';
 let currentSort = 'data-desc';
 // Domeniul activ în tab-ul comun Apartamente/Hoteluri/Afaceri locale (tab-cazari) — setat de
@@ -761,7 +765,7 @@ window.currentDomain = 'apartament';
 // Ascunde din listă apartamentele/hotelurile marcate `este_demo` — relevant doar pentru
 // domeniile apartament/hotel (Afaceri locale nu are conceptul de "demo").
 let hideDemo = false;
-const STATUS_ORDER = { nou: 0, publicat: 1, respins: 2 };
+const STATUS_ORDER = { nou: 0, publicat: 1, respins: 2, arhivat: 3 };
 
 function showView(id){
   document.querySelectorAll('.state').forEach(el => el.classList.remove('active'));
@@ -1953,12 +1957,19 @@ function domainRows(){
   return rows;
 }
 
+// Rândurile arhivate ies din lista de lucru zilnică (Toate/În așteptare/Publicate/Respinse) —
+// apar doar sub chip-ul dedicat "Arhivă", ca un coș de reciclare separat.
+function visibleDomainRows(){
+  return domainRows().filter(r => r.status !== 'arhivat');
+}
+
 function renderChips(){
-  const base = domainRows();
-  const counts = { toate: base.length, nou: 0, publicat: 0, respins: 0 };
+  const base = visibleDomainRows();
+  const archivedCount = domainRows().filter(r => r.status === 'arhivat').length;
+  const counts = { toate: base.length, nou: 0, publicat: 0, respins: 0, arhivat: archivedCount };
   base.forEach(r => { counts[r.status] = (counts[r.status] || 0) + 1; });
   const defs = [
-    ['toate', 'Toate'], ['nou', 'În așteptare'], ['publicat', 'Publicate'], ['respins', 'Respinse'],
+    ['toate', 'Toate'], ['nou', 'În așteptare'], ['publicat', 'Publicate'], ['respins', 'Respinse'], ['arhivat', '🗄 Arhivă'],
   ];
   const chips = document.getElementById('chips');
   chips.innerHTML = defs.map(([key, label]) => `
@@ -2006,8 +2017,8 @@ function sortRows(list){
 
 function renderList(){
   const q = document.getElementById('search').value.trim().toLowerCase();
-  const base = domainRows();
-  let list = currentFilter === 'toate' ? base : base.filter(r => r.status === currentFilter);
+  const base = currentFilter === 'arhivat' ? domainRows().filter(r => r.status === 'arhivat') : visibleDomainRows();
+  let list = (currentFilter === 'toate' || currentFilter === 'arhivat') ? base : base.filter(r => r.status === currentFilter);
   if (currentZonaFilter !== 'toate') list = list.filter(r => ((r.zona || '').trim() || '—') === currentZonaFilter);
   if (q) list = list.filter(r => (r.nume || '').toLowerCase().includes(q) || (r.email || '').toLowerCase().includes(q));
   list = sortRows(list);
@@ -2223,6 +2234,10 @@ function rowHtml(r){
 
 function actionsHtml(r){
   const btns = [];
+  if (r.status === 'arhivat') {
+    btns.push(`<button class="pbtn primary" data-source="${r.source}" data-id="${r.id}" data-action="nou" title="Scoate din arhivă și pune-o înapoi în așteptare">↩ Restaurează</button>`);
+    return btns.join('');
+  }
   if (r.status !== 'publicat') {
     btns.push(`<button class="pbtn primary" data-source="${r.source}" data-id="${r.id}" data-action="publicat">Publică</button>`);
   }
@@ -2232,6 +2247,7 @@ function actionsHtml(r){
   if (r.status === 'publicat') {
     btns.push(`<button class="pbtn" data-source="${r.source}" data-id="${r.id}" data-action="nou">Retrage din ghid</button>`);
   }
+  btns.push(`<button class="pbtn" data-source="${r.source}" data-id="${r.id}" data-action="arhivat" title="Mută în arhivă — iese din circuit dar rămâne salvată, o poți restaura oricând">🗄 Arhivează</button>`);
   return btns.join('');
 }
 
@@ -2356,7 +2372,10 @@ function afgDetailsHtml(r){
       <div class="egrid">${afgFieldsHtml(r, rowId)}</div>
       <div class="esave-row">
         <button type="submit" class="pbtn primary">Salvează modificările</button>
-        <button type="button" class="pbtn brick" data-afg-delete="${escapeHtml(r.id)}">Șterge afacerea</button>
+        ${r.arhivat
+          ? `<button type="button" class="pbtn primary" data-afg-restore="${escapeHtml(r.id)}">↩ Restaurează din arhivă</button>`
+          : `<button type="button" class="pbtn" data-afg-archive="${escapeHtml(r.id)}" title="Iese din ghid dar rămâne salvată, o poți restaura oricând">🗄 Arhivează</button>`}
+        <button type="button" class="pbtn brick" data-afg-delete="${escapeHtml(r.id)}">Șterge definitiv</button>
         <span class="esave-msg" id="afg-esave-msg-${rowId}"></span>
       </div>
     </form>
@@ -2367,22 +2386,26 @@ function afgRowHtml(r){
   const rowId = 'afg-' + r.id;
   const icon = r.iconita_fallback || CAT_ICON[r.categorie] || '📍';
   const zoneLabels = (r.zona || '').split(',').map(z => zonaLabel(z.trim())).filter(Boolean).join(', ');
+  const badgeBg = r.arhivat ? 'var(--line)' : (r.activ ? 'var(--green-soft)' : '#EFE9DB');
+  const badgeFg = r.arhivat ? 'var(--ink-soft)' : (r.activ ? 'var(--green)' : '#8F6222');
+  const badgeLabel = r.arhivat ? '🗄 Arhivat' : (r.activ ? 'Activ' : 'Inactiv');
   return `
     <div class="prow">
       <div class="prow-top">
-        <div class="picon" style="background:${r.activ ? 'var(--green-soft)' : '#EFE9DB'};">${icon}</div>
+        <div class="picon" style="background:${badgeBg};">${icon}</div>
         <div class="pinfo">
           <div class="pname-row">
             <span class="pname serif">${escapeHtml(r.nume || '(fără nume)')}</span>
-            <span class="pbadge" style="background:${r.activ ? 'var(--green-soft)' : '#EFE9DB'}; color:${r.activ ? 'var(--green)' : '#8F6222'};">${r.activ ? 'Activ' : 'Inactiv'}</span>
+            <span class="pbadge" style="background:${badgeBg}; color:${badgeFg};">${badgeLabel}</span>
           </div>
           <div class="pmeta">${escapeHtml(CATEGORII[r.categorie] || r.categorie || '—')} · ${escapeHtml(zoneLabels || '—')} &nbsp;·&nbsp; id: <code style="background:var(--cream); padding:1px 5px; border-radius:4px;">${escapeHtml(r.id)}</code></div>
         </div>
         <div class="pactions">
+          ${r.arhivat ? '' : `
           <label class="switch" title="Activ în ghid">
             <input type="checkbox" data-afg-activ="${escapeHtml(r.id)}" ${r.activ ? 'checked' : ''}>
             <span class="track"></span>
-          </label>
+          </label>`}
           <button class="pbtn" data-afg-toggle="${rowId}">Editează</button>
         </div>
       </div>
@@ -2394,14 +2417,19 @@ function afgRowHtml(r){
 function renderAfgList(){
   const q = (document.getElementById('afg-search').value || '').trim().toLowerCase();
   const noEmailOnly = document.getElementById('afg-no-email-filter').checked;
-  let list = AFG_ROWS.slice();
+  const archivedOnly = document.getElementById('afg-archived-filter').checked;
+  // Ca la operatori/candidați — cele arhivate ies din lista normală de lucru; le vezi doar
+  // bifând explicit "Arhivă" (recipientul e un coș de reciclare, nu se amestecă în listă).
+  let list = archivedOnly ? AFG_ROWS.filter(r => r.arhivat) : AFG_ROWS.filter(r => !r.arhivat);
   if (afgZonaFilter !== 'toate') list = list.filter(r => (r.zona || '').split(',').map(z => z.trim()).includes(afgZonaFilter));
   if (afgCatFilter !== 'toate') list = list.filter(r => r.categorie === afgCatFilter);
   if (q) list = list.filter(r => (r.nume || '').toLowerCase().includes(q) || (r.id || '').toLowerCase().includes(q));
   if (noEmailOnly) list = list.filter(r => !r.email);
 
-  const noEmailTotal = AFG_ROWS.filter(r => !r.email).length;
+  const noEmailTotal = AFG_ROWS.filter(r => !r.arhivat && !r.email).length;
   document.getElementById('afg-no-email-count').textContent = noEmailTotal ? `(${noEmailTotal})` : '';
+  const archivedTotal = AFG_ROWS.filter(r => r.arhivat).length;
+  document.getElementById('afg-archived-count').textContent = archivedTotal ? `(${archivedTotal})` : '';
 
   const listEl = document.getElementById('afg-list');
   document.getElementById('afg-empty').style.display = list.length ? 'none' : 'block';
@@ -2409,9 +2437,11 @@ function renderAfgList(){
 
   // Contorul din titlu reflectă rezultatul filtrat curent (zonă/categorie/căutare), nu
   // mereu totalul din bază — altfel arată mereu 180, indiferent ce filtru e aplicat.
+  // Totalul de bază exclude arhivatele (ele nu mai fac parte din ghidul „de lucru").
+  const baseTotal = archivedOnly ? archivedTotal : (AFG_ROWS.length - archivedTotal);
   const afgCountEl = document.getElementById('afg-count');
   const noFilterActive = afgZonaFilter === 'toate' && afgCatFilter === 'toate' && !q;
-  afgCountEl.textContent = noFilterActive ? AFG_ROWS.length : `${list.length} / ${AFG_ROWS.length}`;
+  afgCountEl.textContent = noFilterActive ? baseTotal : `${list.length} / ${baseTotal}`;
 
   listEl.querySelectorAll('[data-afg-toggle]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -2428,6 +2458,12 @@ function renderAfgList(){
   });
   listEl.querySelectorAll('[data-afg-delete]').forEach(btn => {
     btn.addEventListener('click', () => handleAfgDelete(btn.dataset.afgDelete, btn));
+  });
+  listEl.querySelectorAll('[data-afg-archive]').forEach(btn => {
+    btn.addEventListener('click', () => handleAfgArchive(btn.dataset.afgArchive, btn));
+  });
+  listEl.querySelectorAll('[data-afg-restore]').forEach(btn => {
+    btn.addEventListener('click', () => handleAfgRestore(btn.dataset.afgRestore, btn));
   });
 }
 
@@ -2492,6 +2528,36 @@ async function handleAfgActivToggle(id, activ, input){
   renderAfgList();
 }
 
+async function handleAfgArchive(id, btn){
+  // Arhivarea o scoate din ghidul live (activ=false) și o pune în coșul de reciclare —
+  // rămâne complet salvată, spre deosebire de "Șterge definitiv".
+  btn.disabled = true;
+  const { error } = await supabaseClient.from('afaceri_ghid').update({ arhivat: true, activ: false }).eq('id', id);
+  btn.disabled = false;
+  if (error) {
+    console.error(error);
+    alert('Nu am putut arhiva — încearcă din nou.');
+    return;
+  }
+  const row = AFG_ROWS.find(r => String(r.id) === String(id));
+  if (row) { row.arhivat = true; row.activ = false; }
+  renderAfgList();
+}
+
+async function handleAfgRestore(id, btn){
+  btn.disabled = true;
+  const { error } = await supabaseClient.from('afaceri_ghid').update({ arhivat: false }).eq('id', id);
+  btn.disabled = false;
+  if (error) {
+    console.error(error);
+    alert('Nu am putut restaura — încearcă din nou.');
+    return;
+  }
+  const row = AFG_ROWS.find(r => String(r.id) === String(id));
+  if (row) row.arhivat = false;
+  renderAfgList();
+}
+
 async function handleAfgDelete(id, btn){
   if (!confirm('Sigur ștergi definitiv această afacere din baza de date? Nu mai poate fi recuperată.')) return;
   btn.disabled = true;
@@ -2512,6 +2578,7 @@ document.getElementById('afg-zona-filter').addEventListener('change', (e) => { a
 document.getElementById('afg-cat-filter').addEventListener('change', (e) => { afgCatFilter = e.target.value; renderAfgList(); });
 document.getElementById('afg-search').addEventListener('input', renderAfgList);
 document.getElementById('afg-no-email-filter').addEventListener('change', renderAfgList);
+document.getElementById('afg-archived-filter').addEventListener('change', renderAfgList);
 
 document.getElementById('afg-btn-add').addEventListener('click', () => {
   const wrap = document.getElementById('afg-add-wrap');
