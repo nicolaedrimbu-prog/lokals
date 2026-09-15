@@ -552,7 +552,10 @@ async function resolveOperator() {
       const op = rows[0];
       currentOperator = op;
       if (!currentApt) {
-        currentApt = { name: op.nume_afisat || op.nume_afacere, zona: op.zona || 'rasnov', telefon: formatPhoneRo(op.telefon) };
+        // normalizăm la lowercase — afaceriToPlace() compară cu zona (lowercase) din afaceri_ghid,
+        // iar zona operatorului poate fi introdusă cu majuscule (ex. "Rasnov") din formularul de înregistrare
+        const zonaNormalizata = (op.zona || 'rasnov').trim().toLowerCase() || 'rasnov';
+        currentApt = { name: op.nume_afisat || op.nume_afacere, zona: zonaNormalizata, telefon: formatPhoneRo(op.telefon) };
         currentZona = currentApt.zona;
       }
     }
@@ -1539,7 +1542,7 @@ async function renderFacilitati() {
       const form = item.querySelector('#preinreg-form');
       if (form) form.addEventListener('submit', submitPreinregistrare);
       attachFotoIdCountSync('prb', 'prb-nr');
-      item.classList.add('open'); // deschis implicit — e utilitar, nu doar informativ
+      // închisă implicit — oaspetele o deschide singur din acordeon, ca restul secțiunilor
     }
   });
 
