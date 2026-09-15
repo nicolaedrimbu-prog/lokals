@@ -298,6 +298,25 @@ function renderCazari(rows, unreadCounts) {
       </div>
       ${row.inregistrare_activa ? `<div class="reg-note">🔒 Verificare identitate activă — „Vezi ghidul” și „Distribuie” arată automat ghidul oaspetelui validat azi. Exportul PDF e dezactivat (nu poate cere verificarea identității).</div>` : ''}
       ${row.tip === 'hotel' && !row.preinregistrare_activa ? `<div class="reg-note">🧾 Preînregistrare recepție — dezactivată. Odată activată din panoul administratorului, poți copia link-ul de recepție și printa afișul cu cod QR pentru front-desk.</div>` : ''}
+      ${row.tip === 'hotel' && row.preinregistrare_activa ? `
+        <div class="reg-toggle-row" style="margin:10px 0 0;">
+          <div>
+            <div class="reg-toggle-label">Cere poză act de identitate</div>
+            <div class="reg-toggle-sub">Oaspetele trebuie să încarce o poză a actului odată cu formularul de preînregistrare.</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" data-fotoid-hotel-toggle="${row.id}" ${row.necesita_foto_id ? 'checked' : ''}>
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div data-fotoid-hotel-mode-wrap="${row.id}" style="${row.necesita_foto_id ? '' : 'display:none;'} margin:-6px 0 4px;">
+          <label style="font-size:11px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.02em; display:block; margin-bottom:5px;">Câte poze?</label>
+          <select data-fotoid-hotel-mode="${row.id}" style="border:1.5px solid var(--line); border-radius:8px; padding:7px 10px; font-size:12.5px; font-family:inherit; width:100%; box-sizing:border-box; background:#fff; color:var(--ink);">
+            <option value="single" ${!row.foto_id_per_oaspete ? 'selected' : ''}>O singură poză — cel care a făcut rezervarea</option>
+            <option value="per_oaspete" ${row.foto_id_per_oaspete ? 'selected' : ''}>Câte o poză pentru fiecare oaspete</option>
+          </select>
+        </div>
+      ` : ''}
       ${isEssential ? `<div class="reg-panel" id="reg-panel-${row.id}"></div>` : ''}
     `;
     wrap.appendChild(card);
@@ -438,6 +457,45 @@ document.getElementById('list-cazari').addEventListener('click', (e) => {
   }
 });
 
+document.getElementById('list-cazari').addEventListener('change', async (e) => {
+  const toggle = e.target.closest('[data-fotoid-hotel-toggle]');
+  const mode = e.target.closest('[data-fotoid-hotel-mode]');
+
+  if (toggle) {
+    const operatorId = toggle.dataset.fotoidHotelToggle;
+    const necesita = toggle.checked;
+    toggle.disabled = true;
+    const { error } = await supabaseClient.from('operatori').update({ necesita_foto_id: necesita }).eq('id', operatorId);
+    toggle.disabled = false;
+    if (error) {
+      console.error(error);
+      toggle.checked = !necesita;
+      alert('Nu am putut salva schimbarea — încearcă din nou.');
+      return;
+    }
+    const row = OPERATORI_BY_ID[operatorId];
+    if (row) row.necesita_foto_id = necesita;
+    const modeWrap = document.querySelector(`[data-fotoid-hotel-mode-wrap="${operatorId}"]`);
+    if (modeWrap) modeWrap.style.display = necesita ? '' : 'none';
+    return;
+  }
+
+  if (mode) {
+    const operatorId = mode.dataset.fotoidHotelMode;
+    const perOaspete = mode.value === 'per_oaspete';
+    mode.disabled = true;
+    const { error } = await supabaseClient.from('operatori').update({ foto_id_per_oaspete: perOaspete }).eq('id', operatorId);
+    mode.disabled = false;
+    if (error) {
+      console.error(error);
+      alert('Nu am putut salva schimbarea — încearcă din nou.');
+      return;
+    }
+    const row = OPERATORI_BY_ID[operatorId];
+    if (row) row.foto_id_per_oaspete = perOaspete;
+  }
+});
+
 function regRowsFor(operatorId) {
   return REG_BY_OP[operatorId] || [];
 }
@@ -458,6 +516,23 @@ function renderRegPanel(operatorId) {
       </label>
     </div>
     <div id="reg-gen-wrap-${operatorId}" style="${op && op.inregistrare_activa ? '' : 'display:none;'}">
+      <div class="reg-toggle-row" style="margin-top:-4px;">
+        <div>
+          <div class="reg-toggle-label">Cere poză act de identitate</div>
+          <div class="reg-toggle-sub">Oaspetele trebuie să încarce o poză a actului odată cu formularul, înainte să-l validezi.</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" data-fotoid-toggle="${operatorId}" ${op && op.necesita_foto_id ? 'checked' : ''}>
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div data-fotoid-mode-wrap="${operatorId}" style="${op && op.necesita_foto_id ? '' : 'display:none;'} margin:-6px 0 16px;">
+        <label style="font-size:11px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.02em; display:block; margin-bottom:5px;">Câte poze?</label>
+        <select data-fotoid-mode="${operatorId}" style="border:1.5px solid var(--line); border-radius:8px; padding:7px 10px; font-size:12.5px; font-family:inherit; width:100%; box-sizing:border-box; background:#fff; color:var(--ink);">
+          <option value="single" ${!(op && op.foto_id_per_oaspete) ? 'selected' : ''}>O singură poză — cel care a făcut rezervarea</option>
+          <option value="per_oaspete" ${op && op.foto_id_per_oaspete ? 'selected' : ''}>Câte o poză pentru fiecare oaspete</option>
+        </select>
+      </div>
       <!-- Completare automată din email (Booking.com/Airbnb): ascunsă temporar — Booking.com nu include datele rezervării în corpul emailului, deci AI-ul nu are ce extrage. Backend-ul (coloane, edge function, toggle) rămâne intact, doar UI-ul e ascuns ca să nu creeze confuzie. -->
       <form class="reg-form" data-reg-gen-form="${operatorId}">
         <div>
@@ -511,6 +586,35 @@ function renderRegPanel(operatorId) {
       const step1 = card.querySelector('.share-step1');
       if (step1) step1.insertAdjacentHTML('beforeend', `<button class="share-opt" type="button" data-choose="pdf">${PDF_ICON} <span>Ghid PDF<span class="share-opt-sub">Variantă offline, printabilă</span></span></button>`);
     }
+  });
+
+  panel.querySelector(`[data-fotoid-toggle="${operatorId}"]`).addEventListener('change', async (e) => {
+    const necesita = e.target.checked;
+    e.target.disabled = true;
+    const { error } = await supabaseClient.from('operatori').update({ necesita_foto_id: necesita }).eq('id', operatorId);
+    e.target.disabled = false;
+    if (error) {
+      console.error(error);
+      e.target.checked = !necesita;
+      alert('Nu am putut salva schimbarea — încearcă din nou.');
+      return;
+    }
+    if (op) op.necesita_foto_id = necesita;
+    const modeWrap = panel.querySelector(`[data-fotoid-mode-wrap="${operatorId}"]`);
+    if (modeWrap) modeWrap.style.display = necesita ? '' : 'none';
+  });
+
+  panel.querySelector(`[data-fotoid-mode="${operatorId}"]`).addEventListener('change', async (e) => {
+    const perOaspete = e.target.value === 'per_oaspete';
+    e.target.disabled = true;
+    const { error } = await supabaseClient.from('operatori').update({ foto_id_per_oaspete: perOaspete }).eq('id', operatorId);
+    e.target.disabled = false;
+    if (error) {
+      console.error(error);
+      alert('Nu am putut salva schimbarea — încearcă din nou.');
+      return;
+    }
+    if (op) op.foto_id_per_oaspete = perOaspete;
   });
 
   panel.querySelector(`[data-reg-gen-form="${operatorId}"]`).addEventListener('submit', async (e) => {
@@ -593,6 +697,11 @@ function renderRegList(operatorId) {
       ${r.status === 'asteptare_validare' ? `
         <div class="reg-meta-secondary">${r.act_tip === 'pasaport' ? 'Pașaport' : 'CI'}: ${escapeHtmlAcc(r.act_serie_numar || '—')} · Oaspeți: ${r.nr_oaspeti || '—'}</div>
       ` : ''}
+      ${Array.isArray(r.foto_id_paths) && r.foto_id_paths.length ? `
+        <div class="reg-meta-secondary">📷 ${r.foto_id_paths.length === 1 ? 'Poză act de identitate' : `${r.foto_id_paths.length} poze acte de identitate`} încărcate —
+          <button class="reg-btn" type="button" style="padding:2px 8px; font-size:11.5px;" data-reg-view-foto="${r.id}">Vezi</button>
+        </div>
+      ` : ''}
       ${r.status === 'respins' && r.motiv_respingere ? `<div class="reg-meta" style="color:#9C4536;">Motiv respingere: ${escapeHtmlAcc(r.motiv_respingere)}</div>` : ''}
       <div class="reg-actions">
         ${r.status === 'asteptare_validare' ? `
@@ -631,6 +740,29 @@ function renderRegList(operatorId) {
       msgEl.className = 'reg-msg'; msgEl.textContent = 'Cod salvat.';
       const row = regRowsFor(operatorId).find(x => String(x.id) === String(id));
       if (row) row.cod_acces = cod || null;
+    });
+  });
+
+  listEl.querySelectorAll('[data-reg-view-foto]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-reg-view-foto');
+      const row = regRowsFor(operatorId).find(x => String(x.id) === String(id));
+      const paths = (row && row.foto_id_paths) || [];
+      if (!paths.length) return;
+      btn.disabled = true;
+      btn.textContent = 'Se încarcă…';
+      try {
+        for (const path of paths) {
+          const { data, error } = await supabaseClient.storage.from('acte-identitate').createSignedUrl(path, 300);
+          if (error || !data || !data.signedUrl) throw error || new Error('lipsă url');
+          window.open(data.signedUrl, '_blank', 'noopener');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Nu am putut deschide pozele — încearcă din nou.');
+      }
+      btn.disabled = false;
+      btn.textContent = 'Vezi';
     });
   });
 

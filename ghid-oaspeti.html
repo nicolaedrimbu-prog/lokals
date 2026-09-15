@@ -187,6 +187,17 @@
   .rg-timer-bar{width:100%; height:5px; border-radius:999px; background:var(--line); overflow:hidden;}
   .rg-timer-fill{width:100%; height:100%; background:var(--spruce); border-radius:999px; transition:width linear;}
 
+  /* ===== Poze acte de identitate — upload (comun ambelor formulare) ===== */
+  .fid-wrap{border:1.5px solid var(--line); border-radius:12px; padding:11px 12px 12px; margin-bottom:14px; background:var(--bg);}
+  .fid-title{font-size:12px; font-weight:700; color:var(--ink); margin-bottom:8px;}
+  .fid-field{margin-bottom:8px;}
+  .fid-field label{display:block; font-size:11px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.03em; margin-bottom:4px;}
+  .fid-field input[type="file"]{width:100%; box-sizing:border-box; border:1.5px dashed var(--line); border-radius:9px;
+    padding:8px; font-size:12.5px; font-family:'Inter', sans-serif; color:var(--ink); background:#fff;}
+  .fid-field.done input[type="file"]{border-style:solid; border-color:var(--spruce);}
+  .fid-note{font-size:11px; color:var(--ink-soft); line-height:1.5; margin-top:2px;}
+  .fid-error{color:var(--brick); font-size:12px; margin-top:4px;}
+
   /* ===== Preînregistrare hotel (Evantai, necondiționată) ===== */
   .prb-field{margin-bottom:10px;}
   .prb-field label{display:block; font-size:11px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.03em; margin-bottom:4px;}
@@ -401,6 +412,84 @@ async function sbFetch(path, options = {}) {
   });
 }
 
+// ===== Poze acte de identitate — upload direct în bucket-ul privat "acte-identitate" =====
+// Comun ambelor formulare (poarta de verificare identitate la apartamente, preînregistrare
+// hotel). Cerința (activă/nu) și modul (o poză / o poză per oaspete) sunt configurate de
+// gazdă, pe cazare — currentOperator.necesita_foto_id / currentOperator.foto_id_per_oaspete.
+// Pagina nu încarcă supabase-js — upload-ul se face prin fetch direct la Storage REST API,
+// la fel ca restul cererilor din pagină (vezi sbFetch mai sus, tot pe cheia anon).
+function fotoIdRequired() {
+  return !!(currentOperator && currentOperator.necesita_foto_id === true);
+}
+
+function fotoIdCount(nrOaspeti) {
+  if (!fotoIdRequired()) return 0;
+  if (currentOperator.foto_id_per_oaspete === true) return Math.max(1, Number(nrOaspeti) || 1);
+  return 1;
+}
+
+function fotoIdFieldsHtml(prefix, nrOaspeti) {
+  if (!fotoIdRequired()) return '';
+  const perOaspete = currentOperator.foto_id_per_oaspete === true;
+  const count = fotoIdCount(nrOaspeti);
+  let html = `<div class="fid-wrap" id="${prefix}-foto-wrap">`;
+  html += `<div class="fid-title">📷 ${perOaspete ? 'Poză act de identitate pentru fiecare oaspete' : 'Poză act de identitate (cel care a făcut rezervarea)'}</div>`;
+  for (let i = 0; i < count; i++) {
+    html += `
+      <div class="fid-field">
+        <label for="${prefix}-foto-${i}">${perOaspete ? `Oaspete ${i + 1}` : 'Poza actului'}</label>
+        <input type="file" accept="image/*" capture="environment" id="${prefix}-foto-${i}" data-fid-input>
+      </div>`;
+  }
+  html += `<div class="fid-note">Poza e văzută doar de gazdă, pentru verificarea identității la check-in — se șterge automat la 30 de zile după check-out.</div>`;
+  html += `<div class="fid-error" id="${prefix}-foto-err"></div>`;
+  html += `</div>`;
+  return html;
+}
+
+// Regenerează inputurile de poze cand se schimba "Numar oaspeti" (doar in modul per-oaspete
+// — in modul "o singura poza" numarul de inputuri nu depinde de cate persoane vin).
+function attachFotoIdCountSync(prefix, nrInputId) {
+  if (!fotoIdRequired() || currentOperator.foto_id_per_oaspete !== true) return;
+  const nrInput = document.getElementById(nrInputId);
+  const wrap = document.getElementById(`${prefix}-foto-wrap`);
+  if (!nrInput || !wrap) return;
+  nrInput.addEventListener('change', () => {
+    wrap.outerHTML = fotoIdFieldsHtml(prefix, nrInput.value);
+    attachFotoIdCountSync(prefix, nrInputId); // outerHTML a distrus elementul vechi — reatasam
+  });
+}
+
+// Încarcă toate fișierele selectate în inputurile #${prefix}-foto-N și întoarce căile din
+// bucket (de salvat în foto_id_paths). Dacă cerința e activă dar lipsește vreo poză, întoarce
+// missing:true și NU încarcă nimic — apelantul decide dacă blochează trimiterea formularului.
+async function collectFotoIdPaths(prefix, operatorId, sejurId) {
+  if (!fotoIdRequired()) return { paths: [], missing: false };
+  const inputs = Array.from(document.querySelectorAll(`#${prefix}-foto-wrap [data-fid-input]`));
+  const files = inputs.map(inp => (inp.files && inp.files[0]) || null);
+  if (files.some(f => !f)) return { paths: [], missing: true };
+
+  const paths = [];
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const ext = ((file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '')) || 'jpg';
+    const path = `${operatorId}/${sejurId}/${i}-${Date.now()}.${ext}`;
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/acte-identitate/${path.split('/').map(encodeURIComponent).join('/')}`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': file.type || 'image/jpeg',
+        'x-upsert': 'true',
+      },
+      body: file,
+    });
+    if (!res.ok) throw new Error(`upload foto id a eșuat (${res.status})`);
+    paths.push(path);
+  }
+  return { paths, missing: false };
+}
+
 function formatPhoneRo(raw) {
   const digits = (raw || '').replace(/\D/g, '');
   if (digits.startsWith('40')) return digits;
@@ -590,15 +679,14 @@ function renderGateForm() {
         <div class="rg-field"><label for="rg-checkout">Check-out</label><input id="rg-checkout" type="date" required value="${s.check_out || ''}"></div>
       </div>
       <div class="rg-field"><label for="rg-nr-oaspeti">Număr oaspeți</label><input id="rg-nr-oaspeti" type="number" min="1" required value="${s.nr_oaspeti || ''}"></div>
-      ${currentOperator && currentOperator.necesita_foto_id ? `
-      <div class="rg-photo-disabled">📷 Încărcare poză act de identitate — disponibil în curând în această regiune.</div>
-      ` : ''}
+      ${fotoIdFieldsHtml('rg', s.nr_oaspeti || 1)}
       <div class="rg-note">Datele sunt văzute doar de gazdă, pentru verificarea identității la check-in — conform cerințelor locale de evidență a turiștilor.</div>
       <button type="submit" class="rg-submit" id="rg-submit-btn">Trimite înregistrarea</button>
       <div class="rg-error" id="rg-form-error"></div>
     </form>`;
 
   document.getElementById('rg-form').addEventListener('submit', submitRegistration);
+  attachFotoIdCountSync('rg', 'rg-nr-oaspeti');
 }
 
 async function submitRegistration(e) {
@@ -630,6 +718,23 @@ async function submitRegistration(e) {
     completat_la: new Date().toISOString(),
     motiv_respingere: null,
   };
+
+  if (fotoIdRequired()) {
+    const fidErrEl = document.getElementById('rg-foto-err');
+    try {
+      const { paths, missing } = await collectFotoIdPaths('rg', currentOperator.id, stayToken);
+      if (missing) {
+        if (fidErrEl) fidErrEl.textContent = 'Gazda cere o poză a actului de identitate — te rugăm să o adaugi mai sus.';
+        btn.disabled = false;
+        return;
+      }
+      payload.foto_id_paths = paths;
+    } catch (err) {
+      if (fidErrEl) fidErrEl.textContent = 'Nu am putut încărca poza — încearcă din nou.';
+      btn.disabled = false;
+      return;
+    }
+  }
 
   try {
     const res = await sbFetch(`inregistrari_oaspeti?token=eq.${encodeURIComponent(stayToken)}`, {
@@ -678,6 +783,26 @@ async function submitPreinregistrare(e) {
   };
 
   let codScurt = randomCode(6);
+
+  if (fotoIdRequired()) {
+    const fidErrEl = document.getElementById('prb-foto-err');
+    try {
+      // Folosim un id separat de codScurt pentru calea din storage — codScurt se poate
+      // regenera mai jos la o coliziune (409), iar poza trebuie să rămână validă oricum.
+      const uploadId = (crypto.randomUUID && crypto.randomUUID()) || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const { paths, missing } = await collectFotoIdPaths('prb', currentOperator.id, uploadId);
+      if (missing) {
+        if (fidErrEl) fidErrEl.textContent = 'Hotelul cere o poză a actului de identitate — te rugăm să o adaugi mai sus.';
+        btn.disabled = false;
+        return;
+      }
+      payload.foto_id_paths = paths;
+    } catch (err) {
+      if (fidErrEl) fidErrEl.textContent = 'Nu am putut încărca poza — încearcă din nou.';
+      btn.disabled = false;
+      return;
+    }
+  }
   let attempt = 0;
   let saved = null;
   while (attempt < 3 && !saved) {
@@ -1247,7 +1372,7 @@ async function renderFacilitati() {
             <div class="prb-field"><label>${t.preinregTelefon}</label><input id="prb-telefon" type="tel"></div>
           </div>
           <div class="prb-field"><label>${t.preinregEmail}</label><input id="prb-email" type="email"></div>
-          ${currentOperator.necesita_foto_id ? `<div class="prb-photo-note">${t.preinregFotoNota}</div>` : ''}
+          ${fotoIdFieldsHtml('prb', 1)}
           <div class="prb-note">${t.preinregNote}</div>
           <button type="submit" class="prb-submit" id="prb-submit-btn">${t.preinregSubmit}</button>
           <div class="prb-error" id="prb-form-error"></div>
@@ -1413,6 +1538,7 @@ async function renderFacilitati() {
     if (sec.key === 'preinregistrare') {
       const form = item.querySelector('#preinreg-form');
       if (form) form.addEventListener('submit', submitPreinregistrare);
+      attachFotoIdCountSync('prb', 'prb-nr');
       item.classList.add('open'); // deschis implicit — e utilitar, nu doar informativ
     }
   });

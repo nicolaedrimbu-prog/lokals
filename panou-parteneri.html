@@ -3078,6 +3078,10 @@ function renderRegList() {
           <div><b>Oaspeți:</b> ${r.nr_oaspeti || '—'}</div>
           <div><b>Completat:</b> ${fmtData(r.completat_la)}</div>
         </div>` : ''}
+      ${Array.isArray(r.foto_id_paths) && r.foto_id_paths.length ? `
+        <div style="margin-top:8px;">
+          <button class="bo-copy" data-reg-view-foto="${r.id}">📷 ${r.foto_id_paths.length === 1 ? 'Vezi poza actului' : `Vezi pozele actelor (${r.foto_id_paths.length})`}</button>
+        </div>` : ''}
       ${r.status === 'respins' && r.motiv_respingere ? `<div class="pmeta" style="margin-top:8px; color:var(--brick);">Motiv respingere: ${escapeHtml(r.motiv_respingere)}</div>` : ''}
       <div id="reg-msg-${r.id}" class="esave-msg"></div>
     </div>`;
@@ -3114,6 +3118,29 @@ function renderRegList() {
       msgEl.className = 'esave-msg'; msgEl.textContent = 'Cod salvat.';
       const row = REG_ROWS.find(x => String(x.id) === String(id));
       if (row) row.cod_acces = cod || null;
+    });
+  });
+
+  listEl.querySelectorAll('[data-reg-view-foto]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-reg-view-foto');
+      const row = REG_ROWS.find(x => String(x.id) === String(id));
+      const paths = (row && row.foto_id_paths) || [];
+      if (!paths.length) return;
+      btn.disabled = true;
+      btn.textContent = 'Se încarcă…';
+      try {
+        for (const path of paths) {
+          const { data, error } = await supabaseClient.storage.from('acte-identitate').createSignedUrl(path, 300);
+          if (error || !data || !data.signedUrl) throw error || new Error('lipsă url');
+          window.open(data.signedUrl, '_blank', 'noopener');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Nu am putut deschide pozele — încearcă din nou.');
+      }
+      btn.disabled = false;
+      btn.textContent = '📷 Vezi poza actului';
     });
   });
 
