@@ -438,7 +438,7 @@ function fotoIdFieldsHtml(prefix, nrOaspeti) {
     html += `
       <div class="fid-field">
         <label for="${prefix}-foto-${i}">${perOaspete ? `Oaspete ${i + 1}` : 'Poza actului'}</label>
-        <input type="file" accept="image/*" capture="environment" id="${prefix}-foto-${i}" data-fid-input>
+        <input type="file" accept="image/*" id="${prefix}-foto-${i}" data-fid-input>
       </div>`;
   }
   html += `<div class="fid-note">Poza e văzută doar de gazdă, pentru verificarea identității la check-in — se șterge automat la 30 de zile după check-out.</div>`;
@@ -469,23 +469,34 @@ async function collectFotoIdPaths(prefix, operatorId, sejurId) {
   const files = inputs.map(inp => (inp.files && inp.files[0]) || null);
   if (files.some(f => !f)) return { paths: [], missing: true };
 
+  // Upload-ul trece printr-un edge function (nu direct pe Storage cu cheia anon): cererea
+  // Storage API foloseste RETURNING * intern, care ar necesita si o politica de citire pe
+  // bucket pentru anon — asta ar face pozele listabile/descarcabile de oricine care stie ca
+  // bucket-ul exista. Edge function-ul foloseste service_role (ocolește RLS) si intoarce
+  // catre browser doar calea salvată, niciodată conținutul sau un link.
   const paths = [];
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
-    const ext = ((file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '')) || 'jpg';
-    const path = `${operatorId}/${sejurId}/${i}-${Date.now()}.${ext}`;
-    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/acte-identitate/${path.split('/').map(encodeURIComponent).join('/')}`, {
+    const extFromName = (file.name.split('.').pop() || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const ext = extFromName || 'jpg';
+    const contentType = (file.type && /^image\//.test(file.type)) ? file.type : 'image/jpeg';
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/upload-id-photo`, {
       method: 'POST',
       headers: {
         apikey: SUPABASE_ANON_KEY,
         Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        'Content-Type': file.type || 'image/jpeg',
-        'x-upsert': 'true',
+        'Content-Type': contentType,
+        'x-operator-id': operatorId,
+        'x-sejur-id': sejurId,
+        'x-file-index': String(i),
+        'x-file-ext': ext,
       },
       body: file,
     });
     if (!res.ok) throw new Error(`upload foto id a eșuat (${res.status})`);
-    paths.push(path);
+    const data = await res.json();
+    if (!data || !data.path) throw new Error('upload foto id — răspuns invalid');
+    paths.push(data.path);
   }
   return { paths, missing: false };
 }
