@@ -183,6 +183,9 @@
     padding:14px; font-size:14.5px; font-weight:700; cursor:pointer; font-family:inherit; margin-top:4px;}
   .rg-submit:disabled{opacity:.6; cursor:default;}
   .rg-error{color:var(--brick); font-size:12.5px; margin-top:8px; min-height:15px; text-align:center;}
+  .rg-timer-note{font-size:11.5px; color:var(--ink-soft); text-align:center; line-height:1.5; margin:14px 0 10px;}
+  .rg-timer-bar{width:100%; height:5px; border-radius:999px; background:var(--line); overflow:hidden;}
+  .rg-timer-fill{width:100%; height:100%; background:var(--spruce); border-radius:999px; transition:width linear;}
 
   /* ===== Preînregistrare hotel (Evantai, necondiționată) ===== */
   .prb-field{margin-bottom:10px;}
@@ -487,6 +490,38 @@ function setFrozen(on) {
   document.getElementById('registration-gate').classList.toggle('visible', on);
 }
 
+// ===== Deblocare automată după 10s — DOAR pentru vizitatorii fără token de sejur =====
+// (link general, nu cel personalizat primit de la gazdă). După 10 secunde arătate
+// printr-o bară care se "consumă", ghidul local (restaurante, afaceri, info generale)
+// se deblochează — dar codul general de acces rămâne ascuns (vezi codAccesAllowed() și
+// codAccesEfectiv din renderFacilitati), pentru că nu știm cine e vizitatorul.
+// Celelalte stări ale gate-ului (formular netrimis dar cu token valid, în așteptarea
+// validării tale, respins) NU au deblocare automată — rămân blocate ca până acum.
+const GATE_NO_STAY_AUTOUNLOCK_MS = 10000;
+let noStayAutoUnlocked = false;
+let noStayUnlockTimer = null;
+
+function codAccesAllowed() {
+  if (!gateRequired()) return true;
+  return !!currentStay;
+}
+
+function startNoStayUnlockTimer() {
+  if (noStayUnlockTimer || noStayAutoUnlocked) return;
+  const fill = document.getElementById('rg-timer-fill');
+  if (fill) {
+    fill.style.transitionDuration = (GATE_NO_STAY_AUTOUNLOCK_MS / 1000) + 's';
+    // pornim animația pe frame-ul următor, ca tranziția CSS să prindă schimbarea de la 100% la 0%
+    requestAnimationFrame(() => { fill.style.width = '0%'; });
+  }
+  noStayUnlockTimer = setTimeout(() => {
+    noStayAutoUnlocked = true;
+    noStayUnlockTimer = null;
+    setFrozen(false);
+    renderFacilitati(); // re-randăm ca să reflectăm codAccesAllowed() — rămâne ascuns, restul apare
+  }, GATE_NO_STAY_AUTOUNLOCK_MS);
+}
+
 function escapeHtmlGuide(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
@@ -495,11 +530,15 @@ async function applyRegistrationGate() {
   if (!gateRequired()) { setFrozen(false); return; }
 
   if (!stayToken || !currentStay) {
+    if (noStayAutoUnlocked) { setFrozen(false); return; }
     setFrozen(true);
     document.getElementById('rg-content').innerHTML = `
       <div class="rg-icon err">✕</div>
       <p class="rg-title">Link personalizat necesar</p>
-      <p class="rg-sub">Acest apartament cere înregistrare înainte de check-in. Foloseşte linkul primit de la gazdă prin email sau WhatsApp — nu linkul general al ghidului.</p>`;
+      <p class="rg-sub">Acest apartament cere înregistrare înainte de check-in. Foloseşte linkul primit de la gazdă prin email sau WhatsApp — nu linkul general al ghidului.</p>
+      <p class="rg-timer-note">Între timp, îți deblocăm ghidul local (recomandări, afaceri partenere) în câteva secunde — codul de acces rămâne disponibil doar prin linkul tău personal.</p>
+      <div class="rg-timer-bar"><div class="rg-timer-fill" id="rg-timer-fill"></div></div>`;
+    startNoStayUnlockTimer();
     return;
   }
 
@@ -1087,7 +1126,11 @@ async function renderFacilitati() {
   // Codul de acces poate fi setat per-sejur (pregatit de gazda pentru acest oaspete
   // exact, chiar daca a schimbat deja codul global pentru urmatoarea rezervare) —
   // cand exista, are prioritate fata de codul general al cazarii.
-  const codAccesEfectiv = (currentStay && currentStay.cod_acces) ? currentStay.cod_acces : checkin.cod_acces;
+  // codAccesAllowed() — cand verificarea de identitate e activă dar nu există un sejur
+  // identificat (link general, fără token), ghidul se poate debloca automat după bara
+  // de 10 secunde, dar codul general de acces rămâne ascuns: e exact informația pe care
+  // gate-ul de identitate trebuie s-o protejeze.
+  const codAccesEfectiv = (currentStay && currentStay.cod_acces) ? currentStay.cod_acces : (codAccesAllowed() ? checkin.cod_acces : null);
 
   // Data de sosire/plecare a acestui sejur — doar cand verificarea de identitate e
   // activata pentru cazare (inregistrare_activa) SI tier-ul e Essential (ghidUnlocked
