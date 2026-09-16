@@ -223,6 +223,9 @@ const REGISTRATION_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill=
 let OPERATORI_BY_ID = {};
 let REG_BY_OP = {};
 let CURRENT_EMAIL = null;
+// arată doar înregistrările curente implicit — pe măsură ce se acumulează sejururi, lista
+// devine greu de parcurs, așa că gazda poate arhiva ce a încheiat și le revede oricând aici
+let REG_VIEW_ARCHIVED = {};
 const REG_STATUS_LABEL = {
   asteptare_completare: 'Trimis, neîncepută', asteptare_validare: 'Așteaptă validare',
   validat: 'Validat', respins: 'Respins',
@@ -671,10 +674,30 @@ function renderRegList(operatorId) {
   if (!panel) return;
   const listEl = panel.querySelector('[data-reg-list]');
   if (!listEl) return;
-  const rows = regRowsFor(operatorId);
-  if (rows.length === 0) { listEl.innerHTML = '<div class="reg-empty">Nicio înregistrare generată încă.</div>'; return; }
+  const allRows = regRowsFor(operatorId);
+  const archivedCount = allRows.filter(r => r.arhivat).length;
+  const showArchived = REG_VIEW_ARCHIVED[operatorId] === true;
+  const rows = allRows.filter(r => showArchived ? r.arhivat : !r.arhivat);
 
-  listEl.innerHTML = rows.map(r => {
+  const toggleHtml = archivedCount > 0 ? `
+    <div style="margin-bottom:10px;">
+      <button type="button" class="reg-btn" data-reg-toggle-archived="${operatorId}" style="font-size:11px;">
+        ${showArchived ? '← Înapoi la înregistrările actuale' : `🗄 Vezi arhivate (${archivedCount})`}
+      </button>
+    </div>` : '';
+
+  if (rows.length === 0) {
+    listEl.innerHTML = toggleHtml + `<div class="reg-empty">${showArchived ? 'Nicio înregistrare arhivată.' : 'Nicio înregistrare curentă.'}</div>`;
+    listEl.querySelectorAll('[data-reg-toggle-archived]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        REG_VIEW_ARCHIVED[operatorId] = !REG_VIEW_ARCHIVED[operatorId];
+        renderRegList(operatorId);
+      });
+    });
+    return;
+  }
+
+  listEl.innerHTML = toggleHtml + rows.map(r => {
     const sc = REG_STATUS_COLOR[r.status] || REG_STATUS_COLOR.asteptare_completare;
     const numeOaspete = [r.prenume, r.nume].filter(Boolean).join(' ') || '— oaspetele nu a completat încă —';
     const link = `https://lokals.ro/ghid-oaspeti.html?stay=${r.token}`;
@@ -713,10 +736,46 @@ function renderRegList(operatorId) {
       <div class="reg-actions reg-actions-divider">
         <button class="reg-btn" type="button" data-reg-copy="${link}">Copiază link</button>
         <a class="reg-btn" style="text-decoration:none;" href="https://wa.me/?text=${waText}" target="_blank" rel="noopener">WhatsApp</a>
+        ${r.arhivat
+          ? `<button class="reg-btn" type="button" data-reg-restore="${r.id}">↩ Restaurează</button>`
+          : `<button class="reg-btn" type="button" data-reg-archive="${r.id}" style="border-color:var(--ink-soft); color:var(--ink-soft);" title="Iese din lista curentă, dar rămâne salvată — o poți restaura oricând">🗄 Arhivează</button>`}
       </div>
       <div class="reg-msg" data-reg-row-msg="${r.id}"></div>
     </div>`;
   }).join('');
+
+  listEl.querySelectorAll('[data-reg-toggle-archived]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      REG_VIEW_ARCHIVED[operatorId] = !REG_VIEW_ARCHIVED[operatorId];
+      renderRegList(operatorId);
+    });
+  });
+
+  listEl.querySelectorAll('[data-reg-archive]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-reg-archive');
+      btn.disabled = true;
+      const { error } = await supabaseClient.from('inregistrari_oaspeti').update({ arhivat: true }).eq('id', id);
+      btn.disabled = false;
+      if (error) { console.error(error); alert('Nu am putut arhiva — încearcă din nou.'); return; }
+      const row = regRowsFor(operatorId).find(x => String(x.id) === String(id));
+      if (row) row.arhivat = true;
+      renderRegList(operatorId);
+    });
+  });
+
+  listEl.querySelectorAll('[data-reg-restore]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-reg-restore');
+      btn.disabled = true;
+      const { error } = await supabaseClient.from('inregistrari_oaspeti').update({ arhivat: false }).eq('id', id);
+      btn.disabled = false;
+      if (error) { console.error(error); alert('Nu am putut restaura — încearcă din nou.'); return; }
+      const row = regRowsFor(operatorId).find(x => String(x.id) === String(id));
+      if (row) row.arhivat = false;
+      renderRegList(operatorId);
+    });
+  });
 
   listEl.querySelectorAll('[data-reg-copy]').forEach(btn => {
     btn.addEventListener('click', () => {
