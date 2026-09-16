@@ -688,6 +688,7 @@ function renderGateForm() {
         </div>
         <div class="rg-field"><label for="rg-act-nr">Serie și număr</label><input id="rg-act-nr" required value="${escapeHtmlGuide(s.act_serie_numar || '')}"></div>
       </div>
+      <div class="rg-field"><label for="rg-cetatenie">Cetățenie</label><input id="rg-cetatenie" required value="${escapeHtmlGuide(s.cetatenie || 'România')}"></div>
       <div class="rg-row2">
         <div class="rg-field"><label for="rg-checkin">Check-in</label><input id="rg-checkin" type="date" required value="${s.check_in || ''}"></div>
         <div class="rg-field"><label for="rg-checkout">Check-out</label><input id="rg-checkout" type="date" required value="${s.check_out || ''}"></div>
@@ -725,6 +726,7 @@ async function submitRegistration(e) {
     telefon: document.getElementById('rg-telefon').value.trim(),
     act_tip: document.getElementById('rg-act-tip').value,
     act_serie_numar: document.getElementById('rg-act-nr').value.trim(),
+    cetatenie: document.getElementById('rg-cetatenie').value.trim(),
     check_in: checkIn,
     check_out: checkOut,
     nr_oaspeti: Number(document.getElementById('rg-nr-oaspeti').value) || 1,
@@ -788,6 +790,7 @@ async function submitPreinregistrare(e) {
     nume: document.getElementById('prb-nume').value.trim(),
     tip_act: document.getElementById('prb-tip-act').value,
     act_serie_numar: document.getElementById('prb-act-nr').value.trim() || null,
+    cetatenie: document.getElementById('prb-cetatenie').value.trim() || null,
     check_in: checkIn,
     check_out: checkOut,
     nr_oaspeti: Number(document.getElementById('prb-nr').value) || 1,
@@ -1099,6 +1102,7 @@ const I18N = {
       preinregIntro: "Completează datele înainte de sosire ca să scurtezi timpul la recepție. Este opțional — poți continua să răsfoiești ghidul oricând, cu sau fără să completezi acest formular.",
       preinregPrenume: "Prenume", preinregNume: "Nume", preinregTipActLabel: "Act identitate",
       preinregTipActCI: "Carte de identitate", preinregTipActPasaport: "Pașaport", preinregSerie: "Serie și număr act",
+      preinregCetatenie: "Cetățenie",
       preinregCheckin: "Check-in", preinregCheckout: "Check-out", preinregNr: "Număr oaspeți",
       preinregEmail: "Email", preinregTelefon: "Telefon",
       preinregFotoNota: "📷 Încărcare poză act de identitate — disponibil în curând în această regiune.",
@@ -1171,6 +1175,7 @@ const I18N = {
       preinregIntro: "Fill in your details before arrival to speed up check-in at the front desk. It's optional — you can keep browsing the guide any time, with or without filling this in.",
       preinregPrenume: "First name", preinregNume: "Last name", preinregTipActLabel: "ID type",
       preinregTipActCI: "ID card", preinregTipActPasaport: "Passport", preinregSerie: "ID / passport number",
+      preinregCetatenie: "Nationality",
       preinregCheckin: "Check-in", preinregCheckout: "Check-out", preinregNr: "Number of guests",
       preinregEmail: "Email", preinregTelefon: "Phone",
       preinregFotoNota: "📷 ID/passport photo upload — coming soon to this region.",
@@ -1377,6 +1382,7 @@ async function renderFacilitati() {
             </div>
             <div class="prb-field"><label>${t.preinregSerie}</label><input id="prb-act-nr"></div>
           </div>
+          <div class="prb-field"><label>${t.preinregCetatenie}</label><input id="prb-cetatenie" value="România"></div>
           <div class="prb-row2">
             <div class="prb-field"><label>${t.preinregCheckin}</label><input id="prb-checkin" type="date"></div>
             <div class="prb-field"><label>${t.preinregCheckout}</label><input id="prb-checkout" type="date"></div>
