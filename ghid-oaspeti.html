@@ -441,7 +441,7 @@ function fotoIdFieldsHtml(prefix, nrOaspeti) {
         <input type="file" accept="image/*" id="${prefix}-foto-${i}" data-fid-input>
       </div>`;
   }
-  html += `<div class="fid-note">Poza e văzută doar de gazdă, pentru verificarea identității la check-in — se șterge automat la 30 de zile după check-out.</div>`;
+  html += `<div class="fid-note">Poza e văzută doar de ${hostTeamLabel('nom', 'ro')}, pentru verificarea identității la check-in — se șterge automat la 30 de zile după check-out.</div>`;
   html += `<div class="fid-error" id="${prefix}-foto-err"></div>`;
   html += `</div>`;
   return html;
@@ -975,7 +975,10 @@ function renderStayFeedbackBox(){
   const t = I18N[currentLang];
   document.getElementById('stay-fb-name').placeholder = t.stayFbNamePlaceholder;
   document.getElementById('stay-fb-submit-text').textContent = t.stayFbSubmitBtn;
-  document.getElementById('stay-fb-success-text').textContent = t.stayFbSuccess;
+  const isHotelNow = currentOperator && currentOperator.tip === 'hotel';
+  document.getElementById('stay-fb-success-text').textContent = isHotelNow
+    ? (currentLang === 'en' ? `Thank you! Your feedback has been sent to ${hostTeamLabel('nom')}.` : `Mulțumim! Am trimis feedback-ul ${hostTeamLabel('gen')}.`)
+    : t.stayFbSuccess;
 
   starsWrap.innerHTML = [1, 2, 3, 4, 5].map(n =>
     `<button type="button" class="sf-star ${n <= stayFbRating ? 'filled' : ''}" data-star="${n}">★</button>`
@@ -1046,11 +1049,16 @@ const I18N = {
   ro: {
     eyebrow: "🔥 Ghid de oaspeți",
     title: "Recomandările gazdei",
+    titleHotel: "Recomandările echipei hotelului",
     subtitle: "O selecție de afaceri locale — activități, cultură, wellness și gastronomie, alese pentru sejurul tău.",
     wcBadge: "Pregătit special pentru tine",
     wcWelcome: (name) => `Bine ai venit${name ? ', ' + name : ''}!`,
     wcMessage: "Ne bucurăm să te găzduim! Am pregătit acest ghid cu tot ce ai nevoie pentru sejurul tău — cod de acces, recomandări și informații utile, într-un singur loc. Sper să te simți ca acasă.",
     wcSign: "— Gazda ta",
+    wcBadgeHotel: "Mesaj din partea echipei hotelului",
+    wcWelcomeHotel: (nume) => `Bun venit la ${nume}!`,
+    wcMessageHotel: "Vă mulțumim că ați ales să stați cu noi! Am pregătit acest ghid cu tot ce aveți nevoie pentru sejurul dumneavoastră — cod de acces, recomandări și informații utile, într-un singur loc. Vă dorim un sejur plăcut.",
+    wcSignHotel: (nume) => `— Echipa ${nume}`,
     welcome: (name) => `Bun venit — ${name}`,
     all: "Toate",
     website: "🌐 Website",
@@ -1119,11 +1127,16 @@ const I18N = {
   en: {
     eyebrow: "🔥 Guest Guide",
     title: "Host's Recommendations",
+    titleHotel: "Recommendations from the hotel team",
     subtitle: "A selection of local businesses — activities, culture, wellness and food, chosen for your stay.",
     wcBadge: "Prepared just for you",
     wcWelcome: (name) => `Welcome${name ? ', ' + name : ''}!`,
     wcMessage: "We're delighted to host you! We've put together this guide with everything you need for your stay — access code, recommendations and useful info, all in one place. Hope you feel right at home.",
     wcSign: "— Your host",
+    wcBadgeHotel: "A message from the hotel team",
+    wcWelcomeHotel: (nume) => `Welcome to ${nume}!`,
+    wcMessageHotel: "Thank you for choosing to stay with us! We've put together this guide with everything you need for your stay — access code, recommendations and useful info, all in one place. We wish you a pleasant stay.",
+    wcSignHotel: (nume) => `— The ${nume} team`,
     welcome: (name) => `Welcome — ${name}`,
     all: "All",
     website: "🌐 Website",
@@ -1210,6 +1223,22 @@ const FAC_ICONS = {
 };
 
 function fmt(s){ return (s || '').trim(); }
+
+// La hoteluri, oaspetele interacționează cu personalul recepției, nu cu o persoană-gazdă
+// unică ca la un apartament — peste tot unde ghidul menționează "gazda", pe un hotel arătăm
+// în schimb "echipa hotelului {Nume}". form: 'nom' (formă simplă, ex. "văzută doar de X")
+// sau 'gen' (formă posesivă, ex. "feedback-ul lui X").
+function hostTeamLabel(form, lang){
+  const isHotelNow = currentOperator && currentOperator.tip === 'hotel';
+  const en = (lang || currentLang) === 'en';
+  if (isHotelNow) {
+    const nume = currentOperator.nume_afisat || currentOperator.nume_afacere || '';
+    if (en) return nume ? `the ${nume} team` : 'the hotel team';
+    return nume ? (form === 'gen' ? `echipei hotelului ${nume}` : `echipa hotelului ${nume}`) : (form === 'gen' ? 'echipei hotelului' : 'echipa hotelului');
+  }
+  if (en) return form === 'gen' ? 'your host' : 'the host';
+  return form === 'gen' ? 'gazdei tale' : 'gazdă';
+}
 
 // Data de sosire/plecare a sejurului validat (YYYY-MM-DD din inregistrari_oaspeti),
 // formatată pe limba curentă a ghidului — folosită doar în secțiunile Check-in/Check-out
@@ -1322,13 +1351,9 @@ async function renderFacilitati() {
     await translateBatch(toTranslate, 'en');
   }
 
-  const mesajEl = document.getElementById('facilitati-mesaj');
-  if (isHotel && hotel.mesaj_management) {
-    mesajEl.style.display = 'block';
-    mesajEl.textContent = `“${tr(hotel.mesaj_management)}”`;
-  } else {
-    mesajEl.style.display = 'none';
-  }
+  // Mesajul echipei hotelului se arată acum în cardul de bun venit de sus (renderWelcomeCard),
+  // la fel ca mesajul personalizat de pe apartamente — nu îl mai duplicăm și aici.
+  document.getElementById('facilitati-mesaj').style.display = 'none';
 
   // Cadran dedicat "Locație & acces" (nu mai e parte din acordeon)
   renderLocatieCard(currentOperator, loc, t);
@@ -1497,7 +1522,10 @@ async function renderFacilitati() {
   if (currentOperator.telefon || contacteLista.length) {
     let body = '';
     if (currentOperator.telefon && f.whatsapp_activ !== false) {
-      body += `<a class="fac-pill" href="https://wa.me/${formatPhoneRo(currentOperator.telefon)}" target="_blank" rel="noopener">${FAC_ICONS.whatsapp} ${t.whatsapp}</a>`;
+      const whatsappLabel = isHotel
+        ? (currentLang === 'en' ? `Message ${hostTeamLabel('nom')} on WhatsApp` : `Scrie pe WhatsApp către ${hostTeamLabel('nom')}`)
+        : t.whatsapp;
+      body += `<a class="fac-pill" href="https://wa.me/${formatPhoneRo(currentOperator.telefon)}" target="_blank" rel="noopener">${FAC_ICONS.whatsapp} ${whatsappLabel}</a>`;
     }
     if (contacteLista.length) {
       body += `<div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">${contacteLista.map(c => `<div class="fac-row" style="margin-bottom:0;">${tr(c)}</div>`).join('')}</div>`;
@@ -1510,8 +1538,11 @@ async function renderFacilitati() {
   // n-au un operator_id real în baza de date, deci n-avem la ce feedback să-l atașăm).
   if (currentOperator.id !== 'demo') {
     const tRoot = I18N[currentLang];
+    const stayFbSubText = isHotel
+      ? (currentLang === 'en' ? `Your feedback is private — only ${hostTeamLabel('nom')} sees it, it's never public.` : `Feedback-ul e privat — îl vede doar ${hostTeamLabel('nom')}, nu apare public.`)
+      : tRoot.stayFbSub;
     const body = `
-      <p style="margin:0 0 14px; font-size:12.5px; color:var(--ink-soft); line-height:1.5;">${tRoot.stayFbSub}</p>
+      <p style="margin:0 0 14px; font-size:12.5px; color:var(--ink-soft); line-height:1.5;">${stayFbSubText}</p>
       <div id="stay-fb-form">
         <div class="sf-stars" id="stay-fb-stars"></div>
         <div class="sf-types" id="stay-fb-types"></div>
@@ -1817,14 +1848,27 @@ function renderFilters(){
   });
 }
 
-// Cardul de bun venit personalizat — vizibil doar când verificarea identității e activă
-// (Essential) ȘI există un sejur validat cu numele oaspetelui cunoscut ȘI cazarea e
-// apartament (nu hotel — un mesaj "doar pentru tine" nu are sens pe un view comun tuturor
-// camerelor; Nico a confirmat sa ramana ascuns complet la hotel). Fără el, ghidul rămâne
-// generic (ca pe planul Gratuit), fără să pretindem o personalizare pe care nu o avem.
+// Cardul de bun venit — pe apartamente rămâne personalizat: vizibil doar când verificarea
+// identității e activă (Essential) ȘI există un sejur validat cu numele oaspetelui cunoscut
+// (un mesaj "doar pentru tine" nu are sens pe un view comun tuturor camerelor). Pe hoteluri
+// arătăm în schimb mesajul echipei hotelului (setari-cazare.html → "Servicii hotel"), vizibil
+// tuturor oaspeților, necondiționat de un sejur validat — e mesajul de bun venit al hotelului,
+// nu al unui singur oaspete.
 function renderWelcomeCard(t) {
   const wrap = document.getElementById('welcome-card-wrap');
-  const activ = currentOperator && currentOperator.tip !== 'hotel' && currentOperator.inregistrare_activa === true;
+
+  if (currentOperator && currentOperator.tip === 'hotel') {
+    const mesajManagement = ((currentOperator.facilitati_cazare || {}).hotel || {}).mesaj_management;
+    const numeHotel = currentOperator.nume_afisat || currentOperator.nume_afacere || '';
+    document.getElementById('wc-badge').textContent = t.wcBadgeHotel;
+    document.getElementById('wc-title').textContent = t.wcWelcomeHotel(numeHotel);
+    document.getElementById('wc-msg').textContent = fmt(mesajManagement) ? tr(mesajManagement) : t.wcMessageHotel;
+    document.getElementById('wc-sign').textContent = t.wcSignHotel(numeHotel);
+    wrap.style.display = '';
+    return;
+  }
+
+  const activ = currentOperator && currentOperator.inregistrare_activa === true;
   const guest = currentStay && currentStay.status === 'validat' ? currentStay : null;
   const numeComplet = guest ? [guest.prenume, guest.nume].filter(Boolean).join(' ').trim() : '';
   if (!activ || !guest || !numeComplet) {
@@ -1849,8 +1893,9 @@ async function setLang(lang){
   document.getElementById('eyebrow-text').textContent = `${t.eyebrow} · ${cityLabel}`;
   document.getElementById('demo-banner').style.display = apt.startsWith('demo-') ? 'block' : 'none';
   document.getElementById('title-text').textContent = currentApt ? currentApt.name : '';
+  document.title = ((currentOperator && currentOperator.tip === 'hotel') ? t.titleHotel : t.title) + ' — Ghid de oaspeți';
   document.getElementById('subtitle-text').textContent = t.subtitle;
-  document.getElementById('welcome').textContent = t.title;
+  document.getElementById('welcome').textContent = (currentOperator && currentOperator.tip === 'hotel') ? t.titleHotel : t.title;
   document.getElementById('feedback-label').textContent = t.feedbackLabel;
   document.getElementById('feedback-text').placeholder = t.feedbackPlaceholder;
   document.getElementById('feedback-btn-text').textContent = t.feedbackBtn;
