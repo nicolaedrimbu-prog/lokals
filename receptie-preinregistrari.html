@@ -42,6 +42,24 @@
   .status-dot.trimis{background:var(--gold);}
   .status-dot.procesat{background:var(--green);}
   .empty-hint{color:var(--ink-soft); font-size:12.5px; text-align:center; padding:14px 0;}
+  .btn-fisa{display:block; width:100%; background:#fff; border:1.5px solid var(--line); color:var(--teal-deep); font-weight:700; font-size:13px; padding:11px; border-radius:10px; cursor:pointer; font-family:inherit; margin-bottom:18px;}
+  .btn-fisa:hover{border-color:var(--teal-deep);}
+
+  /* ===== Fișă de ocupare (registru evidență turiști) — overlay printabil ===== */
+  .fisa-overlay{display:none; position:fixed; inset:0; background:rgba(16,48,43,0.55); z-index:60; align-items:flex-start; justify-content:center; padding:24px 16px; overflow:auto;}
+  .fisa-overlay.open{display:flex;}
+  .fisa-card{background:#fff; border-radius:16px; max-width:920px; width:100%; padding:20px; box-shadow:0 20px 60px rgba(16,48,43,0.25);}
+  .fisa-table{width:100%; border-collapse:collapse; font-size:11.5px; margin-top:4px;}
+  .fisa-table th, .fisa-table td{border:1px solid var(--line); padding:6px 8px; text-align:left; vertical-align:top;}
+  .fisa-table th{background:var(--cream); font-size:10px; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-soft);}
+  .fisa-btn{border:1.5px solid var(--line); background:#fff; color:var(--teal-deep); font-size:12px; font-weight:700; font-family:inherit; padding:8px 14px; border-radius:9px; cursor:pointer;}
+  .fisa-btn.primary{background:var(--teal-deep); color:#fff; border-color:var(--teal-deep);}
+  @media print{
+    body > *:not(.fisa-overlay){display:none !important;}
+    .fisa-overlay{position:static; background:none; padding:0; display:block !important;}
+    .fisa-card{box-shadow:none; max-width:none;}
+    .fisa-no-print{display:none !important;}
+  }
 
   #detail-overlay{position:fixed; inset:0; background:rgba(16,48,43,0.55); display:none; align-items:flex-start; justify-content:center; padding:30px 16px; overflow-y:auto; z-index:50;}
   #detail-overlay.visible{display:flex;}
@@ -78,6 +96,8 @@
     <div class="lookup-error" id="lookup-error"></div>
   </div>
 
+  <button type="button" class="btn-fisa" id="btn-fisa">📋 Fișă de ocupare (registru evidență turiști)</button>
+
   <div class="list-card">
     <h3>Preînregistrări recente</h3>
     <div id="pending-list"><div class="empty-hint">Se încarcă…</div></div>
@@ -87,6 +107,8 @@
 <div id="detail-overlay">
   <div class="detail-card" id="detail-card"></div>
 </div>
+
+<div id="fisa-overlay" class="fisa-overlay"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <script>
@@ -117,7 +139,9 @@ async function loadBusinessName() {
   try {
     const res = await sbFetch(`operatori?id=eq.${encodeURIComponent(operatorId)}&select=nume_afisat,nume_afacere`);
     const rows = await res.json();
-    document.getElementById('biz-name').textContent = (rows && rows[0]) ? (rows[0].nume_afisat || rows[0].nume_afacere) : 'Hotel necunoscut';
+    const nume = (rows && rows[0]) ? (rows[0].nume_afisat || rows[0].nume_afacere) : 'Hotel necunoscut';
+    document.getElementById('biz-name').textContent = nume;
+    bizNameCache = nume;
   } catch (e) {
     document.getElementById('biz-name').textContent = 'Hotel necunoscut';
   }
@@ -163,6 +187,7 @@ function showDetail(row) {
     <div class="detail-grid">
       <div class="detail-field"><div class="lbl">Cod</div><div class="val">${escapeHtml(row.cod_scurt)}</div></div>
       <div class="detail-field"><div class="lbl">Act identitate</div><div class="val">${escapeHtml(row.tip_act || '—')}${row.act_serie_numar ? ' · ' + escapeHtml(row.act_serie_numar) : ''}</div></div>
+      <div class="detail-field"><div class="lbl">Cetățenie</div><div class="val">${escapeHtml(row.cetatenie || '—')}</div></div>
       <div class="detail-field"><div class="lbl">Check-in</div><div class="val">${fmtDate(row.check_in)}</div></div>
       <div class="detail-field"><div class="lbl">Check-out</div><div class="val">${fmtDate(row.check_out)}</div></div>
       <div class="detail-field"><div class="lbl">Nr. oaspeți</div><div class="val">${row.nr_oaspeti ?? '—'}</div></div>
@@ -221,6 +246,102 @@ async function lookupCode(rawCode, source) {
     errEl.textContent = 'Eroare la căutare — încearcă din nou.';
   }
 }
+
+// Fișă de ocupare — registrul de evidență a turiștilor cazați, construit din preînregistrările
+// deja confirmate ("procesat") la recepție. Utilă mai ales pentru hotelurile fără recepție
+// fizică permanentă / cu self check-in, unde altfel nu ar exista nicio evidență centralizată.
+let bizNameCache = 'Hotel';
+
+async function openFisaOcupare() {
+  const overlay = document.getElementById('fisa-overlay');
+  overlay.innerHTML = `
+    <div class="fisa-card">
+      <div class="fisa-no-print" style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:12px;">
+        <div style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:var(--gold);">Fișă de ocupare — registru evidență turiști</div>
+        <button type="button" class="fisa-btn" id="fisa-close">✕ Închide</button>
+      </div>
+      <div class="empty-hint">Se încarcă…</div>
+    </div>`;
+  overlay.classList.add('open');
+  document.getElementById('fisa-close').addEventListener('click', () => overlay.classList.remove('open'));
+
+  let rows = [];
+  try {
+    const res = await sbFetch(`preinregistrari_hotel?operator_id=eq.${encodeURIComponent(operatorId)}&status=eq.procesat&order=check_in.asc&limit=2000&select=*`);
+    rows = await res.json();
+    if (!Array.isArray(rows)) rows = [];
+  } catch (e) {
+    rows = [];
+  }
+
+  const card = overlay.querySelector('.fisa-card');
+  card.innerHTML = `
+    <div class="fisa-no-print" style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:12px;">
+      <div style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:var(--gold);">Fișă de ocupare — registru evidență turiști</div>
+      <button type="button" class="fisa-btn" id="fisa-close">✕ Închide</button>
+    </div>
+    <div style="margin-bottom:10px;">
+      <div style="font-weight:700; font-size:15px; color:var(--teal-deep);">${escapeHtml(bizNameCache)}</div>
+      <div class="meta" style="font-family:inherit; color:var(--ink-soft); font-size:11.5px;">Generat ${new Date().toLocaleDateString('ro-RO')} · ${rows.length} ${rows.length === 1 ? 'înregistrare' : 'înregistrări'} confirmate la recepție</div>
+    </div>
+    ${rows.length === 0 ? '<div class="empty-hint">Nicio preînregistrare confirmată încă — fișa se completează automat pe măsură ce confirmi check-in-uri.</div>' : `
+    <table class="fisa-table">
+      <thead><tr>
+        <th>Nr.</th><th>Nume complet</th><th>Cetățenie</th><th>Act identitate</th><th>Sosire</th><th>Plecare</th><th>Nr. persoane</th>
+      </tr></thead>
+      <tbody>
+        ${rows.map((r, i) => `
+          <tr>
+            <td>${i + 1}</td>
+            <td>${escapeHtml([r.prenume, r.nume].filter(Boolean).join(' ') || '—')}</td>
+            <td>${escapeHtml(r.cetatenie || '—')}</td>
+            <td>${escapeHtml((r.tip_act === 'pasaport' ? 'Pașaport' : 'CI') + ' ' + (r.act_serie_numar || '—'))}</td>
+            <td>${fmtDate(r.check_in)}</td>
+            <td>${fmtDate(r.check_out)}</td>
+            <td>${r.nr_oaspeti ?? '—'}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`}
+    <div class="fisa-no-print" style="display:flex; gap:8px; margin-top:14px;">
+      <button type="button" class="fisa-btn primary" id="fisa-print">🖨️ Printează</button>
+      <button type="button" class="fisa-btn" id="fisa-csv" ${rows.length === 0 ? 'disabled' : ''}>⬇ Exportă CSV</button>
+    </div>
+  `;
+  card.querySelector('#fisa-close').addEventListener('click', () => overlay.classList.remove('open'));
+  card.querySelector('#fisa-print').addEventListener('click', () => window.print());
+  const csvBtn = card.querySelector('#fisa-csv');
+  if (csvBtn && !csvBtn.disabled) csvBtn.addEventListener('click', () => downloadFisaCsv(bizNameCache, rows));
+}
+
+function downloadFisaCsv(numeCazare, rows) {
+  const header = ['Nr.', 'Nume complet', 'Cetățenie', 'Tip act', 'Serie și număr', 'Sosire', 'Plecare', 'Nr. persoane'];
+  const csvEscape = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+  const lines = [header.map(csvEscape).join(',')];
+  rows.forEach((r, i) => {
+    lines.push([
+      i + 1,
+      [r.prenume, r.nume].filter(Boolean).join(' '),
+      r.cetatenie || '',
+      r.tip_act === 'pasaport' ? 'Pașaport' : 'CI',
+      r.act_serie_numar || '',
+      r.check_in || '',
+      r.check_out || '',
+      r.nr_oaspeti ?? '',
+    ].map(csvEscape).join(','));
+  });
+  const csv = '﻿' + lines.join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `fisa-ocupare-${(numeCazare || 'hotel').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('btn-fisa').addEventListener('click', openFisaOcupare);
 
 document.getElementById('manual-submit').addEventListener('click', () => {
   lookupCode(document.getElementById('manual-code').value, 'manual');
