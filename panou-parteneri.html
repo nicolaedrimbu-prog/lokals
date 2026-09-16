@@ -3015,9 +3015,10 @@ function regOperatorName(operatorId) {
 function renderRegChips() {
   const wrap = document.getElementById('reg-status-filter');
   if (!wrap) return;
-  const counts = { toate: REG_ROWS.length };
-  REG_ROWS.forEach(r => { counts[r.status] = (counts[r.status] || 0) + 1; });
-  const items = [['toate', 'Toate'], ['asteptare_validare', 'Așteaptă validare'], ['asteptare_completare', 'Trimise, neîncepute'], ['validat', 'Validate'], ['respins', 'Respinse']];
+  const activeRows = REG_ROWS.filter(r => !r.arhivat);
+  const counts = { toate: activeRows.length, arhivat: REG_ROWS.filter(r => r.arhivat).length };
+  activeRows.forEach(r => { counts[r.status] = (counts[r.status] || 0) + 1; });
+  const items = [['toate', 'Toate'], ['asteptare_validare', 'Așteaptă validare'], ['asteptare_completare', 'Trimise, neîncepute'], ['validat', 'Validate'], ['respins', 'Respinse'], ['arhivat', '🗄 Arhivă']];
   wrap.innerHTML = items.map(([key, label]) =>
     `<button class="chip ${regStatusFilter === key ? 'active' : ''}" data-reg-filter="${key}">${label} <span class="n">${counts[key] || 0}</span></button>`
   ).join('');
@@ -3031,8 +3032,9 @@ function renderRegList() {
   const countEl = document.getElementById('reg-count');
   const emptyEl = document.getElementById('reg-empty');
   if (!listEl) return;
-  countEl.textContent = REG_ROWS.length;
-  const rows = regStatusFilter === 'toate' ? REG_ROWS : REG_ROWS.filter(r => r.status === regStatusFilter);
+  countEl.textContent = REG_ROWS.filter(r => !r.arhivat).length;
+  const base = regStatusFilter === 'arhivat' ? REG_ROWS.filter(r => r.arhivat) : REG_ROWS.filter(r => !r.arhivat);
+  const rows = (regStatusFilter === 'toate' || regStatusFilter === 'arhivat') ? base : base.filter(r => r.status === regStatusFilter);
   emptyEl.style.display = rows.length === 0 ? 'block' : 'none';
   listEl.innerHTML = rows.map(r => {
     const sc = REG_STATUS_COLOR[r.status] || REG_STATUS_COLOR.asteptare_completare;
@@ -3064,6 +3066,9 @@ function renderRegList() {
         ${r.status === 'asteptare_validare' ? `
           <button class="pbtn primary" data-reg-approve="${r.id}">✓ Validează</button>
           <button class="pbtn" data-reg-reject="${r.id}" style="border-color:var(--brick); color:var(--brick);">Respinge</button>` : ''}
+        ${r.arhivat
+          ? `<button class="pbtn primary" data-reg-restore="${r.id}" title="Scoate din arhivă și pune-o înapoi în listă">↩ Restaurează</button>`
+          : `<button class="pbtn" data-reg-archive="${r.id}" style="border-color:var(--ink-soft); color:var(--ink-soft);" title="Mută în arhivă — iese din listă dar rămâne salvată, o poți restaura oricând">🗄 Arhivează</button>`}
       </div>
       <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--line); display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
         <span class="pmeta" style="font-weight:600;">🔑 Cod acces (specific acestui oaspete):</span>
@@ -3168,6 +3173,29 @@ function renderRegList() {
       }).eq('id', id);
       btn.disabled = false;
       if (error) { console.error(error); alert('Nu am putut respinge — încearcă din nou.'); return; }
+      loadRegistrations();
+    });
+  });
+
+  listEl.querySelectorAll('[data-reg-archive]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Confirmă arhivarea')) return;
+      const id = btn.getAttribute('data-reg-archive');
+      btn.disabled = true;
+      const { error } = await supabaseClient.from('inregistrari_oaspeti').update({ arhivat: true }).eq('id', id);
+      btn.disabled = false;
+      if (error) { console.error(error); alert('Nu am putut arhiva — încearcă din nou.'); return; }
+      loadRegistrations();
+    });
+  });
+
+  listEl.querySelectorAll('[data-reg-restore]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-reg-restore');
+      btn.disabled = true;
+      const { error } = await supabaseClient.from('inregistrari_oaspeti').update({ arhivat: false }).eq('id', id);
+      btn.disabled = false;
+      if (error) { console.error(error); alert('Nu am putut restaura — încearcă din nou.'); return; }
       loadRegistrations();
     });
   });

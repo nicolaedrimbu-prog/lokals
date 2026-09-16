@@ -753,6 +753,7 @@ function renderRegList(operatorId) {
 
   listEl.querySelectorAll('[data-reg-archive]').forEach(btn => {
     btn.addEventListener('click', async () => {
+      if (!confirm('Confirmă arhivarea')) return;
       const id = btn.getAttribute('data-reg-archive');
       btn.disabled = true;
       const { error } = await supabaseClient.from('inregistrari_oaspeti').update({ arhivat: true }).eq('id', id);
