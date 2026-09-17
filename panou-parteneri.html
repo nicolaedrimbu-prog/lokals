@@ -2954,8 +2954,82 @@ function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
+// ===== Punte automată candidatură → afacere live (tab „Afaceri locale") =====
+// La publicarea unei candidaturi de afacere, creăm (sau reactivăm, dacă exista deja și fusese
+// arhivată) automat rândul corespunzător din afaceri_ghid — nu mai e nevoie s-o reintroduci
+// manual din „+ Adaugă afacere nouă" de fiecare dată. Legătura dintre cele două rânduri (care
+// nu au o coloană dedicată pentru asta) se ține într-o etichetă "candidat:<id>" în câmpul
+// intern "note" al afacerii — invizibilă oaspeților, folosită doar ca să nu creăm un duplicat
+// dacă aceeași candidatură e retrasă și republicată mai târziu.
+function slugifyAfacere(text) {
+  return (text || '')
+    .toString()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'afacere';
+}
+
+function uniqueAfgId(baseSlug) {
+  const existing = new Set(AFG_ROWS.map(a => String(a.id)));
+  if (!existing.has(baseSlug)) return baseSlug;
+  let n = 2;
+  while (existing.has(`${baseSlug}-${n}`)) n++;
+  return `${baseSlug}-${n}`;
+}
+
+async function ensureAfacereFromCandidat(candidatId) {
+  const candRow = ROWS.find(r => r.source === 'candidati_parteneri' && String(r.id) === String(candidatId));
+  const raw = candRow ? candRow.raw : null;
+  if (!raw) return; // nu blocăm publicarea dacă din vreun motiv nu găsim candidatura în memorie
+
+  const noteTag = `candidat:${candidatId}`;
+  const already = AFG_ROWS.find(a => (a.note || '').includes(noteTag));
+  if (already) {
+    // a fost creată la o publicare anterioară — dacă e arhivată/inactivă, o readucem live
+    if (already.arhivat || !already.activ) {
+      const { error } = await supabaseClient.from('afaceri_ghid').update({ arhivat: false, activ: true }).eq('id', already.id);
+      if (!error) { already.arhivat = false; already.activ = true; renderAfgList(); }
+    }
+    return;
+  }
+
+  const newId = uniqueAfgId(slugifyAfacere(raw.nume_afacere));
+  const payload = {
+    id: newId,
+    nume: raw.nume_afacere || '(fără nume)',
+    categorie: raw.categorie || null,
+    zona: raw.zona || null,
+    descriere: raw.descriere || null,
+    website: raw.website || null,
+    facebook: raw.facebook || null,
+    instagram: raw.instagram || null,
+    telefon: raw.telefon || null,
+    persoana_contact: raw.persoana_contact || null,
+    email: raw.email || null,
+    poza_1: raw.poza_url || null,
+    beneficiu: (raw.interesat_beneficiu && raw.beneficiu_propus) ? raw.beneficiu_propus : null,
+    note: noteTag,
+    activ: true,
+  };
+
+  const { data, error } = await supabaseClient.from('afaceri_ghid').insert(payload).select();
+  if (error) {
+    console.error(error);
+    // nu blocăm publicarea candidaturii pentru asta — rămâne calea manuală de rezervă,
+    // din „+ Adaugă afacere nouă" (poți prelua datele din candidatură direct de acolo)
+    alert('Candidatura a fost publicată, dar nu am putut crea automat afacerea în „Afaceri locale" — adaug-o manual din „+ Adaugă afacere nouă" (poți prelua datele din candidatură direct de acolo).');
+    return;
+  }
+  if (data && data[0]) AFG_ROWS.push(data[0]);
+  renderAfgList();
+}
+
 async function handleAction(btn, source, id, newStatus){
   btn.disabled = true;
+  if (source === 'candidati_parteneri' && newStatus === 'publicat') {
+    await ensureAfacereFromCandidat(id);
+  }
   const { error } = await supabaseClient.from(source).update({ status: newStatus }).eq('id', id);
   if (error) {
     console.error(error);
