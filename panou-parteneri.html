@@ -880,6 +880,20 @@ async function loadAll(){
     domain: r.tip === 'hotel' ? 'hotel' : 'apartament', // tab "Hoteluri" vs "Apartamente"
   }));
 
+  // „Înregistrare & verificare identitate" (blocaj complet al ghidului până la validare) e
+  // gândită pentru cazări fără recepție fizică (apartamente cu self check-in) — la un hotel,
+  // recepția verifică actul în persoană, iar „Preînregistrare la check-in" îi ia deja locul,
+  // fără să blocheze ghidul. De-asta nu mai apare deloc în panoul de Hotel; dacă a rămas
+  // activă pe vreun hotel dintr-o configurare anterioară, o dezactivăm automat aici, o
+  // singură dată la încărcare, ca să nu mai blocheze din greșeală ghidul unui oaspete care
+  // are recepție fizică.
+  const hotelsToFix = op.filter(r => r.raw.tip === 'hotel' && r.raw.inregistrare_activa === true);
+  if (hotelsToFix.length) {
+    const { error: fixErr } = await supabaseClient.from('operatori').update({ inregistrare_activa: false }).in('id', hotelsToFix.map(r => r.id));
+    if (!fixErr) hotelsToFix.forEach(r => { r.raw.inregistrare_activa = false; });
+    else console.error(fixErr);
+  }
+
   ROWS = cand.concat(op).sort((a, b) => new Date(b.data) - new Date(a.data));
   document.getElementById('loading').style.display = 'none';
   renderChips();
@@ -2072,9 +2086,15 @@ function renderList(){
     input.addEventListener('change', async (e) => {
       const id = e.target.getAttribute('data-tier-toggle');
       const essential = e.target.checked;
+      // Cascadă: pornirea planului Essential activează automat funcțiile Essential
+      // (Preînregistrare la check-in, Afișează codul de acces, Curățenie & Mentenanță),
+      // iar oprirea lui le dezactivează automat pe toate — rămân totuși comutabile separat,
+      // individual, în orice moment intermediar (fiecare are propriul toggle, mai jos).
       const payload = essential
-        ? { tier: 'essential', tier_ciclu: 'lunar', tier_activat_la: new Date().toISOString() }
-        : { tier: 'gratuit', tier_ciclu: null, tier_activat_la: null };
+        ? { tier: 'essential', tier_ciclu: 'lunar', tier_activat_la: new Date().toISOString(),
+            preinregistrare_activa: true, preinregistrare_self_checkin: true, curatenie_activ: true }
+        : { tier: 'gratuit', tier_ciclu: null, tier_activat_la: null,
+            preinregistrare_activa: false, preinregistrare_self_checkin: false, curatenie_activ: false };
       e.target.disabled = true;
       const { error } = await supabaseClient.from('operatori').update(payload).eq('id', id);
       e.target.disabled = false;
@@ -2178,6 +2198,49 @@ function renderList(){
       }
       const row = ROWS.find(r => r.source === 'operatori' && String(r.id) === String(id));
       if (row) row.raw.preinregistrare_self_checkin = preinregistrare_self_checkin;
+    });
+  });
+  // „Poză act de identitate" — aceleași două coloane (necesita_foto_id, foto_id_per_oaspete)
+  // ca în contul-meu.html, indiferent care e atributul folosit în markup (hotel vs apartament).
+  listEl.querySelectorAll('[data-fotoid-toggle], [data-fotoid-hotel-toggle]').forEach(input => {
+    input.addEventListener('change', async (e) => {
+      const id = e.target.getAttribute('data-fotoid-toggle') || e.target.getAttribute('data-fotoid-hotel-toggle');
+      const necesita_foto_id = e.target.checked;
+      e.target.disabled = true;
+      const { error } = await supabaseClient.from('operatori').update({ necesita_foto_id }).eq('id', id);
+      e.target.disabled = false;
+      if (error) {
+        console.error(error);
+        e.target.checked = !necesita_foto_id;
+        alert('Nu am putut salva schimbarea — încearcă din nou.');
+        return;
+      }
+      const row = ROWS.find(r => r.source === 'operatori' && String(r.id) === String(id));
+      if (row) row.raw.necesita_foto_id = necesita_foto_id;
+      renderList();
+      const rowId = 'operatori-' + id;
+      const details = document.getElementById('details-' + rowId);
+      if (details) {
+        details.classList.add('open');
+        const toggleBtn = document.querySelector(`[data-toggle="${rowId}"]`);
+        if (toggleBtn) toggleBtn.textContent = 'Ascunde detalii';
+      }
+    });
+  });
+  listEl.querySelectorAll('[data-fotoid-mode], [data-fotoid-hotel-mode]').forEach(select => {
+    select.addEventListener('change', async (e) => {
+      const id = e.target.getAttribute('data-fotoid-mode') || e.target.getAttribute('data-fotoid-hotel-mode');
+      const foto_id_per_oaspete = e.target.value === 'per_oaspete';
+      e.target.disabled = true;
+      const { error } = await supabaseClient.from('operatori').update({ foto_id_per_oaspete }).eq('id', id);
+      e.target.disabled = false;
+      if (error) {
+        console.error(error);
+        alert('Nu am putut salva schimbarea — încearcă din nou.');
+        return;
+      }
+      const row = ROWS.find(r => r.source === 'operatori' && String(r.id) === String(id));
+      if (row) row.raw.foto_id_per_oaspete = foto_id_per_oaspete;
     });
   });
   listEl.querySelectorAll('[data-autoemail-toggle]').forEach(input => {
@@ -2784,26 +2847,11 @@ function detailsHtml(r){
     </div>
   `).join('');
 
-  const extraHtml = r.source === 'operatori'
-    ? `<div style="margin:6px 0 12px; color:var(--ink-soft);">Cont confirmat: ${raw.cont_confirmat ? 'Da' : 'Nu'}</div>
+  const isHotelRow = raw.tip === 'hotel';
+  const essentialOn = raw.tier === 'essential';
+
+  const boxEssential = `
        <div class="addon-box">
-         <div class="addon-row">
-           <div class="addon-icon">
-             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8F6222" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l3 3l-1.5 1.5a2 2 0 0 0 3 3l1.5 -1.5l3 3l-1.5 1.5a2 2 0 1 0 3 3l6 -6a2 2 0 0 0 -3 -3l-1.5 1.5l-3 -3l1.5 -1.5a2 2 0 0 0 -3 -3z"/></svg>
-           </div>
-           <div class="addon-info">
-             <div class="addon-title">Modul Curățenie &amp; Mentenanță</div>
-             <div class="addon-sub">Add-on plătit — activare manuală per proprietate</div>
-           </div>
-           <span class="addon-status ${raw.curatenie_activ ? 'on' : 'off'}">${raw.curatenie_activ ? 'Activ' : 'Inactiv'}</span>
-           <label class="switch">
-             <input type="checkbox" data-curatenie-toggle="${escapeHtml(r.id)}" ${raw.curatenie_activ ? 'checked' : ''}>
-             <span class="track"></span>
-           </label>
-         </div>
-         <div class="addon-note">Doar tu poți activa sau dezactiva acest modul de aici — proprietarul nu-l poate porni singur din contul lui.</div>
-       </div>
-       <div class="addon-box" style="margin-top:10px;">
          <div class="addon-row">
            <div class="addon-icon">
              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8F6222" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.5 5.5L20 9l-4 4l1 6l-5-3l-5 3l1-6l-4-4l5.5-.5z"/></svg>
@@ -2812,21 +2860,25 @@ function detailsHtml(r){
              <div class="addon-title">Plan Essential</div>
              <div class="addon-sub">Activare manuală — plată/facturare în afara platformei</div>
            </div>
-           <span class="addon-status ${raw.tier === 'essential' ? 'on' : 'off'}">${raw.tier === 'essential' ? 'Essential' : 'Gratuit'}</span>
+           <span class="addon-status ${essentialOn ? 'on' : 'off'}">${essentialOn ? 'Essential' : 'Gratuit'}</span>
            <label class="switch">
-             <input type="checkbox" data-tier-toggle="${escapeHtml(r.id)}" ${raw.tier === 'essential' ? 'checked' : ''}>
+             <input type="checkbox" data-tier-toggle="${escapeHtml(r.id)}" ${essentialOn ? 'checked' : ''}>
              <span class="track"></span>
            </label>
          </div>
          <div class="addon-note" id="tier-cycle-note-${rowId}">
-           ${raw.tier === 'essential'
+           ${essentialOn
              ? `Ciclu de facturare: <select data-tier-cycle="${escapeHtml(r.id)}" style="margin:0 4px;">
                   <option value="lunar" ${raw.tier_ciclu === 'anual' ? '' : 'selected'}>Lunar</option>
                   <option value="anual" ${raw.tier_ciclu === 'anual' ? 'selected' : ''}>Anual</option>
                 </select> · activat ${raw.tier_activat_la ? new Date(raw.tier_activat_la).toLocaleDateString('ro-RO') : '—'}`
-             : 'Activează pentru a trece proprietatea pe planul Essential — folosește asta după ce ai confirmat plata manual (transfer, BT ePOS etc).'}
+             : 'Activează pentru a trece proprietatea pe planul Essential — folosește asta după ce ai confirmat plata manual (transfer, BT ePOS etc). Pornește automat și celelalte funcții Essential de mai jos (le poți dezactiva separat, individual, după aceea).'}
          </div>
-       </div>
+       </div>`;
+
+  // Doar la apartamente — la hotel a fost înlocuită de „Preînregistrare la check-in" (vezi
+  // fix-ul automat din loadAll: dezactivăm inregistrare_activa pe orice hotel existent).
+  const boxVerificareIdentitate = isHotelRow ? '' : `
        <div class="addon-box" style="margin-top:10px;">
          <div class="addon-row">
            <div class="addon-icon">
@@ -2834,28 +2886,18 @@ function detailsHtml(r){
            </div>
            <div class="addon-info">
              <div class="addon-title">Înregistrare &amp; verificare identitate oaspeți</div>
-             <div class="addon-sub">${raw.tier === 'essential' ? 'Funcție Essential — activeaz-o per proprietate' : 'Necesită planul Essential activ (vezi mai sus)'}</div>
+             <div class="addon-sub">${essentialOn ? 'Funcție Essential — activeaz-o per proprietate' : 'Necesită planul Essential activ (vezi mai sus)'}</div>
            </div>
            <span class="addon-status ${raw.inregistrare_activa ? 'on' : 'off'}">${raw.inregistrare_activa ? 'Activ' : 'Inactiv'}</span>
            <label class="switch">
-             <input type="checkbox" data-inreg-toggle="${escapeHtml(r.id)}" ${raw.inregistrare_activa ? 'checked' : ''} ${raw.tier === 'essential' ? '' : 'disabled'}>
+             <input type="checkbox" data-inreg-toggle="${escapeHtml(r.id)}" ${raw.inregistrare_activa ? 'checked' : ''} ${essentialOn ? '' : 'disabled'}>
              <span class="track"></span>
            </label>
          </div>
-         <div class="addon-note">Odată activă, oaspeții primesc acces la ghid (adresă, cod de acces, WiFi) doar după ce completezi și trimiți un link de înregistrare (tab „Înregistrări"), iar ei își confirmă identitatea. Genereaz-o per rezervare, din tab-ul „Înregistrări".</div>
-         <div class="addon-row" style="margin-top:10px; padding-top:10px; border-top:1px solid var(--line);">
-           <div class="addon-info">
-             <div class="addon-title" style="font-size:13px;">Poză act de identitate</div>
-             <div class="addon-sub">Pregătit tehnic, neactivat încă — se activează doar unde e cerut legal</div>
-           </div>
-           <span class="addon-status off">În curând</span>
-           <label class="switch">
-             <input type="checkbox" disabled>
-             <span class="track"></span>
-           </label>
-         </div>
-         <!-- Completare automată din email (Booking.com/Airbnb): ascunsă temporar — Booking.com nu include datele rezervării în corpul emailului (doar link către extranetul autentificat), deci AI-ul nu are ce extrage. Backend-ul (coloană auto_trimite_din_email, edge function receive-booking-email, toggle-ul de mai jos) rămâne intact pentru o eventuală reluare (ex. doar pentru Airbnb, dacă emailurile lor conțin datele). -->
-       </div>
+         <div class="addon-note">Odată activă, oaspeții primesc acces la ghid (adresă, cod de acces, WiFi) doar după ce completezi și trimiți un link de înregistrare (tab „Înregistrări"), iar ei își confirmă identitatea. Generează-o per rezervare, din tab-ul „Înregistrări".</div>
+       </div>`;
+
+  const boxPreinreg = `
        <div class="addon-box" style="margin-top:10px;">
          <div class="addon-row">
            <div class="addon-icon">
@@ -2863,7 +2905,7 @@ function detailsHtml(r){
            </div>
            <div class="addon-info">
              <div class="addon-title">Preînregistrare la check-in (fără personalizare — inclusiv hoteluri)</div>
-             <div class="addon-sub">Independent de „Înregistrare &amp; verificare identitate" de mai sus — nu blochează ghidul, doar adaugă un formular opțional în Evantai.</div>
+             <div class="addon-sub">Pornește automat cu planul Essential — nu blochează ghidul, doar adaugă un formular opțional în Evantai.</div>
            </div>
            <span class="addon-status ${raw.preinregistrare_activa ? 'on' : 'off'}">${raw.preinregistrare_activa ? 'Activ' : 'Inactiv'}</span>
            <label class="switch">
@@ -2871,10 +2913,49 @@ function detailsHtml(r){
              <span class="track"></span>
            </label>
          </div>
-         <div class="addon-row" style="margin-top:10px; padding-top:10px; border-top:1px solid var(--line);">
+         ${raw.preinregistrare_activa ? `<div class="addon-note">Setează canalul și contactul de notificare mai jos, în formularul de editare. Link recepție (căutare cod / scanare QR): <a href="receptie-preinregistrari.html?operator=${escapeHtml(r.id)}" target="_blank" rel="noopener">receptie-preinregistrari.html?operator=${escapeHtml(r.id)}</a></div>` : ''}
+         <!-- Completare automată din email (Booking.com/Airbnb): ascunsă temporar — Booking.com nu include datele rezervării în corpul emailului (doar link către extranetul autentificat), deci AI-ul nu are ce extrage. Backend-ul (coloană auto_trimite_din_email, edge function receive-booking-email, toggle-ul de mai jos) rămâne intact pentru o eventuală reluare (ex. doar pentru Airbnb, dacă emailurile lor conțin datele). -->
+       </div>`;
+
+  // „Poză act de identitate" e deja funcțională și testată — o cere formularul relevant
+  // (Preînregistrare la hotel, Verificare identitate la apartament) prin necesita_foto_id /
+  // foto_id_per_oaspete pe operatori, exact ca toggle-ul echivalent din contul-meu.html.
+  // Rămâne comutabilă doar cât timp fluxul de care depinde e activ — fără el, nu are cui
+  // să-i ceară poza, așa că toggle-ul e dezactivat cu o notă, nu ascuns complet.
+  const fotoIdFlowActive = isHotelRow ? !!raw.preinregistrare_activa : !!raw.inregistrare_activa;
+  const fotoIdToggleAttr = isHotelRow ? 'data-fotoid-hotel-toggle' : 'data-fotoid-toggle';
+  const fotoIdModeAttr = isHotelRow ? 'data-fotoid-hotel-mode' : 'data-fotoid-mode';
+  const fotoIdModeWrapAttr = isHotelRow ? 'data-fotoid-hotel-mode-wrap' : 'data-fotoid-mode-wrap';
+  const boxPozaAct = `
+       <div class="addon-box" style="margin-top:10px;">
+         <div class="addon-row">
+           <div class="addon-info">
+             <div class="addon-title" style="font-size:13px;">Poză act de identitate</div>
+             <div class="addon-sub">${fotoIdFlowActive
+               ? `Oaspetele trebuie să încarce o poză a actului odată cu formularul ${isHotelRow ? 'de preînregistrare' : 'de înregistrare, înainte să-l validezi'}.`
+               : `Necesită „${isHotelRow ? 'Preînregistrare la check-in' : 'Înregistrare & verificare identitate'}" activă, mai sus`}</div>
+           </div>
+           <span class="addon-status ${raw.necesita_foto_id ? 'on' : 'off'}">${raw.necesita_foto_id ? 'Activ' : 'Inactiv'}</span>
+           <label class="switch">
+             <input type="checkbox" ${fotoIdToggleAttr}="${escapeHtml(r.id)}" ${raw.necesita_foto_id ? 'checked' : ''} ${fotoIdFlowActive ? '' : 'disabled'}>
+             <span class="track"></span>
+           </label>
+         </div>
+         <div ${fotoIdModeWrapAttr}="${escapeHtml(r.id)}" style="${raw.necesita_foto_id && fotoIdFlowActive ? '' : 'display:none;'} margin-top:8px;">
+           <label style="font-size:11px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.02em; display:block; margin-bottom:5px;">Câte poze?</label>
+           <select ${fotoIdModeAttr}="${escapeHtml(r.id)}" style="border:1.5px solid var(--line); border-radius:8px; padding:7px 10px; font-size:12.5px; font-family:inherit; width:100%; box-sizing:border-box; background:#fff; color:var(--ink);">
+             <option value="single" ${!raw.foto_id_per_oaspete ? 'selected' : ''}>O singură poză — cel care a făcut rezervarea</option>
+             <option value="per_oaspete" ${raw.foto_id_per_oaspete ? 'selected' : ''}>Câte o poză pentru fiecare oaspete</option>
+           </select>
+         </div>
+       </div>`;
+
+  const boxAfiseazaCod = `
+       <div class="addon-box" style="margin-top:10px;">
+         <div class="addon-row">
            <div class="addon-info">
              <div class="addon-title" style="font-size:13px;">Afișează codul de acces cameră (self check-in) după preînregistrare</div>
-             <div class="addon-sub">Reutilizează codul general de check-in setat mai sus, în „Cazare/Facilități".</div>
+             <div class="addon-sub">Pornește automat cu planul Essential — reutilizează codul general de check-in setat mai sus, în „Cazare/Facilități".</div>
            </div>
            <span class="addon-status ${raw.preinregistrare_self_checkin ? 'on' : 'off'}">${raw.preinregistrare_self_checkin ? 'Activ' : 'Inactiv'}</span>
            <label class="switch">
@@ -2882,8 +2963,30 @@ function detailsHtml(r){
              <span class="track"></span>
            </label>
          </div>
-         ${raw.preinregistrare_activa ? `<div class="addon-note">Setează canalul și contactul de notificare mai jos, în formularul de editare. Link recepție (căutare cod / scanare QR): <a href="receptie-preinregistrari.html?operator=${escapeHtml(r.id)}" target="_blank" rel="noopener">receptie-preinregistrari.html?operator=${escapeHtml(r.id)}</a></div>` : ''}
-       </div>`
+       </div>`;
+
+  const boxCuratenie = `
+       <div class="addon-box" style="margin-top:10px;">
+         <div class="addon-row">
+           <div class="addon-icon">
+             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8F6222" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l3 3l-1.5 1.5a2 2 0 0 0 3 3l1.5 -1.5l3 3l-1.5 1.5a2 2 0 1 0 3 3l6 -6a2 2 0 0 0 -3 -3l-1.5 1.5l-3 -3l1.5 -1.5a2 2 0 0 0 -3 -3z"/></svg>
+           </div>
+           <div class="addon-info">
+             <div class="addon-title">Modul Curățenie &amp; Mentenanță</div>
+             <div class="addon-sub">Add-on plătit — pornește automat cu planul Essential, dar poți să-l dezactivezi separat</div>
+           </div>
+           <span class="addon-status ${raw.curatenie_activ ? 'on' : 'off'}">${raw.curatenie_activ ? 'Activ' : 'Inactiv'}</span>
+           <label class="switch">
+             <input type="checkbox" data-curatenie-toggle="${escapeHtml(r.id)}" ${raw.curatenie_activ ? 'checked' : ''}>
+             <span class="track"></span>
+           </label>
+         </div>
+         <div class="addon-note">Doar tu poți activa sau dezactiva acest modul de aici — proprietarul nu-l poate porni singur din contul lui.</div>
+       </div>`;
+
+  const extraHtml = r.source === 'operatori'
+    ? `<div style="margin:6px 0 12px; color:var(--ink-soft);">Cont confirmat: ${raw.cont_confirmat ? 'Da' : 'Nu'}</div>`
+      + boxEssential + boxVerificareIdentitate + boxPreinreg + boxPozaAct + boxAfiseazaCod + boxCuratenie
     : '';
 
   return `
