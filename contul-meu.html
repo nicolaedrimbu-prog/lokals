@@ -535,33 +535,80 @@ function renderRegPanel(operatorId) {
   `;
 
   if (isHotel) {
-    // La hotel, verificarea identității e legată de preînregistrarea la check-in (activată din panoul administratorului) — nu mai există un toggle separat aici.
-    if (!op.preinregistrare_activa) {
-      panel.innerHTML = `<div class="reg-empty">Preînregistrarea la check-in e dezactivată pentru această unitate — activeaz-o din panoul administratorului ca să poți genera linkuri de înregistrare pentru oaspeți.</div>`;
-      renderRegList(operatorId);
-      return;
-    }
     panel.innerHTML = `
       <div class="reg-toggle-row">
         <div>
-          <div class="reg-toggle-label">Cere poză act de identitate</div>
-          <div class="reg-toggle-sub">Oaspetele trebuie să încarce o poză a actului odată cu formularul de preînregistrare.</div>
+          <div class="reg-toggle-label">Preînregistrare la check-in</div>
+          <div class="reg-toggle-sub">Odată activă, poți trimite oaspeților linkul de preînregistrare, copia linkul de recepție și printa afișul cu cod QR pentru front-desk.</div>
         </div>
         <label class="switch">
-          <input type="checkbox" data-fotoid-hotel-toggle="${operatorId}" ${op.necesita_foto_id ? 'checked' : ''}>
+          <input type="checkbox" data-preinreg-hotel-toggle="${operatorId}" ${op.preinregistrare_activa ? 'checked' : ''}>
           <span class="slider"></span>
         </label>
       </div>
-      <div data-fotoid-hotel-mode-wrap="${operatorId}" style="${op.necesita_foto_id ? '' : 'display:none;'} margin:0 0 16px;">
-        <label style="font-size:11px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.02em; display:block; margin-bottom:5px;">Câte poze?</label>
-        <select data-fotoid-hotel-mode="${operatorId}" style="border:1.5px solid var(--line); border-radius:8px; padding:7px 10px; font-size:12.5px; font-family:inherit; width:100%; box-sizing:border-box; background:#fff; color:var(--ink);">
-          <option value="single" ${!op.foto_id_per_oaspete ? 'selected' : ''}>O singură poză — cel care a făcut rezervarea</option>
-          <option value="per_oaspete" ${op.foto_id_per_oaspete ? 'selected' : ''}>Câte o poză pentru fiecare oaspete</option>
-        </select>
+      <div id="reg-gen-wrap-${operatorId}" style="${op.preinregistrare_activa ? '' : 'display:none;'}">
+        <div class="reg-toggle-row" style="margin-top:0;">
+          <div>
+            <div class="reg-toggle-label">Cere poză act de identitate</div>
+            <div class="reg-toggle-sub">Oaspetele trebuie să încarce o poză a actului odată cu formularul de preînregistrare.</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" data-fotoid-hotel-toggle="${operatorId}" ${op.necesita_foto_id ? 'checked' : ''}>
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div data-fotoid-hotel-mode-wrap="${operatorId}" style="${op.necesita_foto_id ? '' : 'display:none;'} margin:0 0 16px;">
+          <label style="font-size:11px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.02em; display:block; margin-bottom:5px;">Câte poze?</label>
+          <select data-fotoid-hotel-mode="${operatorId}" style="border:1.5px solid var(--line); border-radius:8px; padding:7px 10px; font-size:12.5px; font-family:inherit; width:100%; box-sizing:border-box; background:#fff; color:var(--ink);">
+            <option value="single" ${!op.foto_id_per_oaspete ? 'selected' : ''}>O singură poză — cel care a făcut rezervarea</option>
+            <option value="per_oaspete" ${op.foto_id_per_oaspete ? 'selected' : ''}>Câte o poză pentru fiecare oaspete</option>
+          </select>
+        </div>
+        ${genBoxHtml}
       </div>
-      ${genBoxHtml}
     `;
     // data-fotoid-hotel-toggle / data-fotoid-hotel-mode sunt gestionate de listener-ul delegat pe #list-cazari — nu mai e nevoie de handlere separate aici.
+
+    panel.querySelector(`[data-preinreg-hotel-toggle="${operatorId}"]`).addEventListener('change', async (e) => {
+      const activ = e.target.checked;
+      e.target.disabled = true;
+      const { error } = await supabaseClient.from('operatori').update({ preinregistrare_activa: activ }).eq('id', operatorId);
+      e.target.disabled = false;
+      if (error) {
+        console.error(error);
+        e.target.checked = !activ;
+        alert('Nu am putut salva schimbarea — încearcă din nou.');
+        return;
+      }
+      if (op) op.preinregistrare_activa = activ;
+      panel.querySelector(`#reg-gen-wrap-${operatorId}`).style.display = activ ? '' : 'none';
+      // reflectăm nota + butoanele de recepție din bara de acțiuni, fără să reconstruim tot cardul
+      const card = document.getElementById('reg-panel-' + operatorId).closest('.card');
+      let note = card.querySelector('.reg-note');
+      if (!activ && !note) {
+        note = document.createElement('div');
+        note.className = 'reg-note';
+        note.textContent = '🧾 Preînregistrare recepție — dezactivată. Odată activată, poți copia link-ul de recepție și printa afișul cu cod QR pentru front-desk.';
+        card.querySelector('.card-actions').insertAdjacentElement('afterend', note);
+      } else if (activ && note) {
+        note.remove();
+      }
+      const cardActions = card.querySelector('.card-actions');
+      const copyBtn = cardActions.querySelector('[data-action="copy-receptie"]');
+      if (activ && !copyBtn) {
+        const longBtn = cardActions.querySelector('.action-btn-long');
+        const receptieHtml = `
+          <button class="action-btn" type="button" data-action="copy-receptie" data-id="${operatorId}">${COPY_ICON} <span data-copy-receptie-label="${operatorId}">Copiază link recepție</span></button>
+          <button class="action-btn" type="button" data-action="print-receptie-qr" data-id="${operatorId}">${PRINT_ICON} Printează QR Recepție</button>
+        `;
+        if (longBtn) longBtn.insertAdjacentHTML('beforebegin', receptieHtml);
+        else cardActions.insertAdjacentHTML('beforeend', receptieHtml);
+      } else if (!activ && copyBtn) {
+        const printBtn = cardActions.querySelector('[data-action="print-receptie-qr"]');
+        copyBtn.remove();
+        if (printBtn) printBtn.remove();
+      }
+    });
   } else {
     panel.innerHTML = `
       <div class="reg-toggle-row">
