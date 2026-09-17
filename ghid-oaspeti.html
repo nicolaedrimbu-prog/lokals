@@ -224,8 +224,14 @@
 
 <div id="registration-gate">
   <div class="rg-card">
-    <div class="rg-wordmark">lokals</div>
-    <div class="rg-tag">Înregistrare oaspeți</div>
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div class="rg-wordmark">lokals</div>
+      <div id="rg-lang-toggle" style="display:flex; gap:4px;">
+        <button type="button" onclick="setLang('ro')" class="lang-btn" data-lang="ro" style="border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:4px 10px; font-size:12px; font-weight:600; cursor:pointer;">RO</button>
+        <button type="button" onclick="setLang('en')" class="lang-btn" data-lang="en" style="border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:4px 10px; font-size:12px; font-weight:600; cursor:pointer;">EN</button>
+      </div>
+    </div>
+    <div class="rg-tag" id="rg-tag">Înregistrare oaspeți</div>
     <div id="rg-content">Se încarcă…</div>
   </div>
 </div>
@@ -428,20 +434,22 @@ function fotoIdCount(nrOaspeti) {
   return 1;
 }
 
-function fotoIdFieldsHtml(prefix, nrOaspeti) {
+function fotoIdFieldsHtml(prefix, nrOaspeti, lang) {
   if (!fotoIdRequired()) return '';
+  const useLang = lang || currentLang;
+  const fi = I18N[useLang].fid;
   const perOaspete = currentOperator.foto_id_per_oaspete === true;
   const count = fotoIdCount(nrOaspeti);
   let html = `<div class="fid-wrap" id="${prefix}-foto-wrap">`;
-  html += `<div class="fid-title">📷 ${perOaspete ? 'Poză act de identitate pentru fiecare oaspete' : 'Poză act de identitate (cel care a făcut rezervarea)'}</div>`;
+  html += `<div class="fid-title">📷 ${perOaspete ? fi.titlePerOaspete : fi.titleUnul}</div>`;
   for (let i = 0; i < count; i++) {
     html += `
       <div class="fid-field">
-        <label for="${prefix}-foto-${i}">${perOaspete ? `Oaspete ${i + 1}` : 'Poza actului'}</label>
+        <label for="${prefix}-foto-${i}">${perOaspete ? fi.labelOaspete(i + 1) : fi.labelPoza}</label>
         <input type="file" accept="image/*" id="${prefix}-foto-${i}" data-fid-input>
       </div>`;
   }
-  html += `<div class="fid-note">Poza e văzută doar de ${hostTeamLabel('nom', 'ro')}, pentru verificarea identității la check-in — se șterge automat la 30 de zile după check-out.</div>`;
+  html += `<div class="fid-note">${fi.note(hostTeamLabel('nom', useLang))}</div>`;
   html += `<div class="fid-error" id="${prefix}-foto-err"></div>`;
   html += `</div>`;
   return html;
@@ -630,6 +638,11 @@ function escapeHtmlGuide(s) {
 }
 
 async function applyRegistrationGate() {
+  const g = I18N[currentLang].gate;
+  const tagEl = document.getElementById('rg-tag');
+  if (tagEl) tagEl.textContent = g.tag;
+  document.querySelectorAll('#rg-lang-toggle .lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === currentLang));
+
   if (!gateRequired()) { setFrozen(false); return; }
 
   if (!stayToken || !currentStay) {
@@ -637,9 +650,9 @@ async function applyRegistrationGate() {
     setFrozen(true);
     document.getElementById('rg-content').innerHTML = `
       <div class="rg-icon err">✕</div>
-      <p class="rg-title">Link personalizat necesar</p>
-      <p class="rg-sub">Acest apartament cere înregistrare înainte de check-in. Foloseşte linkul primit de la gazdă prin email sau WhatsApp — nu linkul general al ghidului.</p>
-      <p class="rg-timer-note">Între timp, îți deblocăm ghidul local (recomandări, afaceri partenere) în câteva secunde — codul de acces rămâne disponibil doar prin linkul tău personal.</p>
+      <p class="rg-title">${g.needStayTitle}</p>
+      <p class="rg-sub">${g.needStaySub}</p>
+      <p class="rg-timer-note">${g.needStayTimerNote}</p>
       <div class="rg-timer-bar"><div class="rg-timer-fill" id="rg-timer-fill"></div></div>`;
     startNoStayUnlockTimer();
     return;
@@ -653,55 +666,71 @@ async function applyRegistrationGate() {
   } else if (currentStay.status === 'asteptare_validare') {
     document.getElementById('rg-content').innerHTML = `
       <div class="rg-icon pending">⏳</div>
-      <p class="rg-title">Îți verificăm datele</p>
-      <p class="rg-sub">${currentStay.prenume ? 'Mulțumim, ' + escapeHtmlGuide(currentStay.prenume) + '! ' : ''}Gazda confirmă înregistrarea manual, de obicei în câteva ore. Vei primi un email când accesul e deblocat — poți reveni oricând pe acest link.</p>`;
+      <p class="rg-title">${g.pendingTitle}</p>
+      <p class="rg-sub">${currentStay.prenume ? g.pendingThanks(escapeHtmlGuide(currentStay.prenume)) : ''}${g.pendingSub}</p>`;
   } else if (currentStay.status === 'respins') {
     document.getElementById('rg-content').innerHTML = `
       <div class="rg-icon err">✕</div>
-      <p class="rg-title">Mai e nevoie de o corectare</p>
-      <p class="rg-sub">Gazda a cerut o mică corectare înainte să confirme înregistrarea.</p>
+      <p class="rg-title">${g.rejectedTitle}</p>
+      <p class="rg-sub">${g.rejectedSub}</p>
       ${currentStay.motiv_respingere ? `<div class="rg-reason">${escapeHtmlGuide(currentStay.motiv_respingere)}</div>` : ''}
-      <button class="rg-submit" onclick="renderGateForm()">Corectează și retrimite</button>`;
+      <button class="rg-submit" onclick="renderGateForm()">${g.rejectedRetry}</button>`;
   } else {
-    document.getElementById('rg-content').innerHTML = `<div class="rg-icon err">✕</div><p class="rg-title">Link invalid</p>`;
+    document.getElementById('rg-content').innerHTML = `<div class="rg-icon err">✕</div><p class="rg-title">${g.invalidTitle}</p>`;
   }
 }
 
 function renderGateForm() {
   const s = currentStay || {};
+  const g = I18N[currentLang].gate;
+  const defaultCetatenie = currentLang === 'en' ? 'Romania' : 'România';
   document.getElementById('rg-content').innerHTML = `
-    <p class="rg-title" style="text-align:left;">Confirmă-ți identitatea</p>
-    <p class="rg-sub" style="text-align:left;">Un singur pas înainte de sosire — deblochează adresa, codul de acces și WiFi-ul.</p>
+    <p class="rg-title" style="text-align:left;">${g.formTitle}</p>
+    <p class="rg-sub" style="text-align:left;">${g.formSub}</p>
     <form id="rg-form">
       <div class="rg-row2">
-        <div class="rg-field"><label for="rg-prenume">Prenume</label><input id="rg-prenume" required value="${escapeHtmlGuide(s.prenume || '')}"></div>
-        <div class="rg-field"><label for="rg-nume">Nume</label><input id="rg-nume" required value="${escapeHtmlGuide(s.nume || '')}"></div>
+        <div class="rg-field"><label for="rg-prenume">${g.prenume}</label><input id="rg-prenume" required value="${escapeHtmlGuide(s.prenume || '')}"></div>
+        <div class="rg-field"><label for="rg-nume">${g.nume}</label><input id="rg-nume" required value="${escapeHtmlGuide(s.nume || '')}"></div>
       </div>
-      <div class="rg-field"><label for="rg-email">Email</label><input id="rg-email" type="email" required value="${escapeHtmlGuide(s.email || '')}"></div>
-      <div class="rg-field"><label for="rg-telefon">Telefon</label><input id="rg-telefon" type="tel" required value="${escapeHtmlGuide(s.telefon || '')}"></div>
+      <div class="rg-field"><label for="rg-email">${g.email}</label><input id="rg-email" type="email" required value="${escapeHtmlGuide(s.email || '')}"></div>
+      <div class="rg-field"><label for="rg-telefon">${g.telefon}</label><input id="rg-telefon" type="tel" required value="${escapeHtmlGuide(s.telefon || '')}"></div>
       <div class="rg-row2">
-        <div class="rg-field"><label for="rg-act-tip">Act identitate</label>
+        <div class="rg-field"><label for="rg-act-tip">${g.actTip}</label>
           <select id="rg-act-tip">
-            <option value="CI" ${s.act_tip !== 'pasaport' ? 'selected' : ''}>Carte de identitate</option>
-            <option value="pasaport" ${s.act_tip === 'pasaport' ? 'selected' : ''}>Pașaport</option>
+            <option value="CI" ${s.act_tip !== 'pasaport' ? 'selected' : ''}>${g.actCI}</option>
+            <option value="pasaport" ${s.act_tip === 'pasaport' ? 'selected' : ''}>${g.actPasaport}</option>
           </select>
         </div>
-        <div class="rg-field"><label for="rg-act-nr">Serie și număr</label><input id="rg-act-nr" required value="${escapeHtmlGuide(s.act_serie_numar || '')}"></div>
+        <div class="rg-field"><label for="rg-act-nr">${g.actNr}</label><input id="rg-act-nr" required value="${escapeHtmlGuide(s.act_serie_numar || '')}"></div>
       </div>
-      <div class="rg-field"><label for="rg-cetatenie">Cetățenie</label><input id="rg-cetatenie" required value="${escapeHtmlGuide(s.cetatenie || 'România')}"></div>
+      <div class="rg-field"><label for="rg-cetatenie">${g.cetatenie}</label><input id="rg-cetatenie" required value="${escapeHtmlGuide(s.cetatenie || defaultCetatenie)}"></div>
       <div class="rg-row2">
-        <div class="rg-field"><label for="rg-checkin">Check-in</label><input id="rg-checkin" type="date" required value="${s.check_in || ''}"></div>
-        <div class="rg-field"><label for="rg-checkout">Check-out</label><input id="rg-checkout" type="date" required value="${s.check_out || ''}"></div>
+        <div class="rg-field"><label for="rg-checkin">${g.checkin}</label><input id="rg-checkin" type="date" required value="${s.check_in || ''}"></div>
+        <div class="rg-field"><label for="rg-checkout">${g.checkout}</label><input id="rg-checkout" type="date" required value="${s.check_out || ''}"></div>
       </div>
-      <div class="rg-field"><label for="rg-nr-oaspeti">Număr oaspeți</label><input id="rg-nr-oaspeti" type="number" min="1" required value="${s.nr_oaspeti || ''}"></div>
+      <div class="rg-field"><label for="rg-nr-oaspeti">${g.nrOaspeti}</label><input id="rg-nr-oaspeti" type="number" min="1" required value="${s.nr_oaspeti || ''}"></div>
       ${fotoIdFieldsHtml('rg', s.nr_oaspeti || 1)}
-      <div class="rg-note">Datele sunt văzute doar de gazdă, pentru verificarea identității la check-in — conform cerințelor locale de evidență a turiștilor.</div>
-      <button type="submit" class="rg-submit" id="rg-submit-btn">Trimite înregistrarea</button>
+      <div class="rg-note">${g.note}</div>
+      <button type="submit" class="rg-submit" id="rg-submit-btn">${g.submit}</button>
       <div class="rg-error" id="rg-form-error"></div>
     </form>`;
 
   document.getElementById('rg-form').addEventListener('submit', submitRegistration);
   attachFotoIdCountSync('rg', 'rg-nr-oaspeti');
+}
+
+// Preia valorile deja completate în formularul gate-ului (dacă e afișat) înainte de a
+// schimba limba, ca oaspetele să nu piardă ce a scris deja la un switch RO/EN la mijloc.
+function captureGateFormDraft() {
+  const form = document.getElementById('rg-form');
+  if (!form) return;
+  const val = (id) => { const el = document.getElementById(id); return el ? el.value : undefined; };
+  currentStay = {
+    ...(currentStay || {}),
+    prenume: val('rg-prenume'), nume: val('rg-nume'), email: val('rg-email'), telefon: val('rg-telefon'),
+    act_tip: val('rg-act-tip'), act_serie_numar: val('rg-act-nr'), cetatenie: val('rg-cetatenie'),
+    check_in: val('rg-checkin'), check_out: val('rg-checkout'), nr_oaspeti: val('rg-nr-oaspeti'),
+  };
 }
 
 async function submitRegistration(e) {
@@ -714,7 +743,7 @@ async function submitRegistration(e) {
   const checkIn = document.getElementById('rg-checkin').value;
   const checkOut = document.getElementById('rg-checkout').value;
   if (checkOut && checkIn && checkOut <= checkIn) {
-    errEl.textContent = 'Data de check-out trebuie să fie după check-in.';
+    errEl.textContent = I18N[currentLang].checkoutBeforeCheckin;
     btn.disabled = false;
     return;
   }
@@ -740,13 +769,13 @@ async function submitRegistration(e) {
     try {
       const { paths, missing } = await collectFotoIdPaths('rg', currentOperator.id, stayToken);
       if (missing) {
-        if (fidErrEl) fidErrEl.textContent = 'Gazda cere o poză a actului de identitate — te rugăm să o adaugi mai sus.';
+        if (fidErrEl) fidErrEl.textContent = I18N[currentLang].gate.fotoMissing;
         btn.disabled = false;
         return;
       }
       payload.foto_id_paths = paths;
     } catch (err) {
-      if (fidErrEl) fidErrEl.textContent = 'Nu am putut încărca poza — încearcă din nou.';
+      if (fidErrEl) fidErrEl.textContent = I18N[currentLang].gate.fotoErr;
       btn.disabled = false;
       return;
     }
@@ -762,7 +791,7 @@ async function submitRegistration(e) {
     currentStay = (rows && rows[0]) ? rows[0] : { ...currentStay, ...payload };
     applyRegistrationGate();
   } catch (err) {
-    errEl.textContent = 'Nu am putut trimite înregistrarea — încearcă din nou.';
+    errEl.textContent = I18N[currentLang].gate.saveErr;
     btn.disabled = false;
   }
 }
@@ -779,7 +808,7 @@ async function submitPreinregistrare(e) {
   const checkIn = document.getElementById('prb-checkin').value || null;
   const checkOut = document.getElementById('prb-checkout').value || null;
   if (checkIn && checkOut && checkOut <= checkIn) {
-    errEl.textContent = 'Data de check-out trebuie să fie după check-in.';
+    errEl.textContent = I18N[currentLang].checkoutBeforeCheckin;
     btn.disabled = false;
     return;
   }
@@ -1083,6 +1112,38 @@ const I18N = {
     codeLabel: "Codul tău pentru beneficii",
     codeSub: "Generează-l o dată și arată-l la orice afacere din listă care oferă un beneficiu.",
     codeBtn: "Generează codul meu",
+    checkoutBeforeCheckin: "Data de check-out trebuie să fie după check-in.",
+    gate: {
+      tag: "Înregistrare oaspeți",
+      needStayTitle: "Link personalizat necesar",
+      needStaySub: "Acest apartament cere înregistrare înainte de check-in. Foloseşte linkul primit de la gazdă prin email sau WhatsApp — nu linkul general al ghidului.",
+      needStayTimerNote: "Între timp, îți deblocăm ghidul local (recomandări, afaceri partenere) în câteva secunde — codul de acces rămâne disponibil doar prin linkul tău personal.",
+      pendingTitle: "Îți verificăm datele",
+      pendingThanks: (name) => `Mulțumim, ${name}! `,
+      pendingSub: "Gazda confirmă înregistrarea manual, de obicei în câteva ore. Vei primi un email când accesul e deblocat — poți reveni oricând pe acest link.",
+      rejectedTitle: "Mai e nevoie de o corectare",
+      rejectedSub: "Gazda a cerut o mică corectare înainte să confirme înregistrarea.",
+      rejectedRetry: "Corectează și retrimite",
+      invalidTitle: "Link invalid",
+      formTitle: "Confirmă-ți identitatea",
+      formSub: "Un singur pas înainte de sosire — deblochează adresa, codul de acces și WiFi-ul.",
+      prenume: "Prenume", nume: "Nume", email: "Email", telefon: "Telefon",
+      actTip: "Act identitate", actCI: "Carte de identitate", actPasaport: "Pașaport",
+      actNr: "Serie și număr", cetatenie: "Cetățenie",
+      checkin: "Check-in", checkout: "Check-out", nrOaspeti: "Număr oaspeți",
+      note: "Datele sunt văzute doar de gazdă, pentru verificarea identității la check-in — conform cerințelor locale de evidență a turiștilor.",
+      submit: "Trimite înregistrarea",
+      fotoMissing: "Gazda cere o poză a actului de identitate — te rugăm să o adaugi mai sus.",
+      fotoErr: "Nu am putut încărca poza — încearcă din nou.",
+      saveErr: "Nu am putut trimite înregistrarea — încearcă din nou.",
+    },
+    fid: {
+      titlePerOaspete: "Poză act de identitate pentru fiecare oaspete",
+      titleUnul: "Poză act de identitate (cel care a făcut rezervarea)",
+      labelOaspete: (n) => `Oaspete ${n}`,
+      labelPoza: "Poza actului",
+      note: (host) => `Poza e văzută doar de ${host}, pentru verificarea identității la check-in — se șterge automat la 30 de zile după check-out.`,
+    },
     fac: {
       locatie: "Locație & acces", locatieSub: "Adresă, coordonate GPS, parcare",
       checkin: "Check-in", checkinSub: "Cod de acces, locker, program recepție",
@@ -1161,6 +1222,38 @@ const I18N = {
     codeLabel: "Your benefits code",
     codeSub: "Generate it once and show it at any business in the list that offers a perk.",
     codeBtn: "Generate my code",
+    checkoutBeforeCheckin: "Check-out date must be after check-in.",
+    gate: {
+      tag: "Guest registration",
+      needStayTitle: "Personal link required",
+      needStaySub: "This apartment requires registration before check-in. Please use the link your host sent by email or WhatsApp — not the guide's general link.",
+      needStayTimerNote: "In the meantime, we'll unlock the local guide (recommendations, partner businesses) in a few seconds — the access code stays available only through your personal link.",
+      pendingTitle: "We're checking your details",
+      pendingThanks: (name) => `Thanks, ${name}! `,
+      pendingSub: "Your host confirms registration manually, usually within a few hours. You'll get an email once access is unlocked — you can come back to this link anytime.",
+      rejectedTitle: "One more correction needed",
+      rejectedSub: "Your host asked for a small correction before confirming your registration.",
+      rejectedRetry: "Correct and resend",
+      invalidTitle: "Invalid link",
+      formTitle: "Confirm your identity",
+      formSub: "One step before arrival — unlocks the address, access code and WiFi.",
+      prenume: "First name", nume: "Last name", email: "Email", telefon: "Phone",
+      actTip: "ID type", actCI: "ID card", actPasaport: "Passport",
+      actNr: "ID / passport number", cetatenie: "Nationality",
+      checkin: "Check-in", checkout: "Check-out", nrOaspeti: "Number of guests",
+      note: "Your details are seen only by your host, for identity verification at check-in — as required by local tourist registration rules.",
+      submit: "Submit registration",
+      fotoMissing: "Your host requires an ID photo — please add it above.",
+      fotoErr: "We couldn't upload the photo — please try again.",
+      saveErr: "We couldn't submit your registration — please try again.",
+    },
+    fid: {
+      titlePerOaspete: "ID photo for each guest",
+      titleUnul: "ID photo (the person who made the booking)",
+      labelOaspete: (n) => `Guest ${n}`,
+      labelPoza: "ID photo",
+      note: (host) => `The photo is seen only by ${host}, for identity verification at check-in — it's automatically deleted 30 days after check-out.`,
+    },
     fac: {
       locatie: "Location & access", locatieSub: "Address, GPS coordinates, parking",
       checkin: "Check-in", checkinSub: "Access code, locker, front desk hours",
@@ -1886,7 +1979,11 @@ function renderWelcomeCard(t) {
 }
 
 async function setLang(lang){
+  // dacă poarta de înregistrare e deschisă, salvăm ce a completat deja oaspetele înainte
+  // de a rescrie formularul în noua limbă, ca să nu piardă ce a scris până acum
+  captureGateFormDraft();
   currentLang = lang;
+  try { localStorage.setItem('lokal_guest_lang', lang); } catch (e) {}
   document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
   const t = I18N[lang];
   const cityLabel = currentApt ? LokalsZones.label(zoneList, currentZona) : 'Râșnov';
@@ -1909,15 +2006,34 @@ async function setLang(lang){
   renderWelcomeCard(t);
   renderFilters();
   render(currentFilter);
+  // reface și poarta de înregistrare (formular / mesaj de așteptare / etc.) în noua limbă,
+  // dacă e activă — vezi captureGateFormDraft() mai sus, care păstrează ce a scris oaspetele
+  await applyRegistrationGate();
+}
+
+// Limba preferată a oaspetelui: ?lang= din link (dacă gazda îl personalizează), apoi ultima
+// alegere salvată local, apoi limba browserului — implicit rămâne română. Se aplică ÎNAINTE
+// de primul applyRegistrationGate(), ca poarta de înregistrare să nu mai apară o clipă în
+// română unui oaspete care preferă engleza.
+function detectPreferredLang() {
+  try {
+    const urlLang = params.get('lang');
+    if (urlLang === 'en' || urlLang === 'ro') return urlLang;
+    const saved = localStorage.getItem('lokal_guest_lang');
+    if (saved === 'en' || saved === 'ro') return saved;
+  } catch (e) {}
+  if (navigator.language && navigator.language.toLowerCase().startsWith('en')) return 'en';
+  return 'ro';
 }
 
 async function init() {
   await loadStay();
   await Promise.all([resolveOperator(), loadFeaturesMap(), loadZonesMap()]);
   if (!stayToken && gateRequired()) { await resolveActiveStay(); }
+  currentLang = detectPreferredLang();
   logAccesare(); // apt/currentZona/currentOperator sunt finale aici — nu blocam randarea paginii
-  await applyRegistrationGate();
-  setLang('ro');
+  await applyRegistrationGate(); // blochează ghidul imediat (dacă e cazul), în limba corectă din prima
+  setLang(currentLang); // randează restul paginii; la final re-aplică și poarta, pt. consistență
   loadPlaces();
 }
 
