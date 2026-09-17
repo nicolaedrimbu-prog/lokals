@@ -2406,6 +2406,9 @@ function afgRowHtml(r){
             <input type="checkbox" data-afg-activ="${escapeHtml(r.id)}" ${r.activ ? 'checked' : ''}>
             <span class="track"></span>
           </label>`}
+          ${(!r.arhivat && r.activ && r.beneficiu)
+            ? `<button class="pbtn" type="button" data-afg-print-qr="${escapeHtml(r.id)}" title="Afiș A4 cu 6 coduri QR — folosite de afacere pentru a deschide pagina de confirmare a beneficiilor (partner-redeem)">🖨️ Printează cod QR</button>`
+            : ''}
           <button class="pbtn" data-afg-toggle="${rowId}">Editează</button>
         </div>
       </div>
@@ -2464,6 +2467,9 @@ function renderAfgList(){
   });
   listEl.querySelectorAll('[data-afg-restore]').forEach(btn => {
     btn.addEventListener('click', () => handleAfgRestore(btn.dataset.afgRestore, btn));
+  });
+  listEl.querySelectorAll('[data-afg-print-qr]').forEach(btn => {
+    btn.addEventListener('click', () => window.open(`afacere-qr-print.html?afacere=${encodeURIComponent(btn.dataset.afgPrintQr)}`, '_blank'));
   });
 }
 

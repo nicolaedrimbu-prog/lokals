@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Poppins:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root{
     --teal-deep:#10302B; --teal:#1A4A42; --gold:#C98A2C; --gold-soft:#E8CE9E;
@@ -19,6 +20,9 @@
   .toolbar{max-width:210mm; margin:0 auto; padding:18px 0; display:flex; justify-content:space-between; align-items:center;}
   .back-link{font-size:13px; font-weight:600; color:var(--teal-deep); text-decoration:none;}
   .print-btn{background:var(--teal-deep); color:#fff; border:none; font-size:13.5px; font-weight:700; padding:10px 20px; border-radius:999px; cursor:pointer; font-family:inherit;}
+  .toolbar-btns{display:flex; gap:8px; flex-wrap:wrap;}
+  .save-btn{background:#fff; color:var(--teal-deep); border:1.5px solid var(--teal-deep); font-size:13.5px; font-weight:700; padding:9px 18px; border-radius:999px; cursor:pointer; font-family:inherit;}
+  .save-btn:disabled{opacity:.55; cursor:default;}
   .toolbar-note{max-width:210mm; margin:0 auto 18px; font-size:12.5px; color:var(--ink-soft); line-height:1.5;}
 
   .state-msg{max-width:500px; margin:80px auto; text-align:center; color:var(--ink-soft); font-size:14px;}
@@ -53,9 +57,12 @@
 
 <div class="toolbar no-print">
   <a class="back-link" href="contul-meu.html">← Înapoi la proprietățile mele</a>
-  <button class="print-btn" id="btn-print">Printează / Descarcă PDF</button>
+  <div class="toolbar-btns">
+    <button class="save-btn" id="btn-save" disabled>Se pregătește PDF-ul…</button>
+    <button class="print-btn" id="btn-print">Printează</button>
+  </div>
 </div>
-<p class="toolbar-note no-print">6 cartonașe identice pe o pagină A4 — decupează-le și lipește unul lângă casă/recepție. Fiecare cod QR deschide aceeași aplicație de confirmare a beneficiilor Lokals pentru afacerea ta.</p>
+<p class="toolbar-note no-print">6 cartonașe identice pe o pagină A4 — decupează-le și lipește unul lângă casă/recepție. Fiecare cod QR deschide aceeași aplicație de confirmare a beneficiilor Lokals pentru afacerea ta. Folosește <b>Salvează / Distribuie</b> ca să trimiți afișul direct partenerului (WhatsApp, email etc.), fără să mai treci prin printare.</p>
 
 <div id="state-loading" class="state-msg">Se încarcă afișul...</div>
 <div id="state-error" class="state-msg" style="display:none;">Nu am găsit această afacere, sau nu e încă pregătită pentru scanare (trebuie să fie activă în ghid și să aibă un beneficiu setat). Scrie-ne ca s-o activăm, apoi revino aici.</div>
@@ -82,11 +89,100 @@ function tileHtml(nume) {
   `;
 }
 
+// ===== Generare PDF (identic ca așezare cu coala printabilă) — pentru butonul Salvează/Distribuie =====
+// Desenăm direct în jsPDF (fără screenshot al paginii), folosind imaginea codului QR deja
+// randat pe canvas de qrcodejs — rezultatul e un PDF mic, text selectabil, nu o poză a ecranului.
+function qrDataUrlFromHolder(holder) {
+  const canvas = holder.querySelector('canvas');
+  if (canvas) return canvas.toDataURL('image/png');
+  const img = holder.querySelector('img');
+  return img ? img.src : null;
+}
+
+function buildPosterPdf(nume, qrDataUrls) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const pageW = 210, pageH = 297, margin = 10, gap = 6;
+  const cols = 2, rows = 3;
+  const cellW = (pageW - margin * 2 - gap) / cols;
+  const cellH = (pageH - margin * 2 - gap * (rows - 1)) / rows;
+
+  for (let i = 0; i < cols * rows; i++) {
+    const col = i % cols, row = Math.floor(i / cols);
+    const x = margin + col * (cellW + gap);
+    const y = margin + row * (cellH + gap);
+    const cx = x + cellW / 2;
+
+    doc.setDrawColor(220, 213, 198);
+    doc.roundedRect(x, y, cellW, cellH, 3, 3, 'S');
+
+    let cursorY = y + 10;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(16, 48, 43);
+    doc.text('lokals', cx, cursorY, { align: 'center' });
+
+    cursorY += 6;
+    doc.setFontSize(9); doc.setTextColor(201, 138, 44);
+    doc.text(nume.toUpperCase(), cx, cursorY, { maxWidth: cellW - 10, align: 'center' });
+
+    cursorY += 7;
+    doc.setFontSize(12); doc.setTextColor(16, 48, 43);
+    doc.text('Scanare beneficii Lokals', cx, cursorY, { align: 'center' });
+
+    const qrSize = 32;
+    doc.addImage(qrDataUrls[i], 'PNG', cx - qrSize / 2, cursorY + 4, qrSize, qrSize);
+
+    let textY = cursorY + 4 + qrSize + 6;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(24, 30, 27);
+    const whatLines = doc.splitTextToSize('Scanează cu telefonul de la casă/recepție pentru a deschide aplicația de confirmare a beneficiilor Lokals.', cellW - 12);
+    doc.text(whatLines, cx, textY, { align: 'center' });
+    textY += whatLines.length * 3.4 + 3;
+
+    doc.setDrawColor(220, 213, 198);
+    doc.line(x + 6, textY - 1.5, x + cellW - 6, textY - 1.5);
+    doc.setFontSize(7); doc.setTextColor(91, 100, 89);
+    const howLines = doc.splitTextToSize('La plată: deschide linkul de mai sus și scanează codul QR pe care clientul ți-l arată din ghidul Lokals, ca să-i confirmi instant beneficiul.', cellW - 12);
+    doc.text(howLines, cx, textY + 2, { align: 'center' });
+  }
+  return doc;
+}
+
+let pdfDoc = null;
+let posterNume = '';
+
+async function initSaveShareButton() {
+  const btn = document.getElementById('btn-save');
+  if (!pdfDoc) return;
+  const fileSlug = posterNume.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'afacere';
+  const fileName = `lokals-qr-${fileSlug}.pdf`;
+  const blob = pdfDoc.output('blob');
+  const canShareFile = !!(navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: 'application/pdf' })] }));
+
+  btn.disabled = false;
+  btn.textContent = canShareFile ? '📤 Distribuie / trimite' : '⬇️ Descarcă PDF';
+  btn.onclick = async () => {
+    if (canShareFile) {
+      try {
+        await navigator.share({
+          files: [new File([blob], fileName, { type: 'application/pdf' })],
+          title: `Afiș QR Lokals — ${posterNume}`,
+          text: `Afișul cu codurile QR pentru scanarea beneficiilor Lokals la ${posterNume}.`,
+        });
+        return;
+      } catch (e) {
+        if (e && e.name === 'AbortError') return; // omul a anulat din fereastra de distribuire
+        // dacă distribuirea eșuează dintr-un alt motiv, continuăm mai jos cu descărcarea directă
+      }
+    }
+    pdfDoc.save(fileName);
+  };
+}
+
 async function init() {
   const afacereId = new URLSearchParams(window.location.search).get('afacere');
   if (!afacereId) {
     document.getElementById('state-loading').style.display = 'none';
     document.getElementById('state-error').style.display = '';
+    document.getElementById('btn-save').style.display = 'none';
     return;
   }
 
@@ -99,6 +195,7 @@ async function init() {
   document.getElementById('state-loading').style.display = 'none';
   if (!row || row.activ !== true || !row.beneficiu) {
     document.getElementById('state-error').style.display = '';
+    document.getElementById('btn-save').style.display = 'none';
     return;
   }
 
@@ -112,6 +209,16 @@ async function init() {
   });
   document.title = `Afiș QR scanare beneficii — ${nume}`;
   sheet.style.display = '';
+
+  try {
+    const qrDataUrls = Array.from(sheet.querySelectorAll('.tile-qr-holder')).map(qrDataUrlFromHolder);
+    posterNume = nume;
+    pdfDoc = buildPosterPdf(nume, qrDataUrls);
+    await initSaveShareButton();
+  } catch (e) {
+    // dacă generarea PDF eșuează dintr-un motiv oarecare, rămâne oricum printarea din browser
+    document.getElementById('btn-save').style.display = 'none';
+  }
 }
 
 document.getElementById('btn-print').addEventListener('click', () => window.print());
