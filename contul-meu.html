@@ -320,25 +320,6 @@ function renderCazari(rows, unreadCounts) {
       </div>
       ${row.inregistrare_activa ? `<div class="reg-note">🔒 Verificare identitate activă — „Vezi ghidul” și „Distribuie” arată automat ghidul oaspetelui validat azi. Exportul PDF e dezactivat (nu poate cere verificarea identității).</div>` : ''}
       ${row.tip === 'hotel' && !row.preinregistrare_activa ? `<div class="reg-note">🧾 Preînregistrare recepție — dezactivată. Odată activată din panoul administratorului, poți copia link-ul de recepție și printa afișul cu cod QR pentru front-desk.</div>` : ''}
-      ${row.tip === 'hotel' && row.preinregistrare_activa ? `
-        <div class="reg-toggle-row" style="margin:10px 0 0;">
-          <div>
-            <div class="reg-toggle-label">Cere poză act de identitate</div>
-            <div class="reg-toggle-sub">Oaspetele trebuie să încarce o poză a actului odată cu formularul de preînregistrare.</div>
-          </div>
-          <label class="switch">
-            <input type="checkbox" data-fotoid-hotel-toggle="${row.id}" ${row.necesita_foto_id ? 'checked' : ''}>
-            <span class="slider"></span>
-          </label>
-        </div>
-        <div data-fotoid-hotel-mode-wrap="${row.id}" style="${row.necesita_foto_id ? '' : 'display:none;'} margin:-6px 0 4px;">
-          <label style="font-size:11px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.02em; display:block; margin-bottom:5px;">Câte poze?</label>
-          <select data-fotoid-hotel-mode="${row.id}" style="border:1.5px solid var(--line); border-radius:8px; padding:7px 10px; font-size:12.5px; font-family:inherit; width:100%; box-sizing:border-box; background:#fff; color:var(--ink);">
-            <option value="single" ${!row.foto_id_per_oaspete ? 'selected' : ''}>O singură poză — cel care a făcut rezervarea</option>
-            <option value="per_oaspete" ${row.foto_id_per_oaspete ? 'selected' : ''}>Câte o poză pentru fiecare oaspete</option>
-          </select>
-        </div>
-      ` : ''}
       ${isEssential ? `<div class="reg-panel" id="reg-panel-${row.id}"></div>` : ''}
     `;
     wrap.appendChild(card);
@@ -526,120 +507,156 @@ function renderRegPanel(operatorId) {
   const panel = document.getElementById('reg-panel-' + operatorId);
   if (!panel) return;
   const op = OPERATORI_BY_ID[operatorId];
-  panel.innerHTML = `
-    <div class="reg-toggle-row">
-      <div>
-        <div class="reg-toggle-label">Verificare identitate oaspeți</div>
-        <div class="reg-toggle-sub">Odată activă, oaspeții primesc câte un link personal pentru fiecare rezervare, iar ghidul li se deblochează după validare.</div>
-      </div>
-      <label class="switch">
-        <input type="checkbox" data-reg-activ-toggle="${operatorId}" ${op && op.inregistrare_activa ? 'checked' : ''}>
-        <span class="slider"></span>
-      </label>
+  const isHotel = !!(op && op.tip === 'hotel');
+
+  const genBoxHtml = `
+    <!-- Completare automată din email (Booking.com/Airbnb): ascunsă temporar — Booking.com nu include datele rezervării în corpul emailului, deci AI-ul nu are ce extrage. Backend-ul (coloane, edge function, toggle) rămâne intact, doar UI-ul e ascuns ca să nu creeze confuzie. -->
+    <div class="reg-gen-box">
+      <div class="reg-gen-title">Cazare nouă</div>
+      <form class="reg-form" data-reg-gen-form="${operatorId}">
+        <div>
+          <label>Email oaspete (opțional)</label>
+          <input type="email" data-reg-gen-email placeholder="oaspete@exemplu.com">
+        </div>
+        <div>
+          <label>Telefon oaspete (opțional)</label>
+          <input type="tel" data-reg-gen-telefon placeholder="07xx xxx xxx">
+        </div>
+        <button type="submit" class="reg-gen-btn">Generează link nou</button>
+        <span class="reg-msg" data-reg-gen-msg style="grid-column:1/-1;"></span>
+      </form>
+      <div class="reg-result" data-reg-gen-result style="display:none;"></div>
     </div>
-    <div id="reg-gen-wrap-${operatorId}" style="${op && op.inregistrare_activa ? '' : 'display:none;'}">
-      <div class="reg-toggle-row" style="margin-top:-4px;">
+    <div class="reg-list-title" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+      <span>Înregistrările acestei cazări</span>
+      <button type="button" class="reg-btn" data-reg-fisa="${operatorId}" style="text-transform:none; letter-spacing:normal; font-weight:600;">📋 Fișă de ocupare</button>
+    </div>
+    <div data-reg-list></div>
+  `;
+
+  if (isHotel) {
+    // La hotel, verificarea identității e legată de preînregistrarea la check-in (activată din panoul administratorului) — nu mai există un toggle separat aici.
+    if (!op.preinregistrare_activa) {
+      panel.innerHTML = `<div class="reg-empty">Preînregistrarea la check-in e dezactivată pentru această unitate — activeaz-o din panoul administratorului ca să poți genera linkuri de înregistrare pentru oaspeți.</div>`;
+      renderRegList(operatorId);
+      return;
+    }
+    panel.innerHTML = `
+      <div class="reg-toggle-row">
         <div>
           <div class="reg-toggle-label">Cere poză act de identitate</div>
-          <div class="reg-toggle-sub">Oaspetele trebuie să încarce o poză a actului odată cu formularul, înainte să-l validezi.</div>
+          <div class="reg-toggle-sub">Oaspetele trebuie să încarce o poză a actului odată cu formularul de preînregistrare.</div>
         </div>
         <label class="switch">
-          <input type="checkbox" data-fotoid-toggle="${operatorId}" ${op && op.necesita_foto_id ? 'checked' : ''}>
+          <input type="checkbox" data-fotoid-hotel-toggle="${operatorId}" ${op.necesita_foto_id ? 'checked' : ''}>
           <span class="slider"></span>
         </label>
       </div>
-      <div data-fotoid-mode-wrap="${operatorId}" style="${op && op.necesita_foto_id ? '' : 'display:none;'} margin:-6px 0 16px;">
+      <div data-fotoid-hotel-mode-wrap="${operatorId}" style="${op.necesita_foto_id ? '' : 'display:none;'} margin:0 0 16px;">
         <label style="font-size:11px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.02em; display:block; margin-bottom:5px;">Câte poze?</label>
-        <select data-fotoid-mode="${operatorId}" style="border:1.5px solid var(--line); border-radius:8px; padding:7px 10px; font-size:12.5px; font-family:inherit; width:100%; box-sizing:border-box; background:#fff; color:var(--ink);">
-          <option value="single" ${!(op && op.foto_id_per_oaspete) ? 'selected' : ''}>O singură poză — cel care a făcut rezervarea</option>
-          <option value="per_oaspete" ${op && op.foto_id_per_oaspete ? 'selected' : ''}>Câte o poză pentru fiecare oaspete</option>
+        <select data-fotoid-hotel-mode="${operatorId}" style="border:1.5px solid var(--line); border-radius:8px; padding:7px 10px; font-size:12.5px; font-family:inherit; width:100%; box-sizing:border-box; background:#fff; color:var(--ink);">
+          <option value="single" ${!op.foto_id_per_oaspete ? 'selected' : ''}>O singură poză — cel care a făcut rezervarea</option>
+          <option value="per_oaspete" ${op.foto_id_per_oaspete ? 'selected' : ''}>Câte o poză pentru fiecare oaspete</option>
         </select>
       </div>
-      <!-- Completare automată din email (Booking.com/Airbnb): ascunsă temporar — Booking.com nu include datele rezervării în corpul emailului, deci AI-ul nu are ce extrage. Backend-ul (coloane, edge function, toggle) rămâne intact, doar UI-ul e ascuns ca să nu creeze confuzie. -->
-      <div class="reg-gen-box">
-        <div class="reg-gen-title">Cazare nouă</div>
-        <form class="reg-form" data-reg-gen-form="${operatorId}">
-          <div>
-            <label>Email oaspete (opțional)</label>
-            <input type="email" data-reg-gen-email placeholder="oaspete@exemplu.com">
-          </div>
-          <div>
-            <label>Telefon oaspete (opțional)</label>
-            <input type="tel" data-reg-gen-telefon placeholder="07xx xxx xxx">
-          </div>
-          <button type="submit" class="reg-gen-btn">Generează link nou</button>
-          <span class="reg-msg" data-reg-gen-msg style="grid-column:1/-1;"></span>
-        </form>
-        <div class="reg-result" data-reg-gen-result style="display:none;"></div>
+      ${genBoxHtml}
+    `;
+    // data-fotoid-hotel-toggle / data-fotoid-hotel-mode sunt gestionate de listener-ul delegat pe #list-cazari — nu mai e nevoie de handlere separate aici.
+  } else {
+    panel.innerHTML = `
+      <div class="reg-toggle-row">
+        <div>
+          <div class="reg-toggle-label">Verificare identitate oaspeți</div>
+          <div class="reg-toggle-sub">Odată activă, oaspeții primesc câte un link personal pentru fiecare rezervare, iar ghidul li se deblochează după validare.</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" data-reg-activ-toggle="${operatorId}" ${op && op.inregistrare_activa ? 'checked' : ''}>
+          <span class="slider"></span>
+        </label>
       </div>
-      <div class="reg-list-title" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-        <span>Înregistrările acestei cazări</span>
-        <button type="button" class="reg-btn" data-reg-fisa="${operatorId}" style="text-transform:none; letter-spacing:normal; font-weight:600;">📋 Fișă de ocupare</button>
+      <div id="reg-gen-wrap-${operatorId}" style="${op && op.inregistrare_activa ? '' : 'display:none;'}">
+        <div class="reg-toggle-row" style="margin-top:0;">
+          <div>
+            <div class="reg-toggle-label">Cere poză act de identitate</div>
+            <div class="reg-toggle-sub">Oaspetele trebuie să încarce o poză a actului odată cu formularul, înainte să-l validezi.</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" data-fotoid-toggle="${operatorId}" ${op && op.necesita_foto_id ? 'checked' : ''}>
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div data-fotoid-mode-wrap="${operatorId}" style="${op && op.necesita_foto_id ? '' : 'display:none;'} margin:0 0 16px;">
+          <label style="font-size:11px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.02em; display:block; margin-bottom:5px;">Câte poze?</label>
+          <select data-fotoid-mode="${operatorId}" style="border:1.5px solid var(--line); border-radius:8px; padding:7px 10px; font-size:12.5px; font-family:inherit; width:100%; box-sizing:border-box; background:#fff; color:var(--ink);">
+            <option value="single" ${!(op && op.foto_id_per_oaspete) ? 'selected' : ''}>O singură poză — cel care a făcut rezervarea</option>
+            <option value="per_oaspete" ${op && op.foto_id_per_oaspete ? 'selected' : ''}>Câte o poză pentru fiecare oaspete</option>
+          </select>
+        </div>
+        ${genBoxHtml}
       </div>
-      <div data-reg-list></div>
-    </div>
-  `;
+    `;
 
-  panel.querySelector(`[data-reg-activ-toggle="${operatorId}"]`).addEventListener('change', async (e) => {
-    const activ = e.target.checked;
-    e.target.disabled = true;
-    const { error } = await supabaseClient.from('operatori').update({ inregistrare_activa: activ }).eq('id', operatorId);
-    e.target.disabled = false;
-    if (error) {
-      console.error(error);
-      e.target.checked = !activ;
-      alert('Nu am putut salva schimbarea — încearcă din nou.');
-      return;
-    }
-    if (op) op.inregistrare_activa = activ;
-    panel.querySelector(`#reg-gen-wrap-${operatorId}`).style.display = activ ? '' : 'none';
-    // reflectăm nota + dezactivarea exportului PDF fără să reconstruim tot cardul
-    const card = document.getElementById('reg-panel-' + operatorId).closest('.card');
-    let note = card.querySelector('.reg-note');
-    if (activ && !note) {
-      note = document.createElement('div');
-      note.className = 'reg-note';
-      note.textContent = '🔒 Verificare identitate activă — „Vezi ghidul” și „Distribuie” arată automat ghidul oaspetelui validat azi. Exportul PDF e dezactivat (nu poate cere verificarea identității).';
-      card.querySelector('.card-actions').insertAdjacentElement('afterend', note);
-    } else if (!activ && note) {
-      note.remove();
-    }
-    const pdfBtn = card.querySelector('[data-choose="pdf"]');
-    if (activ && pdfBtn) pdfBtn.remove();
-    if (!activ && !pdfBtn) {
-      const step1 = card.querySelector('.share-step1');
-      if (step1) step1.insertAdjacentHTML('beforeend', `<button class="share-opt" type="button" data-choose="pdf">${PDF_ICON} <span>Ghid PDF<span class="share-opt-sub">Variantă offline, printabilă</span></span></button>`);
-    }
-  });
+    panel.querySelector(`[data-reg-activ-toggle="${operatorId}"]`).addEventListener('change', async (e) => {
+      const activ = e.target.checked;
+      e.target.disabled = true;
+      const { error } = await supabaseClient.from('operatori').update({ inregistrare_activa: activ }).eq('id', operatorId);
+      e.target.disabled = false;
+      if (error) {
+        console.error(error);
+        e.target.checked = !activ;
+        alert('Nu am putut salva schimbarea — încearcă din nou.');
+        return;
+      }
+      if (op) op.inregistrare_activa = activ;
+      panel.querySelector(`#reg-gen-wrap-${operatorId}`).style.display = activ ? '' : 'none';
+      // reflectăm nota + dezactivarea exportului PDF fără să reconstruim tot cardul
+      const card = document.getElementById('reg-panel-' + operatorId).closest('.card');
+      let note = card.querySelector('.reg-note');
+      if (activ && !note) {
+        note = document.createElement('div');
+        note.className = 'reg-note';
+        note.textContent = '🔒 Verificare identitate activă — „Vezi ghidul” și „Distribuie” arată automat ghidul oaspetelui validat azi. Exportul PDF e dezactivat (nu poate cere verificarea identității).';
+        card.querySelector('.card-actions').insertAdjacentElement('afterend', note);
+      } else if (!activ && note) {
+        note.remove();
+      }
+      const pdfBtn = card.querySelector('[data-choose="pdf"]');
+      if (activ && pdfBtn) pdfBtn.remove();
+      if (!activ && !pdfBtn) {
+        const step1 = card.querySelector('.share-step1');
+        if (step1) step1.insertAdjacentHTML('beforeend', `<button class="share-opt" type="button" data-choose="pdf">${PDF_ICON} <span>Ghid PDF<span class="share-opt-sub">Variantă offline, printabilă</span></span></button>`);
+      }
+    });
 
-  panel.querySelector(`[data-fotoid-toggle="${operatorId}"]`).addEventListener('change', async (e) => {
-    const necesita = e.target.checked;
-    e.target.disabled = true;
-    const { error } = await supabaseClient.from('operatori').update({ necesita_foto_id: necesita }).eq('id', operatorId);
-    e.target.disabled = false;
-    if (error) {
-      console.error(error);
-      e.target.checked = !necesita;
-      alert('Nu am putut salva schimbarea — încearcă din nou.');
-      return;
-    }
-    if (op) op.necesita_foto_id = necesita;
-    const modeWrap = panel.querySelector(`[data-fotoid-mode-wrap="${operatorId}"]`);
-    if (modeWrap) modeWrap.style.display = necesita ? '' : 'none';
-  });
+    panel.querySelector(`[data-fotoid-toggle="${operatorId}"]`).addEventListener('change', async (e) => {
+      const necesita = e.target.checked;
+      e.target.disabled = true;
+      const { error } = await supabaseClient.from('operatori').update({ necesita_foto_id: necesita }).eq('id', operatorId);
+      e.target.disabled = false;
+      if (error) {
+        console.error(error);
+        e.target.checked = !necesita;
+        alert('Nu am putut salva schimbarea — încearcă din nou.');
+        return;
+      }
+      if (op) op.necesita_foto_id = necesita;
+      const modeWrap = panel.querySelector(`[data-fotoid-mode-wrap="${operatorId}"]`);
+      if (modeWrap) modeWrap.style.display = necesita ? '' : 'none';
+    });
 
-  panel.querySelector(`[data-fotoid-mode="${operatorId}"]`).addEventListener('change', async (e) => {
-    const perOaspete = e.target.value === 'per_oaspete';
-    e.target.disabled = true;
-    const { error } = await supabaseClient.from('operatori').update({ foto_id_per_oaspete: perOaspete }).eq('id', operatorId);
-    e.target.disabled = false;
-    if (error) {
-      console.error(error);
-      alert('Nu am putut salva schimbarea — încearcă din nou.');
-      return;
-    }
-    if (op) op.foto_id_per_oaspete = perOaspete;
-  });
+    panel.querySelector(`[data-fotoid-mode="${operatorId}"]`).addEventListener('change', async (e) => {
+      const perOaspete = e.target.value === 'per_oaspete';
+      e.target.disabled = true;
+      const { error } = await supabaseClient.from('operatori').update({ foto_id_per_oaspete: perOaspete }).eq('id', operatorId);
+      e.target.disabled = false;
+      if (error) {
+        console.error(error);
+        alert('Nu am putut salva schimbarea — încearcă din nou.');
+        return;
+      }
+      if (op) op.foto_id_per_oaspete = perOaspete;
+    });
+  }
 
   panel.querySelector(`[data-reg-fisa="${operatorId}"]`).addEventListener('click', () => openFisaOcupare(operatorId));
 
