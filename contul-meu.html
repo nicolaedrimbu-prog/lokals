@@ -22,8 +22,8 @@
   .card-thumb{width:52px; height:52px; border-radius:12px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:var(--cream); overflow:hidden;}
   .card-thumb img{width:100%; height:100%; object-fit:cover;}
   .card-info{flex:1; min-width:0;}
-  .card-name{font-size:14.5px; font-weight:700; color:var(--ink);}
-  .card-sub{font-size:12px; color:var(--ink-soft); margin-top:2px;}
+  .card-name{font-size:18px; font-weight:700; color:var(--teal-deep); font-family:'Fraunces', Georgia, serif; line-height:1.25;}
+  .card-sub{font-size:13px; font-weight:500; color:var(--ink-soft); margin-top:3px;}
   .badge{display:inline-block; font-size:9.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; padding:3px 9px; border-radius:999px; margin-top:6px;}
   .badge-cazare{background:#E3ECE4; color:var(--teal-deep);}
   .badge-afacere{background:#FBEEDA; color:#8F6222;}
@@ -40,6 +40,9 @@
   .action-btn:hover{border-color:var(--teal-deep); background:var(--cream);}
   .action-btn svg{flex-shrink:0;}
   .action-btn.active{border-color:var(--teal-deep); background:var(--teal-deep); color:#fff;}
+  .action-btn-long{flex:1 1 100%;}
+  .action-btn-cta{background:var(--teal-deep); color:#fff; border-color:var(--teal-deep); font-weight:700; padding:11px 8px;}
+  .action-btn-cta:hover{background:var(--teal); border-color:var(--teal);}
   .share-wrap{position:relative; flex:1 1 calc(50% - 4px); min-width:110px;}
   .share-wrap .action-btn{width:100%;}
   .share-popover{position:absolute; top:calc(100% + 8px); right:0; width:248px; background:var(--pop-bg); border:1px solid var(--pop-line);
@@ -286,7 +289,7 @@ function renderCazari(rows, unreadCounts) {
       </a>
       <div class="card-actions">
         <a class="action-btn" href="facturare.html?slug=${encodeURIComponent(row.slug)}">${BILLING_ICON} Facturare</a>
-        <button class="action-btn" type="button" data-action="qr" data-slug="${row.slug}">${QR_ICON} Afiș QR</button>
+        <button class="action-btn" type="button" data-action="qr" data-slug="${row.slug}">${QR_ICON} ${row.tip === 'hotel' ? 'Afiș QR cameră' : 'Afiș QR apt.'}</button>
         <div class="share-wrap">
           <button class="action-btn" type="button" data-action="share" data-slug="${row.slug}" data-nume="${nume.replace(/"/g, '&quot;')}">${SHARE_ICON} Distribuie</button>
           <div class="share-popover" data-popover-for="${row.slug}" data-step="1">
@@ -307,12 +310,12 @@ function renderCazari(rows, unreadCounts) {
         <a class="action-btn" href="${guideUrl(row.slug)}" target="_blank" rel="noopener">${GUIDE_ICON} Vezi ghidul</a>
         <a class="action-btn" href="curatenie-mentenanta.html?slug=${encodeURIComponent(row.slug)}">${CLEAN_ICON} Curățenie</a>
         <a class="action-btn" style="position:relative;" href="feedback-oaspeti.html?slug=${encodeURIComponent(row.slug)}">${FEEDBACK_ICON} Feedback${unread ? `<span class="fb-badge">${unread}</span>` : ''}</a>
-        ${isEssential ? `
-          <button class="action-btn" type="button" style="position:relative;" data-action="reginfo" data-op-id="${row.id}">${REGISTRATION_ICON} Înregistrare oaspeți${regPending ? `<span class="fb-badge">${regPending}</span>` : ''}</button>
-        ` : ''}
         ${row.tip === 'hotel' && row.preinregistrare_activa ? `
           <button class="action-btn" type="button" data-action="copy-receptie" data-id="${row.id}">${COPY_ICON} <span data-copy-receptie-label="${row.id}">Copiază link recepție</span></button>
-          <button class="action-btn" type="button" data-action="print-receptie-qr" data-id="${row.id}">${PRINT_ICON} Printează cod QR</button>
+          <button class="action-btn" type="button" data-action="print-receptie-qr" data-id="${row.id}">${PRINT_ICON} Printează QR Recepție</button>
+        ` : ''}
+        ${isEssential ? `
+          <button class="action-btn action-btn-long action-btn-cta" type="button" style="position:relative;" data-action="reginfo" data-op-id="${row.id}">${REGISTRATION_ICON} Înregistrare oaspeți${regPending ? `<span class="fb-badge">${regPending}</span>` : ''}</button>
         ` : ''}
       </div>
       ${row.inregistrare_activa ? `<div class="reg-note">🔒 Verificare identitate activă — „Vezi ghidul” și „Distribuie” arată automat ghidul oaspetelui validat azi. Exportul PDF e dezactivat (nu poate cere verificarea identității).</div>` : ''}
