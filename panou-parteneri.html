@@ -142,6 +142,9 @@
   #tabbar{background:#fff; border-bottom:1px solid var(--line); padding:0 40px; display:flex; gap:4px;}
   .tabbtn{background:transparent; border:none; border-bottom:2.5px solid transparent; color:var(--ink-soft); font-family:inherit; font-size:14px; font-weight:600; padding:14px 16px; cursor:pointer;}
   .tabbtn.active{color:var(--teal-deep); border-bottom-color:var(--gold);}
+  .fb-badge{position:absolute; top:7px; right:2px; background:#D6455E; color:#fff; font-size:10px; font-weight:700; line-height:1; min-width:17px; height:17px; border-radius:999px; display:flex; align-items:center; justify-content:center; padding:0 4px; box-shadow:0 0 0 2px #fff;}
+  .afg-pending-banner{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; background:#FCEEF1; border:1.5px solid #F0C3CD; color:#7A2438; border-radius:12px; padding:12px 16px; margin:0 0 18px; font-size:13.5px; font-weight:600;}
+  .afg-pending-banner button{background:#D6455E; color:#fff; border:none; padding:8px 14px; border-radius:999px; font-size:12.5px; font-weight:700; font-family:inherit; cursor:pointer; white-space:nowrap;}
   .tabpanel{display:none;}
   .tabpanel.active{display:block;}
 
@@ -255,7 +258,7 @@
   <div id="tabbar">
     <button class="tabbtn active" data-tab="tab-cazari" data-domain="apartament">Apartamente</button>
     <button class="tabbtn" data-tab="tab-cazari" data-domain="hotel">Hoteluri</button>
-    <button class="tabbtn" data-tab="tab-cazari" data-domain="afaceri">Afaceri locale</button>
+    <button class="tabbtn" data-tab="tab-cazari" data-domain="afaceri" style="position:relative;">Afaceri locale<span id="afg-pending-tab-badge" class="fb-badge" style="display:none;"></span></button>
     <button class="tabbtn" data-tab="tab-zone">Zone</button>
     <button class="tabbtn" data-tab="tab-demo">Demo</button>
     <button class="tabbtn" data-tab="tab-inregistrari">Înregistrări oaspeți</button>
@@ -302,6 +305,11 @@
       <div class="bo-title">🗂️ Baza de date — afaceri locale (ghidul turistic) <span class="count" id="afg-count">…</span></div>
       <p class="lead" style="margin:-4px 0 14px; font-size:12.5px;">Sursa afacerilor din ghidul turistic (tabelul <code style="background:var(--cream); padding:1px 5px; border-radius:5px;">afaceri_ghid</code> din Supabase) — a înlocuit vechiul Google Sheet, care nu mai e folosit. Modifică, adaugă sau dezactivează afaceri direct de aici.</p>
 
+      <div id="afg-pending-banner" class="afg-pending-banner" style="display:none;">
+        <span>✏️ <span id="afg-pending-banner-text">0 modificări</span> de la parteneri așteaptă validarea ta.</span>
+        <button type="button" id="afg-pending-banner-btn">Arată-le</button>
+      </div>
+
       <div id="revend-section" style="display:none; margin-bottom:26px;">
         <div class="bo-title" style="font-size:14px;">🔗 Revendicări de asociere în așteptare <span class="count" id="revend-count">…</span></div>
         <p class="lead" style="margin:-2px 0 12px; font-size:12.5px;">Cineva care s-a înscris prin formularul de parteneri a spus că una din afacerile de mai jos (fără email încă) e a lui. Aprobă doar dacă ești sigur că e chiar afacerea lui — asta îi completează emailul pe afacere și îi permite să o gestioneze din contul lui.</p>
@@ -322,6 +330,9 @@
           </label>
           <label style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--ink-soft); border:1.5px solid var(--line); border-radius:11px; padding:8px 12px; cursor:pointer; background:#fff;">
             <input type="checkbox" id="afg-archived-filter" style="margin:0;"> 🗄 Arhivă <span id="afg-archived-count" class="count" style="margin-left:2px;"></span>
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:#7A2438; border:1.5px solid #F0C3CD; border-radius:11px; padding:8px 12px; cursor:pointer; background:#FCEEF1;">
+            <input type="checkbox" id="afg-pending-filter" style="margin:0;"> ✏️ De verificat <span id="afg-pending-count" class="count" style="margin-left:2px;"></span>
           </label>
         </div>
         <button class="pbtn primary" id="afg-btn-add">+ Adaugă afacere nouă</button>
@@ -2483,10 +2494,32 @@ function afgRowHtml(r){
   `;
 }
 
+function updateAfgPendingNotice(){
+  const pendingTotal = AFG_ROWS.filter(r => !r.arhivat && r.modificari_in_asteptare).length;
+  document.getElementById('afg-pending-count').textContent = pendingTotal ? `(${pendingTotal})` : '';
+
+  const banner = document.getElementById('afg-pending-banner');
+  if (pendingTotal) {
+    banner.style.display = '';
+    document.getElementById('afg-pending-banner-text').textContent = pendingTotal === 1 ? '1 modificare' : `${pendingTotal} modificări`;
+  } else {
+    banner.style.display = 'none';
+  }
+
+  const tabBadge = document.getElementById('afg-pending-tab-badge');
+  if (pendingTotal) {
+    tabBadge.textContent = pendingTotal;
+    tabBadge.style.display = 'flex';
+  } else {
+    tabBadge.style.display = 'none';
+  }
+}
+
 function renderAfgList(){
   const q = (document.getElementById('afg-search').value || '').trim().toLowerCase();
   const noEmailOnly = document.getElementById('afg-no-email-filter').checked;
   const archivedOnly = document.getElementById('afg-archived-filter').checked;
+  const pendingOnly = document.getElementById('afg-pending-filter').checked;
   // Ca la operatori/candidați — cele arhivate ies din lista normală de lucru; le vezi doar
   // bifând explicit "Arhivă" (recipientul e un coș de reciclare, nu se amestecă în listă).
   let list = archivedOnly ? AFG_ROWS.filter(r => r.arhivat) : AFG_ROWS.filter(r => !r.arhivat);
@@ -2494,11 +2527,13 @@ function renderAfgList(){
   if (afgCatFilter !== 'toate') list = list.filter(r => r.categorie === afgCatFilter);
   if (q) list = list.filter(r => (r.nume || '').toLowerCase().includes(q) || (r.id || '').toLowerCase().includes(q));
   if (noEmailOnly) list = list.filter(r => !r.email);
+  if (pendingOnly) list = list.filter(r => r.modificari_in_asteptare);
 
   const noEmailTotal = AFG_ROWS.filter(r => !r.arhivat && !r.email).length;
   document.getElementById('afg-no-email-count').textContent = noEmailTotal ? `(${noEmailTotal})` : '';
   const archivedTotal = AFG_ROWS.filter(r => r.arhivat).length;
   document.getElementById('afg-archived-count').textContent = archivedTotal ? `(${archivedTotal})` : '';
+  updateAfgPendingNotice();
 
   const listEl = document.getElementById('afg-list');
   document.getElementById('afg-empty').style.display = list.length ? 'none' : 'block';
@@ -2669,6 +2704,13 @@ document.getElementById('afg-cat-filter').addEventListener('change', (e) => { af
 document.getElementById('afg-search').addEventListener('input', renderAfgList);
 document.getElementById('afg-no-email-filter').addEventListener('change', renderAfgList);
 document.getElementById('afg-archived-filter').addEventListener('change', renderAfgList);
+document.getElementById('afg-pending-filter').addEventListener('change', renderAfgList);
+document.getElementById('afg-pending-banner-btn').addEventListener('click', () => {
+  document.getElementById('afg-pending-filter').checked = true;
+  document.getElementById('afg-archived-filter').checked = false;
+  renderAfgList();
+  document.getElementById('afg-list').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
 
 document.getElementById('afg-btn-add').addEventListener('click', () => {
   const wrap = document.getElementById('afg-add-wrap');
