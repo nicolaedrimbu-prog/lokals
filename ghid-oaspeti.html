@@ -539,7 +539,11 @@ async function loadStay() {
 async function resolveActiveStay() {
   if (!currentOperator || !currentOperator.id) return;
   try {
-    const res = await sbFetch(`inregistrari_oaspeti?operator_id=eq.${encodeURIComponent(currentOperator.id)}&status=eq.validat&select=*`);
+    // Excludem explicit rândurile arhivate (ex. teste fictive) — altfel o înregistrare
+    // arhivată cu date de check-in/check-out care se suprapun din întâmplare cu o rezervare
+    // reală viitoare ar fi găsită la fel de bine ca cea reală și arătată oaspetelui.
+    // or=(...) tratează și rândurile vechi fără valoare pe arhivat (NULL) ca nearhivate.
+    const res = await sbFetch(`inregistrari_oaspeti?operator_id=eq.${encodeURIComponent(currentOperator.id)}&status=eq.validat&or=(arhivat.eq.false,arhivat.is.null)&select=*`);
     const rows = await res.json();
     if (!rows || !rows.length) return;
     const today = new Date().toISOString().slice(0, 10);
