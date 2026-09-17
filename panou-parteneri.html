@@ -2452,14 +2452,16 @@ function afgRowHtml(r){
   const badgeBg = r.arhivat ? 'var(--line)' : (r.activ ? 'var(--green-soft)' : '#EFE9DB');
   const badgeFg = r.arhivat ? 'var(--ink-soft)' : (r.activ ? 'var(--green)' : '#8F6222');
   const badgeLabel = r.arhivat ? '🗄 Arhivat' : (r.activ ? 'Activ' : 'Inactiv');
+  const pending = !!r.modificari_in_asteptare;
   return `
-    <div class="prow">
+    <div class="prow"${pending ? ' style="background:#FCEEF1; border-color:#F0C3CD;"' : ''}>
       <div class="prow-top">
         <div class="picon" style="background:${badgeBg};">${icon}</div>
         <div class="pinfo">
           <div class="pname-row">
             <span class="pname serif">${escapeHtml(r.nume || '(fără nume)')}</span>
             <span class="pbadge" style="background:${badgeBg}; color:${badgeFg};">${badgeLabel}</span>
+            ${pending ? `<span class="pbadge" style="background:#F3B9C6; color:#7A2438;">✏️ Modificări de verificat</span>` : ''}
           </div>
           <div class="pmeta">${escapeHtml(CATEGORII[r.categorie] || r.categorie || '—')} · ${escapeHtml(zoneLabels || '—')} &nbsp;·&nbsp; id: <code style="background:var(--cream); padding:1px 5px; border-radius:4px;">${escapeHtml(r.id)}</code></div>
         </div>
@@ -2472,6 +2474,7 @@ function afgRowHtml(r){
           ${(!r.arhivat && r.activ && r.beneficiu)
             ? `<button class="pbtn" type="button" data-afg-print-qr="${escapeHtml(r.id)}" title="Afiș A4 cu 6 coduri QR — folosite de afacere pentru a deschide pagina de confirmare a beneficiilor (partner-redeem)">🖨️ Printează cod QR</button>`
             : ''}
+          ${pending ? `<button class="pbtn primary" type="button" data-afg-validate="${escapeHtml(r.id)}" title="Confirmă modificările făcute de partener — afacerea trece pe „Publicat" în contul lui">✓ Validează</button>` : ''}
           <button class="pbtn" data-afg-toggle="${rowId}">Editează</button>
         </div>
       </div>
@@ -2534,6 +2537,23 @@ function renderAfgList(){
   listEl.querySelectorAll('[data-afg-print-qr]').forEach(btn => {
     btn.addEventListener('click', () => window.open(`afacere-qr-print.html?afacere=${encodeURIComponent(btn.dataset.afgPrintQr)}`, '_blank'));
   });
+  listEl.querySelectorAll('[data-afg-validate]').forEach(btn => {
+    btn.addEventListener('click', () => handleAfgValidate(btn.dataset.afgValidate, btn));
+  });
+}
+
+async function handleAfgValidate(id, btn){
+  btn.disabled = true;
+  const { error } = await supabaseClient.from('afaceri_ghid').update({ modificari_in_asteptare: false }).eq('id', id);
+  btn.disabled = false;
+  if (error) {
+    console.error(error);
+    alert('Nu am putut valida — încearcă din nou.');
+    return;
+  }
+  const row = AFG_ROWS.find(r => String(r.id) === String(id));
+  if (row) row.modificari_in_asteptare = false;
+  renderAfgList();
 }
 
 function afgCollectPayload(form){
@@ -2555,6 +2575,7 @@ async function handleAfgSave(form){
   const msgEl = document.getElementById('afg-esave-msg-' + rowId);
   const btn = form.querySelector('button[type="submit"]');
   const payload = afgCollectPayload(form);
+  payload.modificari_in_asteptare = false; // Nico a văzut și a salvat rândul — se consideră validat
 
   btn.disabled = true;
   msgEl.className = 'esave-msg'; msgEl.textContent = '';

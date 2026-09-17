@@ -78,9 +78,10 @@
 
     <a class="back-link" href="contul-meu.html">← Proprietățile mele</a>
 
-    <div style="font-size:11px; font-weight:700; letter-spacing:.05em; color:var(--gold); text-transform:uppercase; margin-bottom:6px;">Afacere parteneră</div>
+    <div style="font-size:11px; font-weight:700; letter-spacing:.05em; color:var(--gold); text-transform:uppercase; margin-bottom:6px;" id="business-kicker">Afacere parteneră</div>
     <div class="serif" style="font-size:23px; font-weight:700; color:var(--teal-deep); margin:0 0 6px;" id="business-title">—</div>
-    <div style="font-size:13px; color:var(--ink-soft); line-height:1.55; margin-bottom:18px;">Aceste informații apar în ghidul turistic, la secțiunea corespunzătoare categoriei tale.</div>
+    <div style="font-size:13px; color:var(--ink-soft); line-height:1.55; margin-bottom:12px;" id="business-intro">Aceste informații apar în ghidul turistic, la secțiunea corespunzătoare categoriei tale.</div>
+    <div id="afacere-status-notice" style="display:none; border-radius:12px; padding:11px 14px; font-size:12.5px; line-height:1.5; margin-bottom:18px;"></div>
 
     <!-- Detalii afacere -->
     <div class="card">
@@ -96,11 +97,16 @@
         <div>
           <label for="f-categorie">Categorie</label>
           <input id="f-categorie" class="field" type="text">
+          <select id="f-categorie-select" class="field" style="display:none;"></select>
         </div>
       </div>
       <div class="field-group">
         <label for="f-descriere">Descriere</label>
         <textarea id="f-descriere" class="field" style="min-height:64px; resize:vertical;"></textarea>
+      </div>
+      <div class="field-group" id="f-descriere-en-wrap" style="display:none;">
+        <label for="f-descriere-en">Descriere (EN)</label>
+        <textarea id="f-descriere-en" class="field" style="min-height:64px; resize:vertical;"></textarea>
       </div>
       <div class="field-group">
         <label for="f-adresa">Adresă (opțional)</label>
@@ -116,6 +122,10 @@
           </label>
           <input id="f-foto" type="file" accept="image/*" style="display:none;">
         </div>
+      </div>
+      <div class="field-group" id="f-poza2-wrap" style="display:none; margin-top:14px;">
+        <label for="f-poza2">A doua fotografie (link, opțional)</label>
+        <input id="f-poza2" class="field" type="text" placeholder="https://...">
       </div>
     </div>
 
@@ -152,24 +162,30 @@
     </div>
 
     <!-- Beneficiu -->
-    <div class="card">
+    <div class="card" id="card-beneficiu">
       <div class="card-head">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0 -5c1.5 0 2.5 2 4.5 5"/><path d="M16.5 8a2.5 2.5 0 0 0 0 -5c-1.5 0 -2.5 2 -4.5 5"/></svg>
         <div class="card-title">Beneficiu pentru oaspeți</div>
       </div>
-      <div class="row" style="padding-top:0; padding-bottom:12px;">
-        <span style="font-size:13px; font-weight:600;">Ofer un beneficiu oaspeților Lokal</span>
-        <label class="switch-label"><input type="checkbox" id="f-interesat-beneficiu"><span class="switch-track"><span class="switch-knob"></span></span></label>
+      <div id="beneficiu-editable">
+        <div class="row" style="padding-top:0; padding-bottom:12px;">
+          <span style="font-size:13px; font-weight:600;">Ofer un beneficiu oaspeților Lokal</span>
+          <label class="switch-label"><input type="checkbox" id="f-interesat-beneficiu"><span class="switch-track"><span class="switch-knob"></span></span></label>
+        </div>
+        <div>
+          <label for="f-beneficiu">Beneficiul oferit</label>
+          <input id="f-beneficiu" class="field" type="text" placeholder="ex. 10% reducere la orice comandă">
+        </div>
       </div>
-      <div>
-        <label for="f-beneficiu">Beneficiul oferit</label>
-        <input id="f-beneficiu" class="field" type="text" placeholder="ex. 10% reducere la orice comandă">
+      <div id="beneficiu-readonly" style="display:none;">
+        <p style="font-size:13px; color:var(--ink-soft); line-height:1.55; margin:0;" id="beneficiu-readonly-text">—</p>
+        <div class="hint">Beneficiul afișat oaspeților e configurat împreună cu Nico — scrie-i dacă vrei să-l schimbi.</div>
       </div>
     </div>
 
     <button class="primary" id="btn-save">Salvează modificările</button>
 
-    <div style="margin-top:4px; max-width:560px;">
+    <div style="margin-top:4px; max-width:560px;" id="zona-risc-wrap">
       <div style="font-size:11px; font-weight:700; letter-spacing:.05em; color:#9C4536; text-transform:uppercase; margin-bottom:8px;">Zonă cu risc</div>
       <button id="btn-delete-open" type="button" style="width:100%; background:#fff; border:1.5px solid #9C4536; color:#9C4536; padding:13px; border-radius:13px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit;">Șterge această afacere</button>
       <div id="delete-confirm" style="display:none; background:#FBE6E0; border-radius:14px; padding:16px; margin-top:10px;">
@@ -195,6 +211,12 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentSession = null;
 let currentRow = null;
 let pendingPhotoFile = null;
+let SOURCE = 'candidat'; // 'candidat' (candidati_parteneri, înscriere în așteptare) | 'afacere' (afaceri_ghid, deja live în ghid)
+
+const CATEGORII = {
+  aventura: "Aventură", cultura: "Cultură", wellness: "Wellness", gastro: "Gastronomie",
+  livrare: "Livrare", producatori: "Producători locali", facilitare: "Facilitare",
+};
 
 function displayName(user) {
   const meta = user.user_metadata || {};
@@ -244,11 +266,44 @@ document.getElementById('f-adresa').addEventListener('input', () => {
   adresaMapTimer = setTimeout(updateAdresaMapPreview, 700);
 });
 
+function renderAfacereStatusNotice(row) {
+  const notice = document.getElementById('afacere-status-notice');
+  if (SOURCE !== 'afacere') { notice.style.display = 'none'; return; }
+  const pending = !!row.modificari_in_asteptare;
+  notice.style.display = '';
+  notice.style.background = pending ? '#FCEEF1' : '#EAF3F9';
+  notice.style.border = `1.5px solid ${pending ? '#F0C3CD' : '#C6DEEC'}`;
+  notice.style.color = pending ? '#7A2438' : '#154766';
+  notice.innerHTML = pending
+    ? '<b>Modificări în curs de verificare.</b> Nico o să vadă schimbările și le validează — până atunci, afacerea rămâne vizibilă cu ultimele date, cele noi apar oaspeților după validare.'
+    : '<b>Publicat.</b> Afacerea e live în ghid, fără modificări de verificat.';
+}
+
 function fillForm(row) {
-  document.getElementById('business-title').textContent = row.nume_afacere || '—';
-  document.getElementById('f-nume').value = row.nume_afacere || '';
-  document.getElementById('f-categorie').value = row.categorie || '';
+  const isAfacere = SOURCE === 'afacere';
+  const nume = isAfacere ? row.nume : row.nume_afacere;
+  document.getElementById('business-title').textContent = nume || '—';
+  document.getElementById('business-kicker').textContent = isAfacere ? 'Afacere activă în ghid' : 'Afacere parteneră';
+  document.getElementById('business-intro').textContent = isAfacere
+    ? 'Aceste informații apar deja oaspeților în ghidul turistic. Modificările pe care le salvezi aici sunt trimise spre verificarea lui Nico.'
+    : 'Aceste informații apar în ghidul turistic, la secțiunea corespunzătoare categoriei tale.';
+  document.getElementById('f-nume').value = nume || '';
+
+  const catInput = document.getElementById('f-categorie');
+  const catSelect = document.getElementById('f-categorie-select');
+  if (isAfacere) {
+    catInput.style.display = 'none';
+    catSelect.style.display = '';
+    catSelect.innerHTML = Object.entries(CATEGORII).map(([val, lbl]) => `<option value="${val}" ${val === row.categorie ? 'selected' : ''}>${lbl}</option>`).join('');
+  } else {
+    catInput.style.display = '';
+    catSelect.style.display = 'none';
+    catInput.value = row.categorie || '';
+  }
+
   document.getElementById('f-descriere').value = row.descriere || '';
+  document.getElementById('f-descriere-en-wrap').style.display = isAfacere ? '' : 'none';
+  document.getElementById('f-descriere-en').value = row.descriere_en || '';
   document.getElementById('f-adresa').value = row.adresa || '';
   updateAdresaMapPreview();
   document.getElementById('f-telefon').value = row.telefon || '';
@@ -256,12 +311,28 @@ function fillForm(row) {
   document.getElementById('f-website').value = row.website || '';
   document.getElementById('f-facebook').value = row.facebook || '';
   document.getElementById('f-instagram').value = row.instagram || '';
+
+  document.getElementById('f-poza2-wrap').style.display = isAfacere ? '' : 'none';
+  document.getElementById('f-poza2').value = isAfacere ? (row.poza_2 || '') : '';
+
+  document.getElementById('beneficiu-editable').style.display = isAfacere ? 'none' : '';
+  document.getElementById('beneficiu-readonly').style.display = isAfacere ? '' : 'none';
+  if (isAfacere) {
+    document.getElementById('beneficiu-readonly-text').textContent = row.beneficiu
+      ? `Beneficiu activ: ${row.beneficiu}`
+      : 'Fără beneficiu setat pentru clienți momentan.';
+  }
   document.getElementById('f-interesat-beneficiu').checked = !!row.interesat_beneficiu;
   document.getElementById('f-beneficiu').value = row.beneficiu_propus || '';
 
+  document.getElementById('zona-risc-wrap').style.display = isAfacere ? 'none' : '';
+
+  const pozaUrl = isAfacere ? row.poza_1 : row.poza_url;
   const preview = document.getElementById('photo-preview');
-  preview.style.backgroundImage = row.poza_url ? `url('${row.poza_url}')` : '';
-  document.getElementById('f-foto-label').textContent = row.poza_url ? 'Schimbă fotografia' : 'Încarcă o fotografie';
+  preview.style.backgroundImage = pozaUrl ? `url('${pozaUrl}')` : '';
+  document.getElementById('f-foto-label').textContent = pozaUrl ? 'Schimbă fotografia' : 'Încarcă o fotografie';
+
+  renderAfacereStatusNotice(row);
 }
 
 async function init() {
@@ -273,13 +344,16 @@ async function init() {
   currentSession = session;
   document.getElementById('header-auth-name').textContent = displayName(session.user);
 
-  const id = new URLSearchParams(window.location.search).get('id');
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get('id');
+  SOURCE = params.get('source') === 'afacere' ? 'afacere' : 'candidat';
   if (!id) {
     showState('state-nomatch');
     return;
   }
 
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/candidati_parteneri?id=eq.${encodeURIComponent(id)}&email=eq.${encodeURIComponent(session.user.email)}&select=*`, {
+  const table = SOURCE === 'afacere' ? 'afaceri_ghid' : 'candidati_parteneri';
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}&email=eq.${encodeURIComponent(session.user.email)}&select=*`, {
     headers: { apikey: SUPABASE_KEY }
   });
   const rows = await res.json();
@@ -323,28 +397,52 @@ document.getElementById('btn-save').addEventListener('click', async () => {
   btn.disabled = true;
   btn.textContent = 'Se salvează...';
   try {
-    let pozaUrl = currentRow.poza_url || null;
+    const isAfacere = SOURCE === 'afacere';
+    let pozaUrl = isAfacere ? (currentRow.poza_1 || null) : (currentRow.poza_url || null);
     if (pendingPhotoFile) {
       pozaUrl = await uploadPhoto(pendingPhotoFile, currentRow.id);
     }
 
-    const payload = {
-      nume_afacere: document.getElementById('f-nume').value.trim(),
-      categorie: document.getElementById('f-categorie').value.trim(),
-      descriere: document.getElementById('f-descriere').value.trim(),
-      adresa: document.getElementById('f-adresa').value.trim() || null,
-      telefon: document.getElementById('f-telefon').value.trim(),
-      persoana_contact: document.getElementById('f-persoana').value.trim(),
-      website: document.getElementById('f-website').value.trim() || null,
-      facebook: document.getElementById('f-facebook').value.trim() || null,
-      instagram: document.getElementById('f-instagram').value.trim() || null,
-      interesat_beneficiu: document.getElementById('f-interesat-beneficiu').checked,
-      beneficiu_propus: document.getElementById('f-beneficiu').value.trim() || null,
-      poza_url: pozaUrl,
-    };
+    let payload;
+    let table;
+    if (isAfacere) {
+      table = 'afaceri_ghid';
+      payload = {
+        nume: document.getElementById('f-nume').value.trim(),
+        categorie: document.getElementById('f-categorie-select').value,
+        descriere: document.getElementById('f-descriere').value.trim() || null,
+        descriere_en: document.getElementById('f-descriere-en').value.trim() || null,
+        adresa: document.getElementById('f-adresa').value.trim() || null,
+        telefon: document.getElementById('f-telefon').value.trim() || null,
+        persoana_contact: document.getElementById('f-persoana').value.trim() || null,
+        website: document.getElementById('f-website').value.trim() || null,
+        facebook: document.getElementById('f-facebook').value.trim() || null,
+        instagram: document.getElementById('f-instagram').value.trim() || null,
+        poza_1: pozaUrl,
+        poza_2: document.getElementById('f-poza2').value.trim() || null,
+        modificari_in_asteptare: true,
+        modificat_la: new Date().toISOString(),
+      };
+    } else {
+      table = 'candidati_parteneri';
+      payload = {
+        nume_afacere: document.getElementById('f-nume').value.trim(),
+        categorie: document.getElementById('f-categorie').value.trim(),
+        descriere: document.getElementById('f-descriere').value.trim(),
+        adresa: document.getElementById('f-adresa').value.trim() || null,
+        telefon: document.getElementById('f-telefon').value.trim(),
+        persoana_contact: document.getElementById('f-persoana').value.trim(),
+        website: document.getElementById('f-website').value.trim() || null,
+        facebook: document.getElementById('f-facebook').value.trim() || null,
+        instagram: document.getElementById('f-instagram').value.trim() || null,
+        interesat_beneficiu: document.getElementById('f-interesat-beneficiu').checked,
+        beneficiu_propus: document.getElementById('f-beneficiu').value.trim() || null,
+        poza_url: pozaUrl,
+      };
+    }
 
     const accessToken = await getFreshAccessToken();
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/candidati_parteneri?id=eq.${currentRow.id}`, {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(currentRow.id)}`, {
       method: 'PATCH',
       headers: {
         apikey: SUPABASE_KEY,
@@ -359,7 +457,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     currentRow = updated[0];
     pendingPhotoFile = null;
     fillForm(currentRow);
-    showToast('Modificările au fost salvate.');
+    showToast(isAfacere ? 'Modificările au fost trimise spre verificare.' : 'Modificările au fost salvate.');
   } catch (e) {
     console.error(e);
     const detail = (e && e.message) ? String(e.message).slice(0, 120) : '';

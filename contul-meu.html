@@ -28,6 +28,12 @@
   .badge-cazare{background:#E3ECE4; color:var(--teal-deep);}
   .badge-afacere{background:#FBEEDA; color:#8F6222;}
   .badge-tier-essential{background:var(--gold-soft); color:#8F6222; margin-left:6px;}
+  .card.afg-pending{background:#FCEEF1; border:1.5px solid #F0C3CD;}
+  .card.afg-published{background:#EAF3F9; border:1.5px solid #C6DEEC;}
+  .afg-status-badge{display:inline-block; font-size:9.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; padding:3px 9px; border-radius:999px; margin-top:6px; margin-left:6px;}
+  .afg-status-badge.pending{background:#F3B9C6; color:#7A2438;}
+  .afg-status-badge.published{background:#AECFE8; color:#154766;}
+  .afg-guides-line{font-size:11.5px; color:var(--ink-soft); margin-top:6px;}
   .edit-btn{flex-shrink:0; border:1.5px solid var(--line); background:#fff; color:var(--teal-deep); font-size:12px; font-weight:700; padding:8px 14px; border-radius:999px;}
   .section-label{font-size:11px; font-weight:700; letter-spacing:.05em; color:var(--gold); text-transform:uppercase; margin:22px 0 10px;}
   .section-label:first-of-type{margin-top:0;}
@@ -242,6 +248,11 @@ const REGISTRATION_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill=
 let OPERATORI_BY_ID = {};
 let REG_BY_OP = {};
 let CURRENT_EMAIL = null;
+let ZONE_LABELS = {};
+function zonaLabelAcc(slug) {
+  const s = (slug || '').trim();
+  return ZONE_LABELS[s] || s;
+}
 // arată doar înregistrările curente implicit — pe măsură ce se acumulează sejururi, lista
 // devine greu de parcurs, așa că gazda poate arhiva ce a încheiat și le revede oricând aici
 let REG_VIEW_ARCHIVED = {};
@@ -1091,18 +1102,27 @@ function renderAfaceriActive(rows) {
   wrap.innerHTML = '';
   rows.forEach(row => {
     const card = document.createElement('div');
-    card.className = 'card';
+    const pending = !!row.modificari_in_asteptare;
+    card.className = 'card' + (pending ? ' afg-pending' : ' afg-published');
     const thumb = row.poza_1 ? `<img src="${row.poza_1}" alt="">` : AFACERE_ICON;
     const eligible = row.activ === true && !!row.beneficiu;
+    const zone = (row.zona || '').split(',').map(z => z.trim()).filter(Boolean);
+    const zoneLabelsTxt = zone.map(zonaLabelAcc).join(', ');
+    const guidesLine = zone.length
+      ? `<div class="afg-guides-line">📍 Apare în ${zone.length} ${zone.length === 1 ? 'ghid' : 'ghiduri'}: ${escapeHtmlAcc(zoneLabelsTxt)}</div>`
+      : '';
     card.innerHTML = `
-      <div class="card-main" style="cursor:default;">
+      <a class="card-main" href="editare-afacere.html?source=afacere&id=${encodeURIComponent(row.id)}">
         <div class="card-thumb">${thumb}</div>
         <div class="card-info">
           <div class="card-name">${escapeHtmlAcc(row.nume)}</div>
           <div class="card-sub">${escapeHtmlAcc(row.categorie || '')}${row.categorie && row.zona ? ' · ' : ''}${escapeHtmlAcc(row.zona || '')}</div>
           <span class="badge badge-afacere">${escapeHtmlAcc(row.categorie || 'Afacere')}</span>
+          <span class="afg-status-badge ${pending ? 'pending' : 'published'}">${pending ? 'Modificări în curs de verificare' : 'Publicat'}</span>
+          ${guidesLine}
         </div>
-      </div>
+        <div class="edit-btn">Editează</div>
+      </a>
       ${eligible ? `
       <div class="card-actions">
         <button class="action-btn" type="button" data-action="copy-afacere" data-id="${row.id}">${COPY_ICON} <span data-copy-afacere-label="${row.id}">Copiază link scanare</span></button>
@@ -1152,7 +1172,7 @@ async function init() {
   const [cazariRes, afaceriRes, afaceriActiveRes] = await Promise.all([
     fetch(`${SUPABASE_URL}/rest/v1/operatori?email=eq.${encodeURIComponent(email)}&select=*&order=created_at.desc`, { headers: { apikey: SUPABASE_KEY } }),
     fetch(`${SUPABASE_URL}/rest/v1/candidati_parteneri?email=eq.${encodeURIComponent(email)}&select=*&order=created_at.desc`, { headers: { apikey: SUPABASE_KEY } }),
-    fetch(`${SUPABASE_URL}/rest/v1/afaceri_ghid?email=eq.${encodeURIComponent(email)}&select=id,nume,categorie,zona,activ,beneficiu,poza_1&order=nume.asc`, { headers: { apikey: SUPABASE_KEY } }),
+    fetch(`${SUPABASE_URL}/rest/v1/afaceri_ghid?email=eq.${encodeURIComponent(email)}&select=id,nume,categorie,zona,activ,beneficiu,poza_1,modificari_in_asteptare&order=nume.asc`, { headers: { apikey: SUPABASE_KEY } }),
   ]);
   const cazari = await cazariRes.json();
   const afaceri = await afaceriRes.json();
@@ -1196,6 +1216,12 @@ async function init() {
   }
   if (afaceriActive.length) {
     document.getElementById('section-afaceri-active').style.display = '';
+    try {
+      const zoneRes = await fetch(`${SUPABASE_URL}/rest/v1/zone_ghid?select=slug,nume`, { headers: { apikey: SUPABASE_KEY } });
+      if (zoneRes.ok) {
+        (await zoneRes.json()).forEach(z => { ZONE_LABELS[z.slug] = z.nume; });
+      }
+    } catch (e) { /* etichetele de zonă sunt un extra cosmetic — lista rămâne utilă și fără ele */ }
     renderAfaceriActive(afaceriActive);
   }
   showState('state-form');
