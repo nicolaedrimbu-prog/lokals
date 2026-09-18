@@ -1074,10 +1074,38 @@ document.getElementById('f-foto').addEventListener('change', (e) => {
   document.getElementById('f-foto-label').textContent = file.name;
 });
 
+// Pozele făcute direct cu telefonul vin adesea la 6-8 MB — necomprimate, încărcate ca atare,
+// îngreunau foarte tare ghidul turistului (mai multe poze de acest fel pe o pagină înseamnă
+// zeci de MB la fiecare vizită). Le redimensionăm și le comprimăm local, în browser, înainte
+// de upload — 1600px pe latura mare e suficient pentru ecranul unui telefon, e mult sub
+// rezoluția originală a camerei, dar clar mai mult decât nevoie pe un card/secțiune de ghid.
+async function compressImageFile(file, maxDim = 1600, quality = 0.82) {
+  if (!file.type || !file.type.startsWith('image/') || file.type === 'image/svg+xml') return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
+    if (scale >= 1 && file.size <= 1.5 * 1024 * 1024) return file; // deja mică, nu mai atingem
+    const w = Math.max(1, Math.round(bitmap.width * scale));
+    const h = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', quality));
+    if (!blob || blob.size >= file.size) return file; // comprimarea n-a ajutat — păstrăm originalul
+    return new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' });
+  } catch (e) {
+    console.error('Nu am putut comprima poza local, o încărcăm ca atare:', e);
+    return file; // orice eroare aici nu trebuie să blocheze salvarea — mai bine poza mare decât nicio poză
+  }
+}
+
 async function uploadPhoto(file, slug, prefix = 'cazare') {
-  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  const toUpload = await compressImageFile(file);
+  const ext = (toUpload.name.split('.').pop() || 'jpg').toLowerCase();
   const path = `${prefix}/${slug}-${Date.now()}.${ext}`;
-  const { error } = await supabaseClient.storage.from('afaceri-poze').upload(path, file, { upsert: true });
+  const { error } = await supabaseClient.storage.from('afaceri-poze').upload(path, toUpload, { upsert: true });
   if (error) throw error;
   const { data } = supabaseClient.storage.from('afaceri-poze').getPublicUrl(path);
   return data.publicUrl;

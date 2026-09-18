@@ -1923,28 +1923,23 @@ function mapsUrl(p){
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.mapsAddress || (p.name + ' Rasnov Brasov'))}`;
 }
 
-async function render(filter){
-  currentFilter = filter;
-  const t = I18N[currentLang];
+// randGen: apărat contra suprapunerii — dacă turistul schimbă limba/filtrul din nou
+// înainte ca traducerea de fundal a randării precedente să se termine, randarea veche
+// nu mai are voie să rescrie grid-ul peste cea nouă.
+let renderGen = 0;
+
+function renderCards(list, t){
   const grid = document.getElementById('grid');
   grid.innerHTML = '';
-  const list = filter === 'toate' ? PLACES : PLACES.filter(p => p.cat === filter);
-  // Multe afaceri (mai ales cele adăugate recent, ex. categoria "Producători locali")
-  // nu au încă o descriere EN scrisă manual în Supabase (descriere_en gol/null) — nu e
-  // o problemă a categoriei în sine, ci pur și simplu lipsă de date la introducere.
-  // Ca oaspetele să nu vadă text în română pe ghidul EN, cerem automat traducerea
-  // descrierii RO prin același mecanism (tr/translateBatch) folosit pentru textele
-  // libere ale gazdei, pentru orice card fără descriere_en.
-  if (currentLang === 'en') {
-    const missingEn = list.filter(p => !p.desc_en).map(p => p.desc).filter(Boolean);
-    await translateBatch(missingEn, 'en');
-  }
   list.forEach(p => {
     const cat = CATS[p.cat];
     const catLabel = currentLang === 'en' ? cat.label_en : cat.label;
     const desc = currentLang === 'en' ? (p.desc_en || tr(p.desc)) : p.desc;
     const card = document.createElement('div');
     card.className = 'card';
+    // data-desc-src identifică descrierea RO originală a cardului, ca traducerea cerută
+    // în fundal (vezi render()) să poată actualiza doar textul, fără să reconstruiască tot grid-ul.
+    if (currentLang === 'en' && !p.desc_en && p.desc) card.dataset.descSrc = p.desc;
     let mediaHtml;
     if (p.photos && p.photos.length > 1) {
       mediaHtml = `<div style="display:flex; width:100%; height:100%; gap:2px;">
@@ -1980,6 +1975,39 @@ async function render(filter){
     `;
     grid.appendChild(card);
   });
+}
+
+function render(filter){
+  currentFilter = filter;
+  const myGen = ++renderGen;
+  const t = I18N[currentLang];
+  const list = filter === 'toate' ? PLACES : PLACES.filter(p => p.cat === filter);
+
+  // Randăm imediat, cu descrierea RO ca variantă provizorie pe cardurile fără descriere_en —
+  // nu mai așteptăm traducerea înainte de a arăta ceva. Blocarea aici (await înainte de a
+  // construi grid-ul) era motivul încărcării foarte lente pe EN: serviciul extern de traducere
+  // (MyMemory, gratuit) răspunde secvențial, un text pe rând, și pentru un filtru cu multe
+  // afaceri netraduse (frecvent — multe descrieri nu au încă varianta EN completată) suma
+  // acelor apeluri seriale putea dura zeci de secunde.
+  renderCards(list, t);
+
+  // Traducerea se cere separat, în fundal — doar pentru textele care nu sunt deja în cache
+  // (tr() le-ar fi găsit deja). Odată primite, actualizăm în loc doar cardurile afectate.
+  if (currentLang === 'en') {
+    const missingEn = Array.from(new Set(
+      list.filter(p => !p.desc_en && p.desc && !(fmt(p.desc) in translatedTexts)).map(p => p.desc)
+    ));
+    if (missingEn.length) {
+      translateBatch(missingEn, 'en').then(() => {
+        // dacă turistul a schimbat deja limba/filtrul, nu mai atingem un grid care nu mai e al nostru
+        if (myGen !== renderGen) return;
+        document.querySelectorAll('#grid .card[data-desc-src]').forEach(card => {
+          const translated = translatedTexts[fmt(card.dataset.descSrc)];
+          if (translated) card.querySelector('.desc').textContent = translated;
+        });
+      });
+    }
+  }
 }
 
 function renderFilters(){
