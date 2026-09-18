@@ -229,10 +229,26 @@
           <input id="f-locker-nr" class="field" type="text">
         </div>
       </div>
-      <div class="field-group">
-        <label for="f-checkin-unitate" id="f-checkin-unitate-label">Cameră / Apartament</label>
+      <div class="field-group" style="display:flex; gap:12px; align-items:center;">
+        <div id="locker-poza-preview" class="minibar-preview"></div>
+        <div style="flex:1;">
+          <label for="f-locker-poza" class="upload-label"><span id="f-locker-poza-label">Poză cu amplasarea locker-ului</span></label>
+          <input id="f-locker-poza" type="file" accept="image/*" style="display:none;">
+          <div class="hint">Opțional — ajută oaspetele să găsească locker-ul din prima, mai ales dacă e mai puțin vizibil.</div>
+        </div>
+      </div>
+      <div class="field-group" style="display:flex; gap:12px; align-items:center; margin-bottom:0;">
+        <div id="usa-poza-preview" class="minibar-preview"></div>
+        <div style="flex:1;">
+          <label for="f-usa-poza" class="upload-label"><span id="f-usa-poza-label">Poză cu ușa de intrare</span></label>
+          <input id="f-usa-poza" type="file" accept="image/*" style="display:none;">
+          <div class="hint">Opțional — utilă mai ales dacă intrarea nu e evidentă de pe stradă (curte comună, mai multe uși etc.).</div>
+        </div>
+      </div>
+      <div class="field-group" id="field-camera-apartament">
+        <label for="f-checkin-unitate" id="f-checkin-unitate-label">Apartament</label>
         <input id="f-checkin-unitate" class="field" type="text" placeholder="ex. Apartamentul 5, etaj 2">
-        <div class="hint">Numărul sau numele camerei/apartamentului — eticheta se adaptează automat după tipul cazării.</div>
+        <div class="hint">Numărul sau numele apartamentului.</div>
       </div>
       <div class="field-group">
         <label for="f-checkin">Note suplimentare (opțional)</label>
@@ -358,6 +374,34 @@
         <div class="hint">Excepții sau completări care nu încap în tabelul de mai sus — apar sub el, în ghid.</div>
       </div>
 
+      <div class="sub">Materiale existente (opțional)</div>
+      <div class="field-group">
+        <div class="hint" style="margin-top:0;">Ai deja aceste informații pregătite ca poze (poster, meniu, program afișat la recepție)? Încarcă până la 3 fotografii aici — apar în ghid așa cum sunt, fără să mai retastezi fiecare câmp de mai sus.</div>
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <div style="display:flex; gap:12px; align-items:center;">
+            <div id="servicii-preview-1" class="minibar-preview"></div>
+            <div>
+              <label for="f-servicii-foto1" class="upload-label"><span id="f-servicii-foto1-label">Poză 1</span></label>
+              <input id="f-servicii-foto1" type="file" accept="image/*" style="display:none;">
+            </div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:center;">
+            <div id="servicii-preview-2" class="minibar-preview"></div>
+            <div>
+              <label for="f-servicii-foto2" class="upload-label"><span id="f-servicii-foto2-label">Poză 2</span></label>
+              <input id="f-servicii-foto2" type="file" accept="image/*" style="display:none;">
+            </div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:center;">
+            <div id="servicii-preview-3" class="minibar-preview"></div>
+            <div>
+              <label for="f-servicii-foto3" class="upload-label"><span id="f-servicii-foto3-label">Poză 3</span></label>
+              <input id="f-servicii-foto3" type="file" accept="image/*" style="display:none;">
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="sub">Minibar</div>
       <div class="field-group">
         <div class="hint" style="margin-top:0;">Încarcă până la 2 poze cu lista de prețuri — nu e nevoie să introduci fiecare produs separat.</div>
@@ -404,7 +448,7 @@
         <label class="switch-label"><input type="checkbox" id="f-whatsapp-activ" checked><span class="switch-track"><span class="switch-knob"></span></span></label>
       </div>
       <div id="subcard-contact-extins">
-        <div class="hint" style="margin-bottom:12px;">Contacte suplimentare (spital, farmacie, service urgențe etc.) — câmpurile goale nu apar în ghid. Poliția (112) apare mereu automat.</div>
+        <div class="hint" style="margin-bottom:12px;">Contacte suplimentare (spital, farmacie, service urgențe etc.) — câmpurile goale nu apar în ghid. Poliția (112) apare mereu automat. Telefonul și link-ul Maps sunt opționale: dacă le completezi, numele devine buton către locație, iar telefonul devine apelabil/WhatsApp direct din ghid.</div>
         <div id="contacte-lista"></div>
       </div>
     </div>
@@ -591,7 +635,7 @@ function buildNumberedFields(containerId, count, idPrefix, exemple) {
     input.type = 'text';
     input.id = `${idPrefix}-${i}`;
     const ex = exemple[i - 1];
-    input.placeholder = ex ? `${idPrefix === 'f-regula' ? 'Regulă' : 'Contact'} ${i} — ex. ${ex}` : `${idPrefix === 'f-regula' ? 'Regulă' : 'Contact'} ${i} (opțional)`;
+    input.placeholder = ex ? `Regulă ${i} — ex. ${ex}` : `Regulă ${i} (opțional)`;
     input.addEventListener('input', schedulePreview);
     row.appendChild(num);
     row.appendChild(input);
@@ -599,7 +643,63 @@ function buildNumberedFields(containerId, count, idPrefix, exemple) {
   }
 }
 buildNumberedFields('reguli-lista', REGULI_MAX, 'f-regula', REGULI_EXEMPLE);
-buildNumberedFields('contacte-lista', CONTACTE_MAX, 'f-contact', CONTACTE_EXEMPLE);
+
+// Contactele au 3 câmpuri (nume/obiectiv, telefon, link Maps) — nu mai reutilizăm
+// buildNumberedFields (regulile casei rămân câmp simplu). Numele devine link către Maps
+// în ghid (dacă e completat un link), telefonul rămâne apelabil/WhatsApp, ca la restul ghidului.
+function buildContactFields(containerId, count, exemple) {
+  const wrap = document.getElementById(containerId);
+  wrap.innerHTML = '';
+  for (let i = 1; i <= count; i++) {
+    const row = document.createElement('div');
+    row.className = 'rule-row';
+    row.style.alignItems = 'flex-start';
+    const num = document.createElement('div');
+    num.className = 'rule-num';
+    num.textContent = i;
+    num.style.marginTop = '11px';
+    const fields = document.createElement('div');
+    fields.style.flex = '1';
+    fields.style.display = 'flex';
+    fields.style.flexDirection = 'column';
+    fields.style.gap = '6px';
+
+    const nume = document.createElement('input');
+    nume.className = 'field';
+    nume.type = 'text';
+    nume.id = `f-contact-${i}`;
+    const ex = exemple[i - 1];
+    nume.placeholder = ex ? `Contact ${i} — ex. ${ex}` : `Contact ${i} (opțional) — ex. Spital, Farmacie de gardă`;
+    nume.addEventListener('input', schedulePreview);
+
+    const twoCol = document.createElement('div');
+    twoCol.style.display = 'flex';
+    twoCol.style.gap = '6px';
+    const telefon = document.createElement('input');
+    telefon.className = 'field';
+    telefon.type = 'tel';
+    telefon.id = `f-contact-tel-${i}`;
+    telefon.placeholder = 'Telefon (opțional)';
+    telefon.style.flex = '1';
+    telefon.addEventListener('input', schedulePreview);
+    const maps = document.createElement('input');
+    maps.className = 'field';
+    maps.type = 'text';
+    maps.id = `f-contact-maps-${i}`;
+    maps.placeholder = 'Link Google Maps (opțional)';
+    maps.style.flex = '1';
+    maps.addEventListener('input', schedulePreview);
+    twoCol.appendChild(telefon);
+    twoCol.appendChild(maps);
+
+    fields.appendChild(nume);
+    fields.appendChild(twoCol);
+    row.appendChild(num);
+    row.appendChild(fields);
+    wrap.appendChild(row);
+  }
+}
+buildContactFields('contacte-lista', CONTACTE_MAX, CONTACTE_EXEMPLE);
 
 // Migrare din formatul vechi (comutatoare fumat/animale/liniste/extra, câmp unic spital) —
 // pre-completează noile câmpuri numerotate, o singură dată, ca proprietarul să nu piardă ce avea salvat.
@@ -612,10 +712,14 @@ function legacyReguliToList(reguli) {
   if (reguli.extra) out.push(reguli.extra);
   return out;
 }
+// Contactele au trecut de la simplu text ("Spital: 0268 xxx") la {nume, telefon, maps} —
+// stringurile vechi devin {nume: text, telefon:'', maps:''}, ca gazda să nu-și piardă datele.
 function legacyUrgenteToList(urgente) {
-  if (Array.isArray(urgente.lista)) return urgente.lista;
+  if (Array.isArray(urgente.lista)) {
+    return urgente.lista.map(item => (typeof item === 'string') ? { nume: item, telefon: '', maps: '' } : item);
+  }
   const out = [];
-  if (urgente.spital) out.push(urgente.spital);
+  if (urgente.spital) out.push({ nume: urgente.spital, telefon: '', maps: '' });
   return out;
 }
 
@@ -628,7 +732,7 @@ function renderPreview() {
   let anyVisible = false;
 
   // Check-in
-  const ciOra = val('f-checkin-ora'), ciCod = val('f-cod-locker'), ciUnit = val('f-checkin-unitate'), ciNote = val('f-checkin');
+  const ciOra = val('f-checkin-ora'), ciCod = val('f-cod-locker'), ciUnit = isHotel ? '' : val('f-checkin-unitate'), ciNote = val('f-checkin');
   const ciHas = ciOra || ciCod || ciUnit || ciNote;
   document.getElementById('gv-item-checkin').style.display = ciHas ? '' : 'none';
   if (ciHas) {
@@ -636,7 +740,7 @@ function renderPreview() {
     let body = '';
     if (ciOra) body += `<div class="gv-stat">${esc(ciOra)}</div>`;
     if (ciCod) body += `<div class="gv-label">Cod de acces</div><span class="gv-code">${esc(ciCod)}</span>`;
-    if (ciUnit) body += `<div class="gv-label">${isHotel ? 'Cameră' : 'Apartament'}</div><div class="gv-value">${esc(ciUnit)}</div>`;
+    if (ciUnit) body += `<div class="gv-label">Apartament</div><div class="gv-value">${esc(ciUnit)}</div>`;
     if (ciNote) body += `<div class="gv-label">Note suplimentare</div><div class="gv-value gv-note" style="font-weight:400;">${esc(ciNote)}</div>`;
     document.getElementById('gv-body-checkin').innerHTML = body;
   }
@@ -689,14 +793,19 @@ function renderPreview() {
   // Contact & urgențe
   const telefon = val('f-telefon');
   const whatsappActiv = document.getElementById('f-whatsapp-activ').checked;
-  const contacteList = Array.from({ length: CONTACTE_MAX }, (_, i) => val(`f-contact-${i + 1}`)).filter(Boolean);
+  const contacteList = Array.from({ length: CONTACTE_MAX }, (_, i) => ({
+    nume: val(`f-contact-${i + 1}`), telefon: val(`f-contact-tel-${i + 1}`), maps: val(`f-contact-maps-${i + 1}`),
+  })).filter(c => c.nume);
   const contactHas = telefon || contacteList.length;
   document.getElementById('gv-item-contact').style.display = contactHas ? '' : 'none';
   if (contactHas) {
     anyVisible = true;
     let body = '';
     if (telefon && whatsappActiv) body += `<div class="gv-row" style="font-weight:600;">📱 Scrie gazdei pe WhatsApp</div>`;
-    contacteList.forEach(c => { body += `<div class="gv-row">${esc(c)}</div>`; });
+    contacteList.forEach(c => {
+      const numeHtml = c.maps ? `<a href="${esc(c.maps)}" target="_blank" rel="noopener" style="color:inherit; text-decoration:underline;">${esc(c.nume)}</a>` : esc(c.nume);
+      body += `<div class="gv-row">${numeHtml}${c.telefon ? ` — ${esc(c.telefon)}` : ''}</div>`;
+    });
     body += `<div class="gv-row"><b>Poliție:</b>&nbsp;112</div>`;
     document.getElementById('gv-body-contact').innerHTML = body;
   }
@@ -743,9 +852,15 @@ function fillForm(row) {
   document.getElementById('f-cod-locker').value = checkin.cod_acces || '';
   document.getElementById('f-locker-loc').value = checkin.locker_locatie || '';
   document.getElementById('f-locker-nr').value = checkin.locker_numar || '';
+  document.getElementById('locker-poza-preview').style.backgroundImage = checkin.locker_foto_url ? `url('${checkin.locker_foto_url}')` : '';
+  document.getElementById('f-locker-poza-label').textContent = checkin.locker_foto_url ? 'Schimbă poza' : 'Poză cu amplasarea locker-ului';
+  document.getElementById('usa-poza-preview').style.backgroundImage = checkin.usa_intrare_foto_url ? `url('${checkin.usa_intrare_foto_url}')` : '';
+  document.getElementById('f-usa-poza-label').textContent = checkin.usa_intrare_foto_url ? 'Schimbă poza' : 'Poză cu ușa de intrare';
   document.getElementById('f-checkin-unitate').value = checkin.unitate || '';
-  document.getElementById('f-checkin-unitate-label').textContent = (row.tip === 'hotel') ? 'Cameră' : 'Apartament';
-  document.getElementById('f-checkin-unitate').placeholder = (row.tip === 'hotel') ? 'ex. Camera 214' : 'ex. Apartamentul 5, etaj 2';
+  // Câmpul e static per-cazare (o singură valoare pentru tot ghidul) — corect la apartament
+  // (o cazare = un ghid), dar greșit la hotel (un singur ghid, comun tuturor camerelor, nu
+  // poate arăta corect numărul camerei fiecărui oaspete) — de aceea îl arătăm doar la apartament.
+  document.getElementById('field-camera-apartament').style.display = (row.tip === 'hotel') ? 'none' : '';
   document.getElementById('f-checkin').value = checkin.instructiuni || '';
   document.getElementById('f-receptie-program').value = receptie.program || '';
   document.getElementById('f-receptie-urg').value = receptie.contact_urgenta || '';
@@ -768,7 +883,10 @@ function fillForm(row) {
   document.getElementById('f-whatsapp-activ').checked = f.whatsapp_activ !== false;
   const contacteList = legacyUrgenteToList(urgente);
   for (let i = 1; i <= CONTACTE_MAX; i++) {
-    document.getElementById(`f-contact-${i}`).value = contacteList[i - 1] || '';
+    const c = contacteList[i - 1] || {};
+    document.getElementById(`f-contact-${i}`).value = c.nume || '';
+    document.getElementById(`f-contact-tel-${i}`).value = c.telefon || '';
+    document.getElementById(`f-contact-maps-${i}`).value = c.maps || '';
   }
 
   // Mesajul de bun venit personalizat (+ datele de sosire/plecare din ghid) presupun un
@@ -801,6 +919,12 @@ function fillForm(row) {
   const minibarPrev2 = document.getElementById('minibar-preview-2');
   minibarPrev2.style.backgroundImage = hotel.minibar_foto2_url ? `url('${hotel.minibar_foto2_url}')` : '';
   document.getElementById('f-minibar-foto2-label').textContent = hotel.minibar_foto2_url ? 'Schimbă poza 2' : 'Poză 2';
+
+  [1, 2, 3].forEach(n => {
+    const url = hotel[`servicii_foto${n}_url`];
+    document.getElementById(`servicii-preview-${n}`).style.backgroundImage = url ? `url('${url}')` : '';
+    document.getElementById(`f-servicii-foto${n}-label`).textContent = url ? `Schimbă poza ${n}` : `Poză ${n}`;
+  });
 
   const preview = document.getElementById('photo-preview');
   if (row.foto_url) {
@@ -962,6 +1086,11 @@ async function uploadPhoto(file, slug, prefix = 'cazare') {
 let pendingReguliPozaFile = null;
 let pendingMinibarFile1 = null;
 let pendingMinibarFile2 = null;
+let pendingLockerPozaFile = null;
+let pendingUsaPozaFile = null;
+let pendingServiciiFile1 = null;
+let pendingServiciiFile2 = null;
+let pendingServiciiFile3 = null;
 function wireMinibarUpload(inputId, previewId, labelId, setPending) {
   document.getElementById(inputId).addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -978,6 +1107,11 @@ function wireMinibarUpload(inputId, previewId, labelId, setPending) {
 wireMinibarUpload('f-minibar-foto1', 'minibar-preview-1', 'f-minibar-foto1-label', (f) => pendingMinibarFile1 = f);
 wireMinibarUpload('f-minibar-foto2', 'minibar-preview-2', 'f-minibar-foto2-label', (f) => pendingMinibarFile2 = f);
 wireMinibarUpload('f-reguli-poza', 'reguli-poza-preview', 'f-reguli-poza-label', (f) => pendingReguliPozaFile = f);
+wireMinibarUpload('f-locker-poza', 'locker-poza-preview', 'f-locker-poza-label', (f) => pendingLockerPozaFile = f);
+wireMinibarUpload('f-usa-poza', 'usa-poza-preview', 'f-usa-poza-label', (f) => pendingUsaPozaFile = f);
+wireMinibarUpload('f-servicii-foto1', 'servicii-preview-1', 'f-servicii-foto1-label', (f) => pendingServiciiFile1 = f);
+wireMinibarUpload('f-servicii-foto2', 'servicii-preview-2', 'f-servicii-foto2-label', (f) => pendingServiciiFile2 = f);
+wireMinibarUpload('f-servicii-foto3', 'servicii-preview-3', 'f-servicii-foto3-label', (f) => pendingServiciiFile3 = f);
 
 document.getElementById('btn-save').addEventListener('click', async () => {
   const btn = document.getElementById('btn-save');
@@ -1002,6 +1136,27 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     if (pendingReguliPozaFile) {
       reguliPozaUrl = await uploadPhoto(pendingReguliPozaFile, currentRow.slug, 'reguli');
     }
+    const checkinPrev = (currentRow.facilitati_cazare && currentRow.facilitati_cazare.checkin) || {};
+    let lockerPozaUrl = checkinPrev.locker_foto_url || null;
+    if (pendingLockerPozaFile) {
+      lockerPozaUrl = await uploadPhoto(pendingLockerPozaFile, currentRow.slug, 'locker');
+    }
+    let usaPozaUrl = checkinPrev.usa_intrare_foto_url || null;
+    if (pendingUsaPozaFile) {
+      usaPozaUrl = await uploadPhoto(pendingUsaPozaFile, currentRow.slug, 'usa-intrare');
+    }
+    let serviciiFoto1Url = hotelPrev.servicii_foto1_url || null;
+    if (pendingServiciiFile1) {
+      serviciiFoto1Url = await uploadPhoto(pendingServiciiFile1, currentRow.slug, 'servicii-hotel');
+    }
+    let serviciiFoto2Url = hotelPrev.servicii_foto2_url || null;
+    if (pendingServiciiFile2) {
+      serviciiFoto2Url = await uploadPhoto(pendingServiciiFile2, currentRow.slug, 'servicii-hotel');
+    }
+    let serviciiFoto3Url = hotelPrev.servicii_foto3_url || null;
+    if (pendingServiciiFile3) {
+      serviciiFoto3Url = await uploadPhoto(pendingServiciiFile3, currentRow.slug, 'servicii-hotel');
+    }
 
     const facilitati_cazare = {
       bun_venit: {
@@ -1017,6 +1172,8 @@ document.getElementById('btn-save').addEventListener('click', async () => {
         cod_acces: document.getElementById('f-cod-locker').value.trim(),
         locker_locatie: document.getElementById('f-locker-loc').value.trim(),
         locker_numar: document.getElementById('f-locker-nr').value.trim(),
+        locker_foto_url: lockerPozaUrl,
+        usa_intrare_foto_url: usaPozaUrl,
         unitate: document.getElementById('f-checkin-unitate').value.trim(),
         instructiuni: document.getElementById('f-checkin').value.trim(),
       },
@@ -1038,7 +1195,11 @@ document.getElementById('btn-save').addEventListener('click', async () => {
       },
       whatsapp_activ: document.getElementById('f-whatsapp-activ').checked,
       urgente: {
-        lista: Array.from({ length: CONTACTE_MAX }, (_, i) => document.getElementById(`f-contact-${i + 1}`).value.trim()).filter(Boolean),
+        lista: Array.from({ length: CONTACTE_MAX }, (_, i) => ({
+          nume: document.getElementById(`f-contact-${i + 1}`).value.trim(),
+          telefon: document.getElementById(`f-contact-tel-${i + 1}`).value.trim(),
+          maps: document.getElementById(`f-contact-maps-${i + 1}`).value.trim(),
+        })).filter(c => c.nume),
       },
       hotel: currentRow.tip === 'hotel' ? {
         restaurant_program: document.getElementById('f-rest-program').value.trim(),
@@ -1059,6 +1220,9 @@ document.getElementById('btn-save').addEventListener('click', async () => {
         nota_servicii: document.getElementById('f-hotel-note').value.trim(),
         minibar_foto1_url: minibarFoto1Url,
         minibar_foto2_url: minibarFoto2Url,
+        servicii_foto1_url: serviciiFoto1Url,
+        servicii_foto2_url: serviciiFoto2Url,
+        servicii_foto3_url: serviciiFoto3Url,
         room_service: document.getElementById('f-roomservice').value.trim(),
         mesaj_management: document.getElementById('f-mesaj-management').value.trim(),
       } : {},
@@ -1090,6 +1254,11 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     pendingMinibarFile1 = null;
     pendingMinibarFile2 = null;
     pendingReguliPozaFile = null;
+    pendingLockerPozaFile = null;
+    pendingUsaPozaFile = null;
+    pendingServiciiFile1 = null;
+    pendingServiciiFile2 = null;
+    pendingServiciiFile3 = null;
     fillForm(currentRow);
     showToast('Setările au fost salvate.');
   } catch (e) {

@@ -83,13 +83,14 @@
   .demo-laptop-base{height:13px; background:linear-gradient(180deg,#2c2c2c,#1c1c1c); border-radius:0 0 9px 9px; position:relative;}
   .demo-laptop-base::after{content:''; position:absolute; left:50%; top:0; transform:translateX(-50%); width:64px; height:5px; background:#111; border-radius:0 0 4px 4px;}
   .demo-phone{flex-shrink:0;}
-  .demo-phone-frame{background:#1c1c1c; border-radius:22px; padding:6px; box-shadow:0 8px 20px rgba(16,48,43,0.18);}
-  .demo-phone-notch{width:43px; height:11px; background:#1c1c1c; border-radius:0 0 8px 8px; margin:0 auto; position:relative; top:6px; z-index:2;}
+  .demo-phone-frame{background:#1c1c1c; border-radius:25px; padding:7px; box-shadow:0 8px 20px rgba(16,48,43,0.18);}
+  .demo-phone-notch{width:49px; height:13px; background:#1c1c1c; border-radius:0 0 8px 8px; margin:0 auto; position:relative; top:6px; z-index:2;}
   /* Aceeași logică: iframe randat la dimensiune reală de telefon (390×844), apoi scalat vizual —
      altfel textul paginii reale (gândită pentru un telefon adevărat) apare disproporționat de mare.
-     Cadrul vizibil e cu 20% mai mic decât varianta anterioară, ca proporția față de laptop să fie realistă. */
-  .demo-phone-screen{width:168px; height:364px; background:#EAE3D3; overflow:hidden; border-radius:14px; margin-top:-11px; position:relative;}
-  .demo-phone-scale{width:390px; height:844px; transform:scale(0.43077); transform-origin:top left;}
+     Cadrul vizibil e cu 15% mai mare decât varianta anterioară (168×364 → 193×418), ca telefonul demo
+     să se vadă mai clar lângă laptop. */
+  .demo-phone-screen{width:193px; height:418px; background:#EAE3D3; overflow:hidden; border-radius:16px; margin-top:-13px; position:relative;}
+  .demo-phone-scale{width:390px; height:844px; transform:scale(0.49539); transform-origin:top left;}
   .demo-phone-scale iframe{width:390px; height:844px; border:0; display:block;}
   @media (max-width:640px){
     .demo-devices{gap:20px;}

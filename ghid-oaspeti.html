@@ -342,6 +342,7 @@
     <button id="feedback-send" onclick="sendFeedback()"
       style="margin-top:10px; background:var(--spruce-deep); color:#fff; border:none; border-radius:999px;
         padding:9px 18px; font-size:13px; font-weight:500; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"/></svg>
       <span id="feedback-btn-text">Trimite pe WhatsApp</span>
     </button>
   </div>
@@ -655,7 +656,7 @@ async function applyRegistrationGate() {
     document.getElementById('rg-content').innerHTML = `
       <div class="rg-icon err">✕</div>
       <p class="rg-title">${g.needStayTitle}</p>
-      <p class="rg-sub">${g.needStaySub}</p>
+      <p class="rg-sub">${g.needStaySub(hostTeamLabel('nom'))}</p>
       <p class="rg-timer-note">${g.needStayTimerNote}</p>
       <div class="rg-timer-bar"><div class="rg-timer-fill" id="rg-timer-fill"></div></div>`;
     startNoStayUnlockTimer();
@@ -671,12 +672,12 @@ async function applyRegistrationGate() {
     document.getElementById('rg-content').innerHTML = `
       <div class="rg-icon pending">⏳</div>
       <p class="rg-title">${g.pendingTitle}</p>
-      <p class="rg-sub">${currentStay.prenume ? g.pendingThanks(escapeHtmlGuide(currentStay.prenume)) : ''}${g.pendingSub}</p>`;
+      <p class="rg-sub">${currentStay.prenume ? g.pendingThanks(escapeHtmlGuide(currentStay.prenume)) : ''}${g.pendingSub(hostTeamLabel('subj'))}</p>`;
   } else if (currentStay.status === 'respins') {
     document.getElementById('rg-content').innerHTML = `
       <div class="rg-icon err">✕</div>
       <p class="rg-title">${g.rejectedTitle}</p>
-      <p class="rg-sub">${g.rejectedSub}</p>
+      <p class="rg-sub">${g.rejectedSub(hostTeamLabel('subj'))}</p>
       ${currentStay.motiv_respingere ? `<div class="rg-reason">${escapeHtmlGuide(currentStay.motiv_respingere)}</div>` : ''}
       <button class="rg-submit" onclick="renderGateForm()">${g.rejectedRetry}</button>`;
   } else {
@@ -714,7 +715,7 @@ function renderGateForm() {
       </div>
       <div class="rg-field"><label for="rg-nr-oaspeti">${g.nrOaspeti}</label><input id="rg-nr-oaspeti" type="number" min="1" required value="${s.nr_oaspeti || ''}"></div>
       ${fotoIdFieldsHtml('rg', s.nr_oaspeti || 1)}
-      <div class="rg-note">${g.note}</div>
+      <div class="rg-note">${g.note(hostTeamLabel('nom'))}</div>
       <button type="submit" class="rg-submit" id="rg-submit-btn">${g.submit}</button>
       <div class="rg-error" id="rg-form-error"></div>
     </form>`;
@@ -773,7 +774,7 @@ async function submitRegistration(e) {
     try {
       const { paths, missing } = await collectFotoIdPaths('rg', currentOperator.id, stayToken);
       if (missing) {
-        if (fidErrEl) fidErrEl.textContent = I18N[currentLang].gate.fotoMissing;
+        if (fidErrEl) fidErrEl.textContent = I18N[currentLang].gate.fotoMissing(hostTeamLabel('subj'));
         btn.disabled = false;
         return;
       }
@@ -913,7 +914,7 @@ function renderPreinregSendButton(payload, codScurt) {
 
   if (tip === 'whatsapp') {
     const phone = formatPhoneRo(contact);
-    wrap.innerHTML = `<a class="prb-send-btn" href="https://wa.me/${phone}?text=${encodeURIComponent(rezumat)}" target="_blank" rel="noopener">${I18N[currentLang].fac.preinregSendWhatsapp}</a>`;
+    wrap.innerHTML = `<a class="prb-send-btn" href="https://wa.me/${phone}?text=${encodeURIComponent(rezumat)}" target="_blank" rel="noopener">${FAC_ICONS.whatsapp} ${I18N[currentLang].fac.preinregSendWhatsapp}</a>`;
   } else {
     wrap.innerHTML = `<a class="prb-send-btn" href="mailto:${encodeURIComponent(contact)}?subject=${encodeURIComponent('Preînregistrare — ' + (numeComplet || codScurt))}&body=${encodeURIComponent(rezumat)}">${I18N[currentLang].fac.preinregSendEmail}</a>`;
   }
@@ -1120,13 +1121,13 @@ const I18N = {
     gate: {
       tag: "Înregistrare oaspeți",
       needStayTitle: "Link personalizat necesar",
-      needStaySub: "Acest apartament cere înregistrare înainte de check-in. Foloseşte linkul primit de la gazdă prin email sau WhatsApp — nu linkul general al ghidului.",
+      needStaySub: (host) => `Acest apartament cere înregistrare înainte de check-in. Foloseşte linkul primit de la ${host} prin email sau WhatsApp — nu linkul general al ghidului.`,
       needStayTimerNote: "Între timp, îți deblocăm ghidul local (recomandări, afaceri partenere) în câteva secunde — codul de acces rămâne disponibil doar prin linkul tău personal.",
       pendingTitle: "Îți verificăm datele",
       pendingThanks: (name) => `Mulțumim, ${name}! `,
-      pendingSub: "Gazda confirmă înregistrarea manual, de obicei în câteva ore. Vei primi un email când accesul e deblocat — poți reveni oricând pe acest link.",
+      pendingSub: (hostSubj) => `${hostSubj} confirmă înregistrarea manual, de obicei în câteva ore. Vei primi un email când accesul e deblocat — poți reveni oricând pe acest link.`,
       rejectedTitle: "Mai e nevoie de o corectare",
-      rejectedSub: "Gazda a cerut o mică corectare înainte să confirme înregistrarea.",
+      rejectedSub: (hostSubj) => `${hostSubj} a cerut o mică corectare înainte să confirme înregistrarea.`,
       rejectedRetry: "Corectează și retrimite",
       invalidTitle: "Link invalid",
       formTitle: "Confirmă-ți identitatea",
@@ -1135,9 +1136,9 @@ const I18N = {
       actTip: "Act identitate", actCI: "Carte de identitate", actPasaport: "Pașaport",
       actNr: "Serie și număr", cetatenie: "Cetățenie",
       checkin: "Check-in", checkout: "Check-out", nrOaspeti: "Număr oaspeți",
-      note: "Datele sunt văzute doar de gazdă, pentru verificarea identității la check-in — conform cerințelor locale de evidență a turiștilor.",
+      note: (host) => `Datele sunt văzute doar de ${host}, pentru verificarea identității la check-in — conform cerințelor locale de evidență a turiștilor.`,
       submit: "Trimite înregistrarea",
-      fotoMissing: "Gazda cere o poză a actului de identitate — te rugăm să o adaugi mai sus.",
+      fotoMissing: (hostSubj) => `${hostSubj} cere o poză a actului de identitate — te rugăm să o adaugi mai sus.`,
       fotoErr: "Nu am putut încărca poza — încearcă din nou.",
       saveErr: "Nu am putut trimite înregistrarea — încearcă din nou.",
     },
@@ -1155,10 +1156,11 @@ const I18N = {
       reguli: "Regulile casei", reguliSub: "Ce e permis și ce nu",
       wifi: "Rețea WiFi", wifiSub: "Conectare rapidă prin cod QR",
       servicii: "Servicii hotel", serviciiSub: "Restaurant, SPA, fitness, room service",
-      contact: "Contact & urgențe", contactSub: "Gazdă, spital, poliție",
+      contact: "Contact & urgențe", contactSub: "Contact, spital, poliție",
+      contactCall: "Apelează", contactMessage: "Trimite mesaj pe WhatsApp",
       openMaps: "Deschide în Maps", parcare: "Parcare", adresa: "Adresă",
       directions: "Du-mă acolo", directionsHint: "Deschide traseul în Google Maps, Waze sau Apple Maps",
-      locker: "Amplasare locker", codAcces: "Cod de acces", receptie: "Recepție",
+      locker: "Amplasare locker", usaIntrare: "Ușa de intrare", codAcces: "Cod de acces", receptie: "Recepție",
       program: "Program", urgentaReceptie: "Urgență recepție",
       checkinOra: "Ora de la care se poate face check-in", camera: "Cameră", apartament: "Apartament",
       noteSuplimentare: "Note suplimentare",
@@ -1186,7 +1188,7 @@ const I18N = {
       preinregShowCode: "Arată acest cod QR (sau codul) recepționerului la sosire — îi va afișa instant datele completate.",
       preinregAccessLabel: "Cod acces cameră (self check-in)",
       preinregSendEmail: "✉️ Trimite pe email recepției",
-      preinregSendWhatsapp: "💬 Trimite pe WhatsApp recepției",
+      preinregSendWhatsapp: "Trimite pe WhatsApp recepției",
     },
   },
   en: {
@@ -1230,13 +1232,13 @@ const I18N = {
     gate: {
       tag: "Guest registration",
       needStayTitle: "Personal link required",
-      needStaySub: "This apartment requires registration before check-in. Please use the link your host sent by email or WhatsApp — not the guide's general link.",
+      needStaySub: (host) => `This apartment requires registration before check-in. Please use the link ${host} sent by email or WhatsApp — not the guide's general link.`,
       needStayTimerNote: "In the meantime, we'll unlock the local guide (recommendations, partner businesses) in a few seconds — the access code stays available only through your personal link.",
       pendingTitle: "We're checking your details",
       pendingThanks: (name) => `Thanks, ${name}! `,
-      pendingSub: "Your host confirms registration manually, usually within a few hours. You'll get an email once access is unlocked — you can come back to this link anytime.",
+      pendingSub: (hostSubj) => `${hostSubj} confirms registration manually, usually within a few hours. You'll get an email once access is unlocked — you can come back to this link anytime.`,
       rejectedTitle: "One more correction needed",
-      rejectedSub: "Your host asked for a small correction before confirming your registration.",
+      rejectedSub: (hostSubj) => `${hostSubj} asked for a small correction before confirming your registration.`,
       rejectedRetry: "Correct and resend",
       invalidTitle: "Invalid link",
       formTitle: "Confirm your identity",
@@ -1245,9 +1247,9 @@ const I18N = {
       actTip: "ID type", actCI: "ID card", actPasaport: "Passport",
       actNr: "ID / passport number", cetatenie: "Nationality",
       checkin: "Check-in", checkout: "Check-out", nrOaspeti: "Number of guests",
-      note: "Your details are seen only by your host, for identity verification at check-in — as required by local tourist registration rules.",
+      note: (host) => `Your details are seen only by ${host}, for identity verification at check-in — as required by local tourist registration rules.`,
       submit: "Submit registration",
-      fotoMissing: "Your host requires an ID photo — please add it above.",
+      fotoMissing: (hostSubj) => `${hostSubj} requires an ID photo — please add it above.`,
       fotoErr: "We couldn't upload the photo — please try again.",
       saveErr: "We couldn't submit your registration — please try again.",
     },
@@ -1265,10 +1267,11 @@ const I18N = {
       reguli: "House rules", reguliSub: "What's allowed and what isn't",
       wifi: "WiFi network", wifiSub: "Quick connect via QR code",
       servicii: "Hotel services", serviciiSub: "Restaurant, spa, fitness, room service",
-      contact: "Contact & emergencies", contactSub: "Host, hospital, police",
+      contact: "Contact & emergencies", contactSub: "Contact, hospital, police",
+      contactCall: "Call", contactMessage: "Send WhatsApp message",
       openMaps: "Open in Maps", parcare: "Parking", adresa: "Address",
       directions: "Take me there", directionsHint: "Opens directions in Google Maps, Waze or Apple Maps",
-      locker: "Locker location", codAcces: "Access code", receptie: "Front desk",
+      locker: "Locker location", usaIntrare: "Entrance door", codAcces: "Access code", receptie: "Front desk",
       program: "Hours", urgentaReceptie: "Front desk emergency line",
       checkinOra: "Check-in from", camera: "Room", apartament: "Apartment",
       noteSuplimentare: "Additional notes",
@@ -1296,7 +1299,7 @@ const I18N = {
       preinregShowCode: "Show this QR code (or the code) to the receptionist on arrival — they'll instantly pull up your details.",
       preinregAccessLabel: "Room access code (self check-in)",
       preinregSendEmail: "✉️ Email the front desk",
-      preinregSendWhatsapp: "💬 WhatsApp the front desk",
+      preinregSendWhatsapp: "WhatsApp the front desk",
     },
   },
 };
@@ -1317,6 +1320,7 @@ const FAC_ICONS = {
   chevron: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B6459" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="fac-chevron"><path d="M6 9l6 6l6 -6"/></svg>',
   pin: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5B6459" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M17.657 16.657L13.414 20.9a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/></svg>',
   car: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5B6459" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h-2v-6l2 -5h9l4 5h1a2 2 0 0 1 2 2v4h-2"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/></svg>',
+  phone: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"/></svg>',
 };
 
 function fmt(s){ return (s || '').trim(); }
@@ -1325,15 +1329,25 @@ function fmt(s){ return (s || '').trim(); }
 // unică ca la un apartament — peste tot unde ghidul menționează "gazda", pe un hotel arătăm
 // în schimb "echipa hotelului {Nume}". form: 'nom' (formă simplă, ex. "văzută doar de X")
 // sau 'gen' (formă posesivă, ex. "feedback-ul lui X").
+// form: 'nom' (simplu, ex. "către X"), 'gen' (posesiv minuscul, ex. "linkul lui X"),
+// 'subj' (subiect de propoziție, cu majusculă, ex. "X confirmă înregistrarea").
 function hostTeamLabel(form, lang){
   const isHotelNow = currentOperator && currentOperator.tip === 'hotel';
   const en = (lang || currentLang) === 'en';
   if (isHotelNow) {
     const nume = currentOperator.nume_afisat || currentOperator.nume_afacere || '';
-    if (en) return nume ? `the ${nume} team` : 'the hotel team';
+    if (en) {
+      const team = nume ? `the ${nume} team` : 'the hotel team';
+      return form === 'subj' ? (team.charAt(0).toUpperCase() + team.slice(1)) : team;
+    }
+    if (form === 'subj') return nume ? `Echipa hotelului ${nume}` : 'Echipa hotelului';
     return nume ? (form === 'gen' ? `echipei hotelului ${nume}` : `echipa hotelului ${nume}`) : (form === 'gen' ? 'echipei hotelului' : 'echipa hotelului');
   }
-  if (en) return form === 'gen' ? 'your host' : 'the host';
+  if (en) {
+    if (form === 'subj') return 'Your host';
+    return (form === 'gen') ? 'your host' : 'the host';
+  }
+  if (form === 'subj') return 'Gazda';
   return form === 'gen' ? 'gazdei tale' : 'gazdă';
 }
 
@@ -1425,7 +1439,7 @@ async function renderFacilitati() {
     wifi.ssid || currentOperator.telefon || urgente.spital ||
     (Array.isArray(reguli.lista) && reguli.lista.filter(Boolean).length) || reguli.poza_url ||
     reguli.fumat !== undefined || reguli.animale !== undefined || reguli.liniste !== undefined || reguli.extra ||
-    (isHotel && (hotel.restaurant_program || hotel.spa_program || hotel.fitness_program || hotel.mic_dejun_program || hotel.room_service || hotel.mesaj_management)) ||
+    (isHotel && (hotel.restaurant_program || hotel.spa_program || hotel.fitness_program || hotel.mic_dejun_program || hotel.room_service || hotel.mesaj_management || hotel.servicii_foto1_url || hotel.servicii_foto2_url || hotel.servicii_foto3_url)) ||
     preinregActiva;
   if (!hasAny) { wrap.style.display = 'none'; return; }
 
@@ -1470,9 +1484,18 @@ async function renderFacilitati() {
       const parts = [checkin.locker_locatie, checkin.locker_numar].filter(Boolean).join(' · ');
       body += `<div class="fac-row">${FAC_ICONS.pin}<span><b>${t.locker}:</b> ${parts}</span></div>`;
     }
-    if (checkin.unitate) {
-      const unitLabel = isHotel ? t.camera : t.apartament;
-      body += `<div class="ci-row"><div class="ci-label">${unitLabel}</div><div class="ci-value">${fmt(checkin.unitate)}</div></div>`;
+    if (checkin.locker_foto_url) {
+      body += `<img src="${checkin.locker_foto_url}" alt="${t.locker}" style="width:100%; max-height:220px; object-fit:cover; border-radius:11px; margin:6px 0;">`;
+    }
+    if (checkin.usa_intrare_foto_url) {
+      body += `<div class="ci-label" style="margin-top:8px;">${t.usaIntrare}</div><img src="${checkin.usa_intrare_foto_url}" alt="${t.usaIntrare}" style="width:100%; max-height:220px; object-fit:cover; border-radius:11px; margin:4px 0 6px;">`;
+    }
+    // "Cameră/Apartament" e o singură valoare per-cazare — corectă la apartament (o cazare =
+    // un ghid), dar înșelătoare la hotel (același ghid, comun tuturor camerelor, ar arăta
+    // aceeași "cameră" oricărui oaspete) — de aceea nu o mai afișăm deloc la hotel, chiar
+    // dacă a rămas o valoare veche completată înainte de această schimbare.
+    if (checkin.unitate && !isHotel) {
+      body += `<div class="ci-row"><div class="ci-label">${t.apartament}</div><div class="ci-value">${fmt(checkin.unitate)}</div></div>`;
     }
     if (checkin.instructiuni) body += `<div class="ci-row"><div class="ci-label">${t.noteSuplimentare}</div><div class="ci-value ci-note note-bullet">${tr(checkin.instructiuni)}</div></div>`;
     if (receptie.program || receptie.contact_urgenta) {
@@ -1589,7 +1612,8 @@ async function renderFacilitati() {
     { label: t.micDejun, program: hotel.mic_dejun_program, locatie: hotel.mic_dejun_locatie, telefon: hotel.mic_dejun_telefon },
   ].filter(r => r.program || r.locatie || r.telefon);
   const minibarImgs = [hotel.minibar_foto1_url, hotel.minibar_foto2_url].filter(Boolean);
-  if (ghidUnlocked('servicii_hotel') && isHotel && (serviciiRows.length || minibarImgs.length || hotel.nota_servicii || hotel.room_service)) {
+  const serviciiImgs = [hotel.servicii_foto1_url, hotel.servicii_foto2_url, hotel.servicii_foto3_url].filter(Boolean);
+  if (ghidUnlocked('servicii_hotel') && isHotel && (serviciiRows.length || minibarImgs.length || serviciiImgs.length || hotel.nota_servicii || hotel.room_service)) {
     let body = '';
     if (serviciiRows.length) {
       body += `<div class="fac-table-wrap"><table class="fac-table"><thead><tr>
@@ -1604,6 +1628,11 @@ async function renderFacilitati() {
       body += `</tbody></table></div>`;
     }
     if (hotel.nota_servicii) body += `<div class="fac-row note-bullet" style="margin-bottom:12px;">${tr(hotel.nota_servicii)}</div>`;
+    if (serviciiImgs.length) {
+      body += `<div class="fac-minibar-imgs">` +
+        serviciiImgs.map(url => `<a href="${url}" target="_blank" rel="noopener"><img src="${url}" alt="${t.servicii}" loading="lazy"></a>`).join('') +
+        `</div>`;
+    }
     if (minibarImgs.length) {
       body += `<div class="fac-minibar-label">${t.minibar}</div><div class="fac-minibar-imgs">` +
         minibarImgs.map(url => `<a href="${url}" target="_blank" rel="noopener"><img src="${url}" alt="${t.minibar} — ${t.minibarPoza}" loading="lazy"></a>`).join('') +
@@ -1615,7 +1644,10 @@ async function renderFacilitati() {
 
   // Contact & urgențe — format nou: pana la 5 contacte libere (urgente.lista); formatul vechi
   // (camp unic "spital") ramane afisat pentru cazarile neactualizate inca.
-  const contacteLista = ghidUnlocked('contact_extins') && Array.isArray(urgente.lista) ? urgente.lista.filter(Boolean) : (ghidUnlocked('contact_extins') && urgente.spital ? [urgente.spital] : []);
+  // Contactele au trecut de la simplu text la {nume, telefon, maps} — stringurile vechi
+  // (dintr-un sejur configurat înainte de schimbare) devin {nume: text}, fără telefon/maps proprii.
+  const normalizeContact = (item) => (typeof item === 'string') ? { nume: item, telefon: '', maps: '' } : (item || {});
+  const contacteLista = (ghidUnlocked('contact_extins') && Array.isArray(urgente.lista) ? urgente.lista.filter(Boolean) : (ghidUnlocked('contact_extins') && urgente.spital ? [urgente.spital] : [])).map(normalizeContact);
   if (currentOperator.telefon || contacteLista.length) {
     let body = '';
     if (currentOperator.telefon && f.whatsapp_activ !== false) {
@@ -1625,7 +1657,20 @@ async function renderFacilitati() {
       body += `<a class="fac-pill" href="https://wa.me/${formatPhoneRo(currentOperator.telefon)}" target="_blank" rel="noopener">${FAC_ICONS.whatsapp} ${whatsappLabel}</a>`;
     }
     if (contacteLista.length) {
-      body += `<div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">${contacteLista.map(c => `<div class="fac-row" style="margin-bottom:0;">${tr(c)}</div>`).join('')}</div>`;
+      body += `<div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">${contacteLista.map(c => {
+        const numeHtml = c.maps
+          ? `<a href="${c.maps}" target="_blank" rel="noopener" style="color:inherit; text-decoration:underline;">${tr(c.nume)}</a>`
+          : tr(c.nume);
+        let actionsHtml = '';
+        if (c.telefon) {
+          const telClean = formatPhoneRo(c.telefon);
+          actionsHtml = `<span style="display:inline-flex; gap:8px; margin-left:8px;">` +
+            `<a href="tel:${telClean}" title="${t.contactCall}" style="color:inherit;">${FAC_ICONS.phone}</a>` +
+            `<a href="https://wa.me/${telClean}" target="_blank" rel="noopener" title="${t.contactMessage}" style="color:inherit;">${FAC_ICONS.whatsapp}</a>` +
+            `</span>`;
+        }
+        return `<div class="fac-row" style="margin-bottom:0;">${numeHtml}${actionsHtml}</div>`;
+      }).join('')}</div>`;
     }
     body += `<div class="fac-row" style="margin-top:10px;"><b>${t.politie}:</b>&nbsp;112</div>`;
     sections.push({ key: 'contact', title: t.contact, body });
