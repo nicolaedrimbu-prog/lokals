@@ -1867,7 +1867,7 @@ async function loadPlaces() {
   PLACES = afaceriPlaces.concat(candidatPlaces);
   PLACES.sort((a, b) => a.ordine - b.ordine);
   renderFilters();
-  render(currentFilter);
+  await render(currentFilter);
 }
 
 let currentFilter = 'toate';
@@ -1878,16 +1878,26 @@ function mapsUrl(p){
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.mapsAddress || (p.name + ' Rasnov Brasov'))}`;
 }
 
-function render(filter){
+async function render(filter){
   currentFilter = filter;
   const t = I18N[currentLang];
   const grid = document.getElementById('grid');
   grid.innerHTML = '';
   const list = filter === 'toate' ? PLACES : PLACES.filter(p => p.cat === filter);
+  // Multe afaceri (mai ales cele adăugate recent, ex. categoria "Producători locali")
+  // nu au încă o descriere EN scrisă manual în Supabase (descriere_en gol/null) — nu e
+  // o problemă a categoriei în sine, ci pur și simplu lipsă de date la introducere.
+  // Ca oaspetele să nu vadă text în română pe ghidul EN, cerem automat traducerea
+  // descrierii RO prin același mecanism (tr/translateBatch) folosit pentru textele
+  // libere ale gazdei, pentru orice card fără descriere_en.
+  if (currentLang === 'en') {
+    const missingEn = list.filter(p => !p.desc_en).map(p => p.desc).filter(Boolean);
+    await translateBatch(missingEn, 'en');
+  }
   list.forEach(p => {
     const cat = CATS[p.cat];
     const catLabel = currentLang === 'en' ? cat.label_en : cat.label;
-    const desc = (currentLang === 'en' && p.desc_en) ? p.desc_en : p.desc;
+    const desc = currentLang === 'en' ? (p.desc_en || tr(p.desc)) : p.desc;
     const card = document.createElement('div');
     card.className = 'card';
     let mediaHtml;
@@ -2009,7 +2019,7 @@ async function setLang(lang){
   await renderFacilitati();
   renderWelcomeCard(t);
   renderFilters();
-  render(currentFilter);
+  await render(currentFilter);
   // reface și poarta de înregistrare (formular / mesaj de așteptare / etc.) în noua limbă,
   // dacă e activă — vezi captureGateFormDraft() mai sus, care păstrează ce a scris oaspetele
   await applyRegistrationGate();
