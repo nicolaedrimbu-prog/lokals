@@ -1323,7 +1323,7 @@ const FAC_ICONS = {
   phone: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"/></svg>',
 };
 
-function fmt(s){ return (s || '').trim(); }
+function fmt(s){ return (typeof s === 'string' ? s : (s == null ? '' : String(s))).trim(); }
 
 // La hoteluri, oaspetele interacționează cu personalul recepției, nu cu o persoană-gazdă
 // unică ca la un apartament — peste tot unde ghidul menționează "gazda", pe un hotel arătăm
@@ -1451,7 +1451,9 @@ async function renderFacilitati() {
   const bunVenit = f.bun_venit || {};
   if (currentLang === 'en') {
     const reguliListaRaw = Array.isArray(reguli.lista) ? reguli.lista.filter(Boolean) : [];
-    const urgenteListaRaw = Array.isArray(urgente.lista) ? urgente.lista.filter(Boolean) : [];
+    const urgenteListaRaw = (Array.isArray(urgente.lista) ? urgente.lista.filter(Boolean) : [])
+      .map(item => (typeof item === 'string') ? item : (item && item.nume) || '')
+      .filter(Boolean);
     const toTranslate = [
       checkin.instructiuni, checkout.instructiuni, reguli.extra,
       hotel.nota_servicii, hotel.room_service, hotel.mesaj_management,
