@@ -74,6 +74,19 @@
   .lock-sub{font-size:13px; color:var(--ink-soft); line-height:1.55; margin-bottom:18px;}
   .lock-btn{display:inline-block; background:var(--teal-deep); color:#fff; font-size:13.5px; font-weight:700; padding:11px 22px; border-radius:999px; cursor:pointer; border:none; font-family:inherit; text-decoration:none;}
   .lock-btn-secondary{display:block; margin-top:12px; font-size:12px; color:var(--ink-soft); text-decoration:underline;}
+
+  .lang-toggle{display:flex; gap:6px; margin-bottom:12px;}
+  .lang-pill{flex:1; text-align:center; padding:7px 10px; border-radius:999px; font-size:12px; font-weight:700; letter-spacing:.02em;
+    background:rgba(255,255,255,0.1); color:#C8CFC2; border:1px solid rgba(255,255,255,0.18); cursor:pointer; font-family:inherit;}
+  .lang-pill.active{background:#fff; color:var(--teal-deep); border-color:#fff;}
+  .msg-edit-link{display:block; text-align:right; font-size:11.5px; font-weight:600; color:#C8CFC2; text-decoration:underline; margin:-6px 0 12px; cursor:pointer;}
+  .msg-edit-box{display:none; background:rgba(255,255,255,0.08); border-radius:11px; padding:12px; margin:-4px 0 14px;}
+  .msg-edit-box.open{display:block;}
+  .msg-edit-box label{display:block; font-size:11px; font-weight:700; color:#C8CFC2; margin-bottom:5px;}
+  .msg-edit-box textarea{width:100%; border-radius:9px; border:1px solid rgba(255,255,255,0.25); background:rgba(255,255,255,0.95);
+    color:var(--ink); font-family:inherit; font-size:12.5px; padding:8px 10px; min-height:56px; resize:vertical; margin-bottom:8px;}
+  .msg-edit-hint{font-size:10.5px; color:#C8CFC2; line-height:1.5; margin-bottom:10px;}
+  .msg-edit-save{font-size:12px; font-weight:700; color:var(--teal-deep); background:#fff; border:none; padding:7px 14px; border-radius:999px; cursor:pointer; font-family:inherit;}
 </style>
 </head>
 <body>
@@ -159,6 +172,56 @@ function checklistLink(token){
   return `${window.location.origin}${window.location.pathname.replace(/curatenie-mentenanta\.html$/, '')}checklist-curatenie.html?token=${encodeURIComponent(token)}`;
 }
 
+// Textul trimis pe WhatsApp la anunțarea curățeniei — configurabil de gazdă, separat pentru
+// RO și EN (firma/persoana de curățenie poate fi vorbitoare de EN). Fără text personalizat,
+// cade pe formularea implicită. Placeholders înlocuite la trimitere: {nume} și {link}.
+const CURATENIE_MSG_DEFAULT = {
+  ro: 'Salut! {nume} trebuie curățat. Poți completa checklist-ul aici: {link}',
+  en: 'Hi! {nume} needs cleaning. You can fill in the checklist here: {link}',
+};
+let curatenieLang = 'ro'; // limba activă a mesajului, aleasă din cele două pastile
+
+function curatenieMsgTemplate(lang){
+  const custom = ((operator.facilitati_cazare || {}).curatenie || {})[lang === 'en' ? 'mesaj_en' : 'mesaj_ro'];
+  return (custom || '').trim() || CURATENIE_MSG_DEFAULT[lang];
+}
+
+function fillCuratenieMsg(template, nume, link){
+  return template.replace(/\{nume\}/g, nume).replace(/\{link\}/g, link);
+}
+
+function setCuratenieLang(lang){
+  curatenieLang = lang;
+  document.querySelectorAll('.lang-pill').forEach(p => p.classList.toggle('active', p.dataset.lang === lang));
+  const box = document.getElementById('msg-edit-box');
+  if (box && box.classList.contains('open')) fillMsgEditBox();
+}
+
+function toggleMsgEditBox(){
+  const box = document.getElementById('msg-edit-box');
+  box.classList.toggle('open');
+  if (box.classList.contains('open')) fillMsgEditBox();
+}
+
+function fillMsgEditBox(){
+  document.getElementById('msg-edit-label').textContent = curatenieLang === 'en' ? 'Mesaj (EN)' : 'Mesaj (RO)';
+  document.getElementById('msg-edit-textarea').value = curatenieMsgTemplate(curatenieLang);
+}
+
+async function saveMsgEdit(){
+  const btn = document.getElementById('msg-edit-save-btn');
+  btn.disabled = true;
+  const text = document.getElementById('msg-edit-textarea').value.trim();
+  const curatenieCfg = { ...((operator.facilitati_cazare || {}).curatenie || {}) };
+  curatenieCfg[curatenieLang === 'en' ? 'mesaj_en' : 'mesaj_ro'] = text;
+  const facilitati = { ...(operator.facilitati_cazare || {}), curatenie: curatenieCfg };
+  const { error } = await supabaseClient.from('operatori').update({ facilitati_cazare: facilitati }).eq('id', operator.id);
+  btn.disabled = false;
+  if (error) { console.error(error); alert('Nu am putut salva mesajul. Încearcă din nou.'); return; }
+  operator.facilitati_cazare = facilitati;
+  document.getElementById('msg-edit-box').classList.remove('open');
+}
+
 async function sendCleaningRequest(){
   const btn = document.getElementById('cta-btn');
   btn.disabled = true;
@@ -172,7 +235,7 @@ async function sendCleaningRequest(){
 
   const nume = operator.nume_afisat || operator.nume_afacere || 'apartamentul';
   const link = checklistLink(newSession.token);
-  const mesaj = `Salut! ${nume} trebuie curățat. Poți completa checklist-ul aici: ${link}`;
+  const mesaj = fillCuratenieMsg(curatenieMsgTemplate(curatenieLang), nume, link);
   window.open(`https://wa.me/?text=${encodeURIComponent(mesaj)}`, '_blank');
 
   renderDash();
@@ -298,6 +361,17 @@ function renderDash(){
       <div class="cta-card">
         <div class="cta-title">Anunță că apartamentul trebuie curățat</div>
         <div class="cta-sub">Se deschide WhatsApp cu mesajul pregătit — alegi tu cui îl trimiți (persoana sau firma care face curățenia de această dată). Linkul din mesaj e unic pentru sesiunea asta; cine îl deschide își scrie numele pe checklist.</div>
+        <div class="lang-toggle">
+          <button type="button" class="lang-pill active" data-lang="ro" id="lang-pill-ro">Mesaj RO</button>
+          <button type="button" class="lang-pill" data-lang="en" id="lang-pill-en">Mesaj EN</button>
+        </div>
+        <span class="msg-edit-link" id="msg-edit-toggle">Editează mesajul →</span>
+        <div class="msg-edit-box" id="msg-edit-box">
+          <label id="msg-edit-label">Mesaj (RO)</label>
+          <textarea id="msg-edit-textarea"></textarea>
+          <div class="msg-edit-hint">Poți folosi <b>{nume}</b> (numele cazării) și <b>{link}</b> (linkul checklist-ului) — se completează automat la trimitere. Necompletat, rămâne formularea implicită.</div>
+          <button class="msg-edit-save" type="button" id="msg-edit-save-btn">Salvează</button>
+        </div>
         <button class="cta-btn" type="button" id="cta-btn">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l1.65 -3.8a9 9 0 1 1 3.4 3.4l-5.05 1.4"/></svg>
           Trimite pe WhatsApp
@@ -329,6 +403,11 @@ function renderDash(){
   } else {
     lockWrap.innerHTML = '';
     document.getElementById('cta-btn').addEventListener('click', sendCleaningRequest);
+    document.querySelectorAll('.lang-pill').forEach(p => {
+      p.addEventListener('click', () => setCuratenieLang(p.dataset.lang));
+    });
+    document.getElementById('msg-edit-toggle').addEventListener('click', toggleMsgEditBox);
+    document.getElementById('msg-edit-save-btn').addEventListener('click', saveMsgEdit);
     document.querySelectorAll('[data-resolve]').forEach(btn => {
       btn.addEventListener('click', () => resolveIssue(btn.dataset.resolve));
     });
