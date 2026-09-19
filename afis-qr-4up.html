@@ -27,6 +27,18 @@
   .toolbar-note{max-width:210mm; margin:0 auto 18px; font-size:12.5px; color:var(--ink-soft); line-height:1.5;}
   .toolbar-note a{color:var(--teal-deep); font-weight:600;}
 
+  .save-wrap{position:relative;}
+  .save-popover{position:absolute; top:calc(100% + 8px); right:0; width:230px; background:#fff; border:1px solid var(--line);
+    border-radius:12px; box-shadow:0 12px 30px rgba(16,48,43,0.18); padding:6px; display:none; z-index:20;}
+  .save-popover.open{display:block;}
+  .save-opt{display:flex; align-items:center; gap:10px; width:100%; background:none; border:none; text-align:left;
+    padding:9px 10px; border-radius:8px; font-family:inherit; font-size:13px; font-weight:600; color:var(--ink);
+    cursor:pointer; text-decoration:none;}
+  .save-opt:hover{background:#F5F1E6;}
+  .save-opt-sub{display:block; font-size:11px; font-weight:400; color:var(--ink-soft); margin-top:1px;}
+  .save-opt[disabled]{opacity:.5; cursor:default;}
+  .save-opt[disabled]:hover{background:none;}
+
   .state-msg{max-width:500px; margin:80px auto; text-align:center; color:var(--ink-soft); font-size:14px;}
 
   .sheet{width:210mm; min-height:297mm; background:#EFE9DA; margin:0 auto 40px;
@@ -73,7 +85,23 @@
 <div class="toolbar no-print">
   <a class="back-link" href="contul-meu.html">← Înapoi la proprietățile mele</a>
   <div class="toolbar-btns">
-    <button class="save-btn" id="btn-save" disabled>Se pregătește PDF-ul…</button>
+    <div class="save-wrap">
+      <button class="save-btn" id="btn-save" disabled>Se pregătește PDF-ul…</button>
+      <div class="save-popover" id="save-popover">
+        <button class="save-opt" type="button" id="opt-download">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12"/><path d="M8 12l4 4 4 -4"/><path d="M4 20h16"/></svg>
+          <span>Descarcă PDF<span class="save-opt-sub">Salvează fișierul pe telefon/calculator</span></span>
+        </button>
+        <button class="save-opt" type="button" id="opt-whatsapp">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#25A160" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l1.65 -3.8a9 9 0 1 1 3.4 3.4l-5.05 1.4"/><path d="M9 10a.5 .5 0 0 0 1 0v-1a.5 .5 0 0 0 -1 0v1a5 5 0 0 0 5 5h1a.5 .5 0 0 0 0 -1h-1a.5 .5 0 0 0 0 1"/></svg>
+          <span><span class="save-opt-label">Trimite pe WhatsApp</span><span class="save-opt-sub">Link către PDF, gata de trimis</span></span>
+        </button>
+        <button class="save-opt" type="button" id="opt-email">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9 -6"/></svg>
+          <span><span class="save-opt-label">Trimite pe Email</span><span class="save-opt-sub">Deschide un email cu linkul</span></span>
+        </button>
+      </div>
+    </div>
     <button class="print-btn" id="btn-print">Printează</button>
   </div>
 </div>
@@ -87,6 +115,10 @@
 <script>
 const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
 const SUPABASE_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
+// Client Supabase — dacă fila a fost deschisă dintr-o filă „Proprietățile mele" deja
+// autentificată, preia automat sesiunea din acest browser (același domeniu), necesară
+// mai jos pentru a încărca PDF-ul în Storage la trimiterea pe WhatsApp/Email.
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 function tileHtml(nume, zona) {
   return `
@@ -202,34 +234,96 @@ function buildPosterPdf(nume, zona, qrDataUrls) {
 
 let pdfDoc = null;
 let posterNume = '';
+let uploadedPdfUrl = null; // link public către PDF-ul deja încărcat în Storage, cerut o singură dată
+
+function fileSlugFromNume(nume) {
+  return nume.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'cazare';
+}
+
+// WhatsApp și Email nu pot primi un fișier atașat direct dintr-un link wa.me/mailto — de-aia
+// îl încărcăm o singură dată în Storage (bucket-ul public folosit deja pentru pozele afacerilor)
+// și trimitem link-ul public către PDF, exact ca opțiunile „Distribuie" de la ghidul online.
+async function ensureUploadedPdfUrl() {
+  if (uploadedPdfUrl) return uploadedPdfUrl;
+  const fileSlug = fileSlugFromNume(posterNume);
+  const path = `afise-qr/${fileSlug}-4up-${Date.now()}.pdf`;
+  const blob = pdfDoc.output('blob');
+  const { error } = await supabaseClient.storage.from('afaceri-poze').upload(path, blob, {
+    contentType: 'application/pdf',
+    upsert: true,
+  });
+  if (error) throw error;
+  const { data } = supabaseClient.storage.from('afaceri-poze').getPublicUrl(path);
+  uploadedPdfUrl = data.publicUrl;
+  return uploadedPdfUrl;
+}
+
+function toggleSavePopover(open) {
+  document.getElementById('save-popover').classList.toggle('open', open);
+}
 
 async function initSaveShareButton() {
   const btn = document.getElementById('btn-save');
   if (!pdfDoc) return;
-  const fileSlug = posterNume.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'cazare';
+  const fileSlug = fileSlugFromNume(posterNume);
   const fileName = `lokals-qr-4up-${fileSlug}.pdf`;
-  const blob = pdfDoc.output('blob');
-  const canShareFile = !!(navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: 'application/pdf' })] }));
 
   btn.disabled = false;
-  btn.textContent = canShareFile ? '📤 Distribuie / trimite' : '⬇️ Descarcă PDF';
-  btn.onclick = async () => {
-    if (canShareFile) {
-      try {
-        await navigator.share({
-          files: [new File([blob], fileName, { type: 'application/pdf' })],
-          title: `Afiș QR Lokals — ${posterNume}`,
-          text: `Afișul cu codul QR (4 pe pagină) pentru ${posterNume}.`,
-        });
-        return;
-      } catch (e) {
-        if (e && e.name === 'AbortError') return; // omul a anulat din fereastra de distribuire
-        // dacă distribuirea eșuează dintr-un alt motiv, continuăm mai jos cu descărcarea directă
-      }
-    }
+  btn.textContent = '📤 Salvează / Distribuie';
+  btn.onclick = () => toggleSavePopover(!document.getElementById('save-popover').classList.contains('open'));
+
+  document.getElementById('opt-download').onclick = () => {
     pdfDoc.save(fileName);
+    toggleSavePopover(false);
+  };
+
+  // WhatsApp și Email deschid o fereastră nouă abia după ce avem linkul — dar un window.open()
+  // apelat după un await nu mai e considerat gest direct al utilizatorului de unele browsere și
+  // poate fi blocat ca pop-up. De-aia deschidem fereastra goală imediat, sincron cu click-ul, și
+  // îi setăm adresa abia după ce se termină încărcarea în Storage.
+  document.getElementById('opt-whatsapp').onclick = async (e) => {
+    const optBtn = e.currentTarget;
+    const win = window.open('', '_blank');
+    const prevLabel = optBtn.querySelector('.save-opt-label').textContent;
+    optBtn.disabled = true;
+    optBtn.querySelector('.save-opt-label').textContent = 'Se încarcă PDF-ul…';
+    try {
+      const url = await ensureUploadedPdfUrl();
+      const mesaj = `Afișul QR Lokals — ${posterNume}: ${url}`;
+      if (win) win.location.href = `https://wa.me/?text=${encodeURIComponent(mesaj)}`;
+      toggleSavePopover(false);
+    } catch (err) {
+      if (win) win.close();
+      alert('Nu am putut încărca PDF-ul pentru trimitere. Verifică dacă ești autentificat (revino din „Proprietățile mele”) sau descarcă PDF-ul și atașează-l manual.');
+    } finally {
+      optBtn.disabled = false;
+      optBtn.querySelector('.save-opt-label').textContent = prevLabel;
+    }
+  };
+
+  document.getElementById('opt-email').onclick = async (e) => {
+    const optBtn = e.currentTarget;
+    const prevLabel = optBtn.querySelector('.save-opt-label').textContent;
+    optBtn.disabled = true;
+    optBtn.querySelector('.save-opt-label').textContent = 'Se încarcă PDF-ul…';
+    try {
+      const url = await ensureUploadedPdfUrl();
+      const subject = `Afiș QR Lokals — ${posterNume}`;
+      const body = `Afișul cu codul QR (4 pe pagină) pentru ${posterNume}:\n${url}`;
+      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      toggleSavePopover(false);
+    } catch (err) {
+      alert('Nu am putut încărca PDF-ul pentru trimitere. Verifică dacă ești autentificat (revino din „Proprietățile mele”) sau descarcă PDF-ul și atașează-l manual.');
+    } finally {
+      optBtn.disabled = false;
+      optBtn.querySelector('.save-opt-label').textContent = prevLabel;
+    }
   };
 }
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.save-wrap')) toggleSavePopover(false);
+});
 
 async function init() {
   const slug = new URLSearchParams(window.location.search).get('slug');
