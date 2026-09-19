@@ -14,10 +14,12 @@
     --cream:#F7F2E8; --ink:#181E1B; --ink-soft:#5B6459; --line:#DCD5C6; --sage:#C8CFC2;
   }
   *{box-sizing:border-box;}
-  body{margin:0; background:#EFE9DA; font-family:'Inter', system-ui, sans-serif; color:var(--ink);}
+  html{overflow-x:hidden;}
+  body{margin:0; background:#EFE9DA; font-family:'Inter', system-ui, sans-serif; color:var(--ink); overflow-x:hidden;}
   .serif{font-family:'Fraunces', Georgia, serif;}
 
-  .toolbar{max-width:794px; margin:0 auto; padding:18px 0; display:flex; justify-content:space-between; align-items:center;}
+  .toolbar{max-width:794px; margin:0 auto; padding:18px 16px; display:flex; justify-content:space-between; align-items:center; gap:10px;
+    flex-wrap:wrap; position:sticky; top:0; background:#EFE9DA; z-index:50;}
   .back-link{font-size:13px; font-weight:600; color:var(--teal-deep); text-decoration:none;}
   .print-btn{background:var(--teal-deep); color:#fff; border:none; font-size:13.5px; font-weight:700; padding:10px 20px; border-radius:999px; cursor:pointer; font-family:inherit;}
 
@@ -45,13 +47,19 @@
 
   .state-msg{max-width:500px; margin:80px auto; text-align:center; color:var(--ink-soft); font-size:14px;}
 
-  .toolbar-note{max-width:794px; margin:0 auto 10px; font-size:12.5px; color:var(--ink-soft); line-height:1.5;}
+  .toolbar-note{max-width:794px; margin:0 auto 10px; padding:0 16px; font-size:12.5px; color:var(--ink-soft); line-height:1.5;}
   .toolbar-note a{color:var(--teal-deep); font-weight:600;}
+
+  /* Afișul are o lățime fixă (794px, la scara A4) pentru tipar — pe un telefon mai îngust,
+     îl micșorăm proporțional cu JS (vezi fitWideBoxToScreen) ca să încapă pe ecran fără
+     scroll orizontal și fără ca browserul să facă zoom-out pe toată pagina (ceea ce împingea
+     bara de sus în afara zonei ușor accesibile). La print, revenim la mărimea reală. */
+  .poster{transform-origin:top center;}
 
   @media print{
     body{background:#fff;}
     .toolbar, .no-print{display:none !important;}
-    .poster{box-shadow:none; margin:0;}
+    .poster{box-shadow:none; margin:0; transform:none !important;}
   }
 </style>
 </head>
@@ -101,6 +109,29 @@
 const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
 const SUPABASE_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
 
+// Afișul e proiectat la lățime fixă (794px, scara A4) pentru tipar. Pe un telefon mai îngust
+// decât atât, fără această scalare, pagina devine mai lată decât ecranul — iar unele browsere
+// mobile reacționează micșorând TOATĂ pagina ca s-o încapă (nu doar afișul), ceea ce face bara
+// de sus greu de atins cu degetul. Îl micșorăm noi, proporțional, ca să încapă exact pe ecran.
+function fitWideBoxToScreen(box) {
+  if (!box) return;
+  function apply() {
+    box.style.transform = 'none';
+    box.style.marginBottom = '';
+    const naturalWidth = box.offsetWidth;
+    const naturalHeight = box.offsetHeight;
+    const avail = window.innerWidth - 24; // mic gutter lateral
+    if (naturalWidth > avail && avail > 0) {
+      const scale = avail / naturalWidth;
+      box.style.transform = `scale(${scale})`;
+      box.style.marginBottom = `${-(naturalHeight - naturalHeight * scale)}px`;
+    }
+  }
+  apply();
+  window.addEventListener('resize', apply);
+  window.addEventListener('orientationchange', apply);
+}
+
 async function init() {
   const slug = new URLSearchParams(window.location.search).get('slug');
   document.getElementById('link-4up').href = `afis-qr-4up.html?slug=${encodeURIComponent(slug || '')}`;
@@ -143,6 +174,7 @@ async function init() {
   document.title = `Afiș QR — ${nume}`;
 
   document.getElementById('poster').style.display = '';
+  fitWideBoxToScreen(document.getElementById('poster'));
 }
 
 document.getElementById('btn-print').addEventListener('click', () => window.print());

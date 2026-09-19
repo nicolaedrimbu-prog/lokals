@@ -14,16 +14,18 @@
     --cream:#F7F2E8; --ink:#181E1B; --ink-soft:#5B6459; --line:#DCD5C6;
   }
   *{box-sizing:border-box;}
-  body{margin:0; background:#EFE9DA; font-family:'Inter', system-ui, sans-serif; color:var(--ink);}
+  html{overflow-x:hidden;}
+  body{margin:0; background:#EFE9DA; font-family:'Inter', system-ui, sans-serif; color:var(--ink); overflow-x:hidden;}
   .serif{font-family:'Fraunces', Georgia, serif;}
 
-  .toolbar{max-width:210mm; margin:0 auto; padding:18px 0; display:flex; justify-content:space-between; align-items:center;}
+  .toolbar{max-width:210mm; margin:0 auto; padding:18px 16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;
+    position:sticky; top:0; background:#EFE9DA; z-index:50;}
   .back-link{font-size:13px; font-weight:600; color:var(--teal-deep); text-decoration:none;}
   .print-btn{background:var(--teal-deep); color:#fff; border:none; font-size:13.5px; font-weight:700; padding:10px 20px; border-radius:999px; cursor:pointer; font-family:inherit;}
   .toolbar-btns{display:flex; gap:8px; flex-wrap:wrap;}
   .save-btn{background:#fff; color:var(--teal-deep); border:1.5px solid var(--teal-deep); font-size:13.5px; font-weight:700; padding:9px 18px; border-radius:999px; cursor:pointer; font-family:inherit;}
   .save-btn:disabled{opacity:.55; cursor:default;}
-  .toolbar-note{max-width:210mm; margin:0 auto 18px; font-size:12.5px; color:var(--ink-soft); line-height:1.5;}
+  .toolbar-note{max-width:210mm; margin:0 auto 18px; padding:0 16px; font-size:12.5px; color:var(--ink-soft); line-height:1.5;}
 
   .save-wrap{position:relative;}
   .save-popover{position:absolute; top:calc(100% + 8px); right:0; width:230px; background:#fff; border:1px solid var(--line);
@@ -56,10 +58,16 @@
   .tile-how{font-size:9px; color:var(--ink-soft); line-height:1.4; border-top:1px dashed var(--line); padding-top:5px; margin-top:auto;}
   .tile-how b{color:var(--ink);}
 
+  /* Coala are lățime fixă (210mm, format A4) pentru tipar — pe un telefon mai îngust o
+     micșorăm proporțional cu JS (vezi fitWideBoxToScreen) ca să încapă pe ecran fără scroll
+     orizontal și fără ca browserul să facă zoom-out pe toată pagina, ceea ce împingea bara de
+     sus în afara zonei ușor accesibile. La print revenim la mărimea reală. */
+  .sheet{transform-origin:top center;}
+
   @media print{
     body{background:#fff;}
     .toolbar, .toolbar-note, .no-print{display:none !important;}
-    .sheet{box-shadow:none; margin:0; width:auto; min-height:auto;}
+    .sheet{box-shadow:none; margin:0; width:auto; min-height:auto; transform:none !important;}
     .tile{border-style:solid;}
     @page{ size:A4; margin:10mm; }
   }
@@ -104,6 +112,29 @@ const SUPABASE_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
 // mele / panoul de parteneri), preia automat sesiunea din acest browser (același domeniu),
 // necesară mai jos pentru a încărca PDF-ul în Storage la trimiterea pe WhatsApp/Email.
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Coala e proiectată la lățime fixă (210mm, format A4) pentru tipar. Pe un telefon mai îngust
+// decât atât, fără această scalare, pagina devine mai lată decât ecranul — iar unele browsere
+// mobile reacționează micșorând TOATĂ pagina ca s-o încapă (nu doar coala), ceea ce face bara
+// de sus greu de atins cu degetul. Îl micșorăm noi, proporțional, ca să încapă exact pe ecran.
+function fitWideBoxToScreen(box) {
+  if (!box) return;
+  function apply() {
+    box.style.transform = 'none';
+    box.style.marginBottom = '';
+    const naturalWidth = box.offsetWidth;
+    const naturalHeight = box.offsetHeight;
+    const avail = window.innerWidth - 24; // mic gutter lateral
+    if (naturalWidth > avail && avail > 0) {
+      const scale = avail / naturalWidth;
+      box.style.transform = `scale(${scale})`;
+      box.style.marginBottom = `${-(naturalHeight - naturalHeight * scale)}px`;
+    }
+  }
+  apply();
+  window.addEventListener('resize', apply);
+  window.addEventListener('orientationchange', apply);
+}
 
 function tileHtml(nume) {
   return `
@@ -303,6 +334,7 @@ async function init() {
   });
   document.title = `Afiș QR scanare beneficii — ${nume}`;
   sheet.style.display = '';
+  fitWideBoxToScreen(sheet);
 
   try {
     const qrDataUrls = Array.from(sheet.querySelectorAll('.tile-qr-holder')).map(qrDataUrlFromHolder);
