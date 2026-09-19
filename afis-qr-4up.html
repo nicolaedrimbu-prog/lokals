@@ -80,6 +80,7 @@
   .sheet{transform-origin:top center;}
 
   @media print{
+    *{ -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; color-adjust:exact !important; }
     body{background:#fff;}
     .toolbar, .toolbar-note, .no-print{display:none !important;}
     .sheet{box-shadow:none; margin:0; width:auto; min-height:auto; background:#fff; transform:none !important;}
@@ -146,9 +147,20 @@ function fitWideBoxToScreen(box) {
       box.style.marginBottom = `${-(naturalHeight - naturalHeight * scale)}px`;
     }
   }
+  function reset() {
+    box.style.transform = 'none';
+    box.style.marginBottom = '';
+  }
   apply();
   window.addEventListener('resize', apply);
   window.addEventListener('orientationchange', apply);
+  // La print (inclusiv "Salvează ca PDF" din dialogul de printare al browserului), afișul
+  // trebuie să revină la mărimea reală A4 — altfel micșorarea de pe ecran (transform + marginea
+  // negativă care o compensează) ajunge și în PDF, rupe paginarea și împinge conținutul pe a
+  // doua pagină. Ascultăm beforeprint/afterprint (browserul le declanșează și pentru "Salvează
+  // ca PDF", nu doar pentru tipar fizic), fiindcă un resize obișnuit nu se declanșează aici.
+  window.addEventListener('beforeprint', reset);
+  window.addEventListener('afterprint', apply);
 }
 
 function tileHtml(nume, zona) {
