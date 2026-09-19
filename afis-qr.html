@@ -45,6 +45,9 @@
 
   .state-msg{max-width:500px; margin:80px auto; text-align:center; color:var(--ink-soft); font-size:14px;}
 
+  .toolbar-note{max-width:794px; margin:0 auto 10px; font-size:12.5px; color:var(--ink-soft); line-height:1.5;}
+  .toolbar-note a{color:var(--teal-deep); font-weight:600;}
+
   @media print{
     body{background:#fff;}
     .toolbar, .no-print{display:none !important;}
@@ -58,6 +61,7 @@
   <a class="back-link" href="contul-meu.html">← Înapoi la proprietățile mele</a>
   <button class="print-btn" id="btn-print">Printează / Descarcă PDF</button>
 </div>
+<p class="toolbar-note no-print">Vrei mai multe afișe mici pe o singură pagină, de decupat pentru fiecare cameră? Vezi <a href="#" id="link-4up">varianta cu 4 afișe bilingve RO/EN pe o pagină A4</a>.</p>
 
 <div id="state-loading" class="state-msg">Se încarcă afișul...</div>
 <div id="state-error" class="state-msg" style="display:none;">Nu am găsit această proprietate. Verifică linkul sau revino din „Proprietățile mele”.</div>
@@ -99,6 +103,7 @@ const SUPABASE_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
 
 async function init() {
   const slug = new URLSearchParams(window.location.search).get('slug');
+  document.getElementById('link-4up').href = `afis-qr-4up.html?slug=${encodeURIComponent(slug || '')}`;
   if (!slug) {
     document.getElementById('state-loading').style.display = 'none';
     document.getElementById('state-error').style.display = '';

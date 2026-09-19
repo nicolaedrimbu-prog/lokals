@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Afiș QR — 4 pe pagină — Lokals</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Poppins:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="lokals-zones.js"></script>
+<style>
+  :root{
+    --teal-deep:#10302B; --teal:#1A4A42; --gold:#C98A2C; --gold-soft:#E8CE9E;
+    --cream:#F7F2E8; --ink:#181E1B; --ink-soft:#5B6459; --line:#DCD5C6; --sage:#C8CFC2;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:#EFE9DA; font-family:'Inter', system-ui, sans-serif; color:var(--ink);}
+  .serif{font-family:'Fraunces', Georgia, serif;}
+
+  .toolbar{max-width:210mm; margin:0 auto; padding:18px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;}
+  .back-link{font-size:13px; font-weight:600; color:var(--teal-deep); text-decoration:none;}
+  .toolbar-btns{display:flex; gap:8px; flex-wrap:wrap;}
+  .print-btn{background:var(--teal-deep); color:#fff; border:none; font-size:13.5px; font-weight:700; padding:10px 20px; border-radius:999px; cursor:pointer; font-family:inherit;}
+  .save-btn{background:#fff; color:var(--teal-deep); border:1.5px solid var(--teal-deep); font-size:13.5px; font-weight:700; padding:9px 18px; border-radius:999px; cursor:pointer; font-family:inherit;}
+  .save-btn:disabled{opacity:.55; cursor:default;}
+  .toolbar-note{max-width:210mm; margin:0 auto 18px; font-size:12.5px; color:var(--ink-soft); line-height:1.5;}
+  .toolbar-note a{color:var(--teal-deep); font-weight:600;}
+
+  .state-msg{max-width:500px; margin:80px auto; text-align:center; color:var(--ink-soft); font-size:14px;}
+
+  .sheet{width:210mm; min-height:297mm; background:#EFE9DA; margin:0 auto 40px;
+    padding:10mm; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:6mm;}
+
+  .tile{background:var(--teal-deep); border-radius:14px; padding:7mm 6mm 6mm; display:flex; flex-direction:column;
+    align-items:center; text-align:center; page-break-inside:avoid; position:relative; box-shadow:0 6px 18px rgba(16,48,43,0.16);
+    outline:1.5px dashed rgba(232,206,158,0.5); outline-offset:5px;}
+
+  .tile-logo{display:flex; align-items:center; gap:6px; margin-bottom:5px;}
+  .tile-logo-dot{width:13px; height:13px; border-radius:50%; background:var(--gold); position:relative;}
+  .tile-logo-dot::after{content:''; position:absolute; inset:3.5px; border-radius:50%; background:var(--teal-deep);}
+  .tile-logo-word{font-family:'Poppins', sans-serif; font-weight:700; color:#fff; font-size:13.5px;}
+
+  .tile-eyebrow{color:var(--gold); font-size:8.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin-bottom:7px;}
+  .tile-pill{display:inline-block; background:var(--cream); color:var(--teal-deep); font-weight:700; font-size:9.5px;
+    letter-spacing:.02em; padding:4px 12px; border-radius:999px; margin-bottom:9px; max-width:90%;}
+
+  .tile-headline{font-size:15.5px; font-weight:700; color:#fff; line-height:1.2; margin-bottom:5px;}
+  .tile-sub{font-size:8px; color:var(--sage); line-height:1.42; max-width:210px; margin-bottom:9px;}
+
+  .tile-qr{background:var(--cream); border-radius:12px; padding:7px; margin-bottom:6px;}
+  .tile-qr img, .tile-qr canvas{width:78px; height:78px; display:block;}
+  .tile-scan{font-size:10px; font-weight:700; color:#fff; margin-bottom:8px;}
+
+  .tile-divider{width:60%; border-top:1px dashed rgba(232,206,158,0.4); margin-bottom:8px;}
+
+  .tile-headline-en{font-size:12.5px; font-weight:700; color:var(--gold-soft); line-height:1.2; margin-bottom:4px;}
+  .tile-sub-en{font-size:7.5px; font-style:italic; color:var(--sage); line-height:1.4; max-width:210px; margin-bottom:0;}
+
+  .tile-footer{margin-top:auto; padding-top:8px; font-size:7.5px; color:var(--sage); letter-spacing:.02em; opacity:.75;}
+
+  @media print{
+    body{background:#fff;}
+    .toolbar, .toolbar-note, .no-print{display:none !important;}
+    .sheet{box-shadow:none; margin:0; width:auto; min-height:auto; background:#fff;}
+    .tile{box-shadow:none;}
+    @page{ size:A4; margin:10mm; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar no-print">
+  <a class="back-link" href="contul-meu.html">← Înapoi la proprietățile mele</a>
+  <div class="toolbar-btns">
+    <button class="save-btn" id="btn-save" disabled>Se pregătește PDF-ul…</button>
+    <button class="print-btn" id="btn-print">Printează</button>
+  </div>
+</div>
+<p class="toolbar-note no-print">4 afișe identice, bilingve RO/EN, pe o pagină A4 — decupează-le pe linia punctată și lipește câte unul în fiecare cameră/apartament. Fiecare cod QR deschide ghidul de oaspeți al acestei cazări. Pentru varianta cu un singur afiș mare pe pagină, vezi <a href="#" id="link-1up">afișul clasic</a>.</p>
+
+<div id="state-loading" class="state-msg">Se încarcă afișul...</div>
+<div id="state-error" class="state-msg" style="display:none;">Nu am găsit această proprietate. Verifică linkul sau revino din „Proprietățile mele”.</div>
+
+<div class="sheet" id="sheet" style="display:none;"></div>
+
+<script>
+const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
+const SUPABASE_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
+
+function tileHtml(nume, zona) {
+  return `
+    <div class="tile">
+      <div class="tile-logo">
+        <span class="tile-logo-dot"></span>
+        <span class="tile-logo-word">lokals</span>
+      </div>
+      <div class="tile-eyebrow">Ghidul gazdei · ${zona}</div>
+      <div class="tile-pill">${nume.toUpperCase()}</div>
+
+      <div class="tile-headline serif">Bine ai venit! 🏔️</div>
+      <div class="tile-sub">Suntem localnici și am adunat toate locurile noastre preferate din ${zona} într-un singur loc. Scanează și ai informațiile șederii tale + beneficii exclusive pentru oaspeții noștri:</div>
+
+      <div class="tile-qr"><div class="tile-qr-holder"></div></div>
+      <div class="tile-scan">lokals.ro</div>
+
+      <div class="tile-divider"></div>
+
+      <div class="tile-headline-en serif">Welcome! 🏔️</div>
+      <div class="tile-sub-en">We're locals, and we've gathered all our favourite spots in ${zona} in one place. Scan for your stay info + exclusive perks for our guests: lokals.ro</div>
+
+      <div class="tile-footer">Afiș generat automat din panoul Lokals · A4</div>
+    </div>
+  `;
+}
+
+// ===== Generare PDF — identic ca așezare cu coala printabilă — pentru butonul Salvează/Distribuie =====
+// Desenăm direct în jsPDF (fără screenshot al paginii), folosind imaginea codului QR deja
+// randat pe canvas de qrcodejs — rezultatul e un PDF mic, text selectabil, nu o poză a ecranului.
+// jsPDF (fontul standard Helvetica) nu desenează emoji color — le omitem din varianta PDF,
+// ele rămân doar pe pagina tipărită direct din browser (butonul „Printează”).
+function qrDataUrlFromHolder(holder) {
+  const canvas = holder.querySelector('canvas');
+  if (canvas) return canvas.toDataURL('image/png');
+  const img = holder.querySelector('img');
+  return img ? img.src : null;
+}
+
+function buildPosterPdf(nume, zona, qrDataUrls) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const pageW = 210, pageH = 297, margin = 10, gap = 6;
+  const cols = 2, rows = 2;
+  const cellW = (pageW - margin * 2 - gap) / cols;
+  const cellH = (pageH - margin * 2 - gap) / rows;
+
+  const teal = [16, 48, 43], gold = [201, 138, 44], goldSoft = [232, 206, 158],
+        cream = [247, 242, 232], sage = [200, 207, 194], white = [255, 255, 255];
+
+  for (let i = 0; i < cols * rows; i++) {
+    const col = i % cols, row = Math.floor(i / cols);
+    const x = margin + col * (cellW + gap);
+    const y = margin + row * (cellH + gap);
+    const cx = x + cellW / 2;
+    const innerW = cellW - 14;
+
+    doc.setFillColor(...teal);
+    doc.roundedRect(x, y, cellW, cellH, 3, 3, 'F');
+
+    let cy = y + 9;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...white);
+    doc.text('lokals', cx, cy, { align: 'center' });
+
+    cy += 5.5;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(...gold);
+    doc.text(`GHIDUL GAZDEI · ${zona.toUpperCase()}`, cx, cy, { maxWidth: innerW, align: 'center' });
+
+    cy += 6.5;
+    doc.setFillColor(...cream);
+    const pillW = Math.min(innerW, doc.getTextWidth(nume.toUpperCase()) + 10);
+    doc.roundedRect(cx - pillW / 2, cy - 3.6, pillW, 6, 3, 3, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(...teal);
+    doc.text(nume.toUpperCase(), cx, cy, { maxWidth: innerW - 4, align: 'center' });
+
+    cy += 8;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...white);
+    doc.text('Bine ai venit!', cx, cy, { align: 'center' });
+
+    cy += 4.5;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(6.2); doc.setTextColor(...sage);
+    const roLines = doc.splitTextToSize(
+      `Suntem localnici si am adunat toate locurile noastre preferate din ${zona} intr-un singur loc. Scaneaza si ai informatiile sederii tale + beneficii exclusive pentru oaspetii nostri:`,
+      innerW
+    );
+    doc.text(roLines, cx, cy, { align: 'center' });
+    cy += roLines.length * 2.75 + 3;
+
+    const qrSize = 24;
+    doc.addImage(qrDataUrls[i], 'PNG', cx - qrSize / 2, cy, qrSize, qrSize);
+    cy += qrSize + 4.5;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...white);
+    doc.text('lokals.ro', cx, cy, { align: 'center' });
+
+    cy += 3.5;
+    doc.setDrawColor(...goldSoft);
+    doc.line(x + cellW * 0.2, cy, x + cellW * 0.8, cy);
+
+    cy += 5;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...goldSoft);
+    doc.text('Welcome!', cx, cy, { align: 'center' });
+
+    cy += 4;
+    doc.setFont('helvetica', 'italic'); doc.setFontSize(5.8); doc.setTextColor(...sage);
+    const enLines = doc.splitTextToSize(
+      `We're locals, and we've gathered all our favourite spots in ${zona} in one place. Scan for your stay info + exclusive perks for our guests: lokals.ro`,
+      innerW
+    );
+    doc.text(enLines, cx, cy, { align: 'center' });
+  }
+  return doc;
+}
+
+let pdfDoc = null;
+let posterNume = '';
+
+async function initSaveShareButton() {
+  const btn = document.getElementById('btn-save');
+  if (!pdfDoc) return;
+  const fileSlug = posterNume.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'cazare';
+  const fileName = `lokals-qr-4up-${fileSlug}.pdf`;
+  const blob = pdfDoc.output('blob');
+  const canShareFile = !!(navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: 'application/pdf' })] }));
+
+  btn.disabled = false;
+  btn.textContent = canShareFile ? '📤 Distribuie / trimite' : '⬇️ Descarcă PDF';
+  btn.onclick = async () => {
+    if (canShareFile) {
+      try {
+        await navigator.share({
+          files: [new File([blob], fileName, { type: 'application/pdf' })],
+          title: `Afiș QR Lokals — ${posterNume}`,
+          text: `Afișul cu codul QR (4 pe pagină) pentru ${posterNume}.`,
+        });
+        return;
+      } catch (e) {
+        if (e && e.name === 'AbortError') return; // omul a anulat din fereastra de distribuire
+        // dacă distribuirea eșuează dintr-un alt motiv, continuăm mai jos cu descărcarea directă
+      }
+    }
+    pdfDoc.save(fileName);
+  };
+}
+
+async function init() {
+  const slug = new URLSearchParams(window.location.search).get('slug');
+  document.getElementById('link-1up').href = `afis-qr.html?slug=${encodeURIComponent(slug || '')}`;
+  if (!slug) {
+    document.getElementById('state-loading').style.display = 'none';
+    document.getElementById('state-error').style.display = '';
+    document.getElementById('btn-save').style.display = 'none';
+    return;
+  }
+
+  const [res, zoneList] = await Promise.all([
+    fetch(`${SUPABASE_URL}/rest/v1/operatori?slug=eq.${encodeURIComponent(slug)}&select=nume_afacere,nume_afisat,zona,adresa,slug&limit=1`, {
+      headers: { apikey: SUPABASE_KEY },
+    }),
+    LokalsZones.load(SUPABASE_URL, SUPABASE_KEY),
+  ]);
+  const rows = await res.json();
+  const row = rows && rows[0];
+
+  document.getElementById('state-loading').style.display = 'none';
+  if (!row) {
+    document.getElementById('state-error').style.display = '';
+    document.getElementById('btn-save').style.display = 'none';
+    return;
+  }
+
+  const nume = row.nume_afisat || row.nume_afacere || 'Cazarea ta';
+  const zona = LokalsZones.label(zoneList, row.zona);
+  const guideUrl = `https://lokals.ro/ghid-oaspeti.html?apt=${encodeURIComponent(row.slug)}`;
+
+  const sheet = document.getElementById('sheet');
+  sheet.innerHTML = Array.from({ length: 4 }).map(() => tileHtml(nume, zona)).join('');
+  // Codul QR se generează direct în browser (biblioteca qrcodejs, ca peste tot în platformă) —
+  // nu depindem de un serviciu extern care ar putea pica sau bloca afișarea codului.
+  sheet.querySelectorAll('.tile-qr-holder').forEach(holder => {
+    new QRCode(holder, { text: guideUrl, width: 78, height: 78, colorDark: '#10302B', colorLight: '#F7F2E8' });
+  });
+  document.title = `Afiș QR — 4 pe pagină — ${nume}`;
+  sheet.style.display = '';
+
+  try {
+    const qrDataUrls = Array.from(sheet.querySelectorAll('.tile-qr-holder')).map(qrDataUrlFromHolder);
+    posterNume = nume;
+    pdfDoc = buildPosterPdf(nume, zona, qrDataUrls);
+    await initSaveShareButton();
+  } catch (e) {
+    // dacă generarea PDF eșuează dintr-un motiv oarecare, rămâne oricum printarea din browser
+    document.getElementById('btn-save').style.display = 'none';
+  }
+}
+
+document.getElementById('btn-print').addEventListener('click', () => window.print());
+
+init();
+</script>
+
+</body>
+</html>
