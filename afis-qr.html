@@ -60,7 +60,19 @@
     *{ -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; color-adjust:exact !important; }
     body{background:#fff;}
     .toolbar, .no-print{display:none !important;}
-    .poster{box-shadow:none; margin:0; transform:none !important;}
+    /* min-height:1123px umple exact o pagină A4 pe ecran (conținutul real e mai scurt, restul
+       spațiului fiind absorbit de .steps prin margin-top:auto) — la print, combinat cu marginile
+       implicite de pagină ale browserului (și, dacă sunt active, antetul/subsolul lui), acea
+       înălțime completă depășea o pagină și afișul se rupea pe a doua. Lăsăm cutia să se
+       dimensioneze după conținutul real, cu marjă suficientă să încapă sigur pe o pagină. */
+    .poster{box-shadow:none; margin:0; transform:none !important; min-height:auto; width:100%; padding-top:32px; padding-bottom:28px;}
+    .logo-row{margin-bottom:28px;}
+    .subline{margin-bottom:24px;}
+    .qr-frame{margin-bottom:20px;}
+    .scan-sub{margin-bottom:24px;}
+    .steps{margin-top:0;}
+    .footer{margin-top:20px;}
+    @page{ size:A4; margin:10mm; }
   }
 </style>
 </head>
