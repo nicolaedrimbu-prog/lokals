@@ -178,6 +178,10 @@
   .rg-field input:focus, .rg-field select:focus{outline:none; border-color:var(--spruce);}
   .rg-row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
   .rg-note{font-size:11.5px; color:var(--ink-soft); line-height:1.5; margin:2px 0 16px;}
+  .rg-privacy-note{font-size:11px; color:var(--ink-soft); line-height:1.5; margin:0 0 8px;}
+  .rg-privacy-note a{color:var(--amber-deep); font-weight:600;}
+  .rg-consimt-check{display:flex; align-items:flex-start; gap:8px; font-size:12px; color:var(--ink-soft); line-height:1.4; margin:0 0 14px; cursor:pointer;}
+  .rg-consimt-check input{margin-top:2px; flex-shrink:0;}
   .rg-photo-disabled{border:1.5px dashed var(--line); border-radius:10px; padding:12px; font-size:12px; color:var(--ink-soft); text-align:center; margin-bottom:14px; background:var(--bg);}
   .rg-submit{display:block; width:100%; background:var(--spruce-deep); color:#fff; border:none; border-radius:12px;
     padding:14px; font-size:14.5px; font-weight:700; cursor:pointer; font-family:inherit; margin-top:4px;}
@@ -418,6 +422,11 @@ async function sbFetch(path, options = {}) {
     },
   });
 }
+
+// Versiunea Politicii de confidențialitate afișate la colectarea datelor — se
+// crește manual când se schimbă textul din politica-confidentialitate.html,
+// ca să rămână trasabil cărei versiuni i s-a supus fiecare oaspete.
+const GDPR_POLICY_VERSION = 'v1-2026-09-21';
 
 // ===== Poze acte de identitate — upload direct în bucket-ul privat "acte-identitate" =====
 // Comun ambelor formulare (poarta de verificare identitate la apartamente, preînregistrare
@@ -722,6 +731,14 @@ function renderGateForm() {
       <div class="rg-field"><label for="rg-nr-oaspeti">${g.nrOaspeti}</label><input id="rg-nr-oaspeti" type="number" min="1" required value="${s.nr_oaspeti || ''}"></div>
       ${fotoIdFieldsHtml('rg', s.nr_oaspeti || 1)}
       <div class="rg-note">${g.note(hostTeamLabel('nom'))}</div>
+      <p class="rg-privacy-note">${currentLang === 'en'
+        ? 'We collect this information because it is legally required for guest registration. See our'
+        : 'Colectăm aceste date pentru că sunt cerute legal la înregistrarea oaspeților. Vezi'}
+        <a href="politica-confidentialitate.html" target="_blank" rel="noopener">${currentLang === 'en' ? 'Privacy Policy' : 'Politica de confidențialitate'}</a>.</p>
+      <label class="rg-consimt-check"><input type="checkbox" id="rg-consimt-opt" ${s.consimtamant_optional ? 'checked' : ''}>
+        <span>${currentLang === 'en'
+          ? 'I agree to be contacted (WhatsApp/email) about my stay and any benefits (optional).'
+          : 'Sunt de acord să fiu contactat(ă) (WhatsApp/email) în legătură cu sejurul și eventuale beneficii (opțional).'}</span></label>
       <button type="submit" class="rg-submit" id="rg-submit-btn">${g.submit}</button>
       <div class="rg-error" id="rg-form-error"></div>
     </form>`;
@@ -771,6 +788,8 @@ async function submitRegistration(e) {
     p_check_in: checkIn,
     p_check_out: checkOut,
     p_nr_oaspeti: Number(document.getElementById('rg-nr-oaspeti').value) || 1,
+    p_consimtamant_optional: !!document.getElementById('rg-consimt-opt')?.checked,
+    p_versiune_politica: GDPR_POLICY_VERSION,
   };
 
   if (fotoIdRequired()) {
@@ -877,6 +896,8 @@ async function submitPreinregistrare(e) {
         p_telefon: payload.telefon,
         p_cod_scurt: codScurt,
         p_foto_id_paths: payload.foto_id_paths || null,
+        p_consimtamant_optional: !!document.getElementById('prb-consimt-opt')?.checked,
+        p_versiune_politica: GDPR_POLICY_VERSION,
       }),
     });
     if (res.ok) {
@@ -1565,6 +1586,14 @@ async function renderFacilitati() {
           <div class="prb-field"><label>${t.preinregEmail}</label><input id="prb-email" type="email"></div>
           ${fotoIdFieldsHtml('prb', 1)}
           <div class="prb-note">${t.preinregNote}</div>
+          <p class="rg-privacy-note">${currentLang === 'en'
+            ? 'We collect this information because it is legally required for guest registration. See our'
+            : 'Colectăm aceste date pentru că sunt cerute legal la înregistrarea oaspeților. Vezi'}
+            <a href="politica-confidentialitate.html" target="_blank" rel="noopener">${currentLang === 'en' ? 'Privacy Policy' : 'Politica de confidențialitate'}</a>.</p>
+          <label class="rg-consimt-check"><input type="checkbox" id="prb-consimt-opt">
+            <span>${currentLang === 'en'
+              ? 'I agree to be contacted (WhatsApp/email) about my stay and any benefits (optional).'
+              : 'Sunt de acord să fiu contactat(ă) (WhatsApp/email) în legătură cu sejurul și eventuale beneficii (opțional).'}</span></label>
           <button type="submit" class="prb-submit" id="prb-submit-btn">${t.preinregSubmit}</button>
           <div class="prb-error" id="prb-form-error"></div>
         </form>

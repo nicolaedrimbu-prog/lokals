@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solicitare date personale (GDPR) — Lokals</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#EAE3D3; --surface:#FBF8F1; --ink:#20291F; --ink-soft:#5B6459;
+    --spruce:#3C5B44; --spruce-deep:#26382C; --amber:#B9812F; --amber-deep:#8F6222;
+    --line:rgba(32,41,31,0.14); --gold-soft:#E8CE9E; --brick:#9C4536;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:'Inter', system-ui, sans-serif; line-height:1.55;}
+  .serif{font-family:'Fraunces', Georgia, serif;}
+  .wrap{max-width:520px; margin:0 auto; padding:36px 20px 80px;}
+  .back{font-size:13px; font-weight:600; color:var(--spruce-deep); text-decoration:none;}
+  h1{font-family:'Fraunces', Georgia, serif; font-size:25px; margin:18px 0 8px;}
+  .lead{color:var(--ink-soft); font-size:14px; margin-bottom:24px;}
+  .lead a{color:var(--amber-deep); font-weight:600;}
+  form{background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:22px 20px;}
+  .field{margin-bottom:16px;}
+  label{display:block; font-size:12.5px; font-weight:600; color:var(--ink-soft); margin-bottom:5px; text-transform:uppercase; letter-spacing:.03em;}
+  select, input, textarea{width:100%; border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; font-family:'Inter', sans-serif; color:var(--ink); background:#fff;}
+  textarea{resize:vertical; min-height:80px;}
+  .hint{font-size:12px; color:var(--ink-soft); margin-top:4px;}
+  .submit-btn{width:100%; background:var(--spruce-deep); color:#fff; border:none; border-radius:999px; padding:14px; font-size:14.5px; font-weight:700; cursor:pointer; font-family:inherit; margin-top:6px;}
+  .submit-btn:disabled{opacity:.6; cursor:default;}
+  .err{color:var(--brick); font-size:13px; margin-top:10px; min-height:16px;}
+  .done{display:none; background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:26px 22px; text-align:center;}
+  .done .ico{font-size:34px; margin-bottom:8px;}
+  .done h2{font-family:'Fraunces', Georgia, serif; font-size:19px; margin:0 0 8px;}
+  .done p{color:var(--ink-soft); font-size:13.5px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="javascript:history.back()">← Înapoi</a>
+  <h1>Solicitare privind datele tale personale</h1>
+  <p class="lead">Poți cere acces la datele tale, corectarea lor sau ștergerea, conform
+    <a href="politica-confidentialitate.html">Politicii de confidențialitate</a>. Răspundem în cel mult
+    30 de zile. Dacă cererea ta de ștergere privește date pentru care există încă o obligație legală de
+    păstrare (ex. evidența turiștilor cazați), o să-ți explicăm termenul exact în răspuns.</p>
+
+  <form id="gdpr-form">
+    <div class="field">
+      <label for="g-tip">Tipul cererii</label>
+      <select id="g-tip" required>
+        <option value="">Alege...</option>
+        <option value="acces">Vreau să văd ce date aveți despre mine</option>
+        <option value="rectificare">Vreau să corectez o informație greșită</option>
+        <option value="stergere">Vreau să-mi ștergeți datele</option>
+        <option value="opozitie">Mă opun folosirii datelor mele pentru un anumit scop</option>
+        <option value="portabilitate">Vreau o copie a datelor mele</option>
+        <option value="altele">Altceva</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="g-nume">Nume complet</label>
+      <input id="g-nume" required>
+    </div>
+    <div class="field">
+      <label for="g-email">Email <span style="font-weight:400; text-transform:none;">(unde îți trimitem răspunsul)</span></label>
+      <input id="g-email" type="email" required>
+    </div>
+    <div class="field">
+      <label for="g-telefon">Telefon <span style="font-weight:400; text-transform:none;">(opțional)</span></label>
+      <input id="g-telefon" type="tel">
+    </div>
+    <div class="field">
+      <label for="g-token">Codul din linkul sejurului <span style="font-weight:400; text-transform:none;">(opțional — ne ajută să te găsim mai repede)</span></label>
+      <input id="g-token" placeholder="ex. partea de după ?stay= din linkul primit">
+    </div>
+    <div class="field">
+      <label for="g-detalii">Detalii</label>
+      <textarea id="g-detalii" placeholder="Descrie pe scurt cererea ta"></textarea>
+    </div>
+    <button type="submit" class="submit-btn" id="g-submit-btn">Trimite cererea</button>
+    <div class="err" id="g-err"></div>
+  </form>
+
+  <div class="done" id="gdpr-done">
+    <div class="ico">✅</div>
+    <h2>Cererea a fost înregistrată</h2>
+    <p>Îți răspundem la adresa de email indicată în cel mult 30 de zile.</p>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://mwtodfcwuwzgnkohxpwi.supabase.co";
+const SUPABASE_KEY = "sb_publishable_5I9zz5OjPkB7yuew0cWBVA_mmmxSjhf";
+
+document.getElementById('gdpr-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('g-submit-btn');
+  const errEl = document.getElementById('g-err');
+  errEl.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'Se trimite...';
+
+  const body = {
+    p_tip_cerere: document.getElementById('g-tip').value,
+    p_nume: document.getElementById('g-nume').value.trim(),
+    p_email: document.getElementById('g-email').value.trim(),
+    p_telefon: document.getElementById('g-telefon').value.trim() || null,
+    p_detalii: document.getElementById('g-detalii').value.trim() || null,
+    p_token_sejur: document.getElementById('g-token').value.trim() || null,
+    p_operator_id: null,
+  };
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/submit_cerere_gdpr`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_KEY,
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation',
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error('save failed');
+    document.getElementById('gdpr-form').style.display = 'none';
+    document.getElementById('gdpr-done').style.display = 'block';
+  } catch (err) {
+    errEl.textContent = 'Nu am putut trimite cererea — încearcă din nou sau scrie-ne direct la privacy@lokals.ro.';
+    btn.disabled = false;
+    btn.textContent = 'Trimite cererea';
+  }
+});
+</script>
+</body>
+</html>

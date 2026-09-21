@@ -262,6 +262,7 @@
     <button class="tabbtn" data-tab="tab-zone">Zone</button>
     <button class="tabbtn" data-tab="tab-demo">Demo</button>
     <button class="tabbtn" data-tab="tab-inregistrari">Înregistrări oaspeți</button>
+    <button class="tabbtn" data-tab="tab-gdpr" style="position:relative;">Cereri GDPR<span id="gdpr-pending-tab-badge" class="fb-badge" style="display:none;"></span></button>
     <button class="tabbtn" data-tab="tab-coduri">Coduri Reducere</button>
     <button class="tabbtn" data-tab="tab-redeem">Partners redeem</button>
     <button class="tabbtn" data-tab="tab-status-clienti">Status clienți</button>
@@ -665,6 +666,23 @@
   </div>
   </div>
 
+  <div class="tabpanel" id="tab-gdpr">
+  <div id="main">
+    <h1 class="serif">Cereri GDPR</h1>
+    <p class="lead">Cereri de acces, corectare, ștergere sau opoziție primite prin formularul <code>solicitare-gdpr.html</code>. Răspunde-le în cel mult 30 de zile. O cerere de ștergere pentru date încă în perioada legală de retenție (evidența turiștilor) nu se poate onora imediat — explică termenul exact în răspuns.</p>
+
+    <div class="bo-section">
+      <div class="bo-title">📨 Toate cererile <span class="count" id="gdpr-count">…</span></div>
+      <div class="toolbar" style="margin-bottom:0;">
+        <div class="chips" id="gdpr-status-filter"></div>
+      </div>
+      <div id="gdpr-loading" style="text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Se încarcă...</div>
+      <div id="gdpr-empty" style="display:none; text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Nicio cerere pentru acest filtru.</div>
+      <div id="gdpr-list" style="display:flex; flex-direction:column; gap:10px;"></div>
+    </div>
+  </div>
+  </div>
+
 </div>
 
 <script>
@@ -853,6 +871,7 @@ function enterPanel(email){
   loadStatistici();
   loadStatisticiLegacy();
   loadRedeemStats();
+  loadGdprRequests();
 }
 
 async function init(){
@@ -3251,6 +3270,102 @@ async function loadRegistrations() {
   REG_ROWS = data || [];
   renderRegChips();
   renderRegList();
+}
+
+// ---------- Cereri GDPR (acces / rectificare / ștergere / opoziție) ----------
+let GDPR_ROWS = [];
+let gdprStatusFilter = 'primita';
+const GDPR_TIP_LABEL = { acces: 'Acces la date', rectificare: 'Corectare', stergere: 'Ștergere', opozitie: 'Opoziție', portabilitate: 'Portabilitate', altele: 'Altele' };
+const GDPR_STATUS_LABEL = { primita: 'Primită', in_procesare: 'În procesare', rezolvata: 'Rezolvată', respinsa: 'Respinsă' };
+const GDPR_STATUS_COLOR = {
+  primita: { bg: '#F4E3D3', color: '#8F6222' },
+  in_procesare: { bg: '#E3ECE4', color: '#1A4A42' },
+  rezolvata: { bg: '#DCEFE0', color: '#1F7A3D' },
+  respinsa: { bg: '#F4DADA', color: '#9C4536' },
+};
+
+async function loadGdprRequests() {
+  document.getElementById('gdpr-loading').style.display = 'block';
+  const { data, error } = await supabaseClient.from('cereri_gdpr').select('*').order('creat_la', { ascending: false });
+  document.getElementById('gdpr-loading').style.display = 'none';
+  if (error) { console.error(error); return; }
+  GDPR_ROWS = data || [];
+  const pending = GDPR_ROWS.filter(r => r.status === 'primita' || r.status === 'in_procesare').length;
+  const tabBadge = document.getElementById('gdpr-pending-tab-badge');
+  if (tabBadge) {
+    if (pending) { tabBadge.textContent = pending; tabBadge.style.display = 'flex'; }
+    else { tabBadge.style.display = 'none'; }
+  }
+  renderGdprChips();
+  renderGdprList();
+}
+
+function renderGdprChips() {
+  const wrap = document.getElementById('gdpr-status-filter');
+  if (!wrap) return;
+  const counts = { toate: GDPR_ROWS.length };
+  GDPR_ROWS.forEach(r => { counts[r.status] = (counts[r.status] || 0) + 1; });
+  const items = [['toate', 'Toate'], ['primita', 'Primite'], ['in_procesare', 'În procesare'], ['rezolvata', 'Rezolvate'], ['respinsa', 'Respinse']];
+  wrap.innerHTML = items.map(([key, label]) =>
+    `<button class="chip ${gdprStatusFilter === key ? 'active' : ''}" data-gdpr-filter="${key}">${label} <span class="n">${counts[key] || 0}</span></button>`
+  ).join('');
+  wrap.querySelectorAll('[data-gdpr-filter]').forEach(btn => {
+    btn.addEventListener('click', () => { gdprStatusFilter = btn.getAttribute('data-gdpr-filter'); renderGdprChips(); renderGdprList(); });
+  });
+}
+
+function renderGdprList() {
+  const listEl = document.getElementById('gdpr-list');
+  const countEl = document.getElementById('gdpr-count');
+  const emptyEl = document.getElementById('gdpr-empty');
+  if (!listEl) return;
+  countEl.textContent = GDPR_ROWS.length;
+  const rows = gdprStatusFilter === 'toate' ? GDPR_ROWS : GDPR_ROWS.filter(r => r.status === gdprStatusFilter);
+  emptyEl.style.display = rows.length === 0 ? 'block' : 'none';
+  listEl.innerHTML = rows.map(r => {
+    const sc = GDPR_STATUS_COLOR[r.status] || GDPR_STATUS_COLOR.primita;
+    return `
+    <div class="prow">
+      <div class="prow-top">
+        <div class="picon" style="background:${sc.bg}; color:${sc.color}; font-size:13px; font-weight:700;">${(r.nume || '?').slice(0,1)}</div>
+        <div class="pinfo">
+          <div class="pname-row">
+            <span class="pname">${escapeHtml(r.nume || '(fără nume)')}</span>
+            <span class="pmeta" style="background:#E3ECE4; color:var(--green,#1A4A42); padding:3px 10px; border-radius:999px; font-weight:600;">${GDPR_TIP_LABEL[r.tip_cerere] || r.tip_cerere}</span>
+            <span class="pmeta" style="background:${sc.bg}; color:${sc.color}; padding:3px 10px; border-radius:999px; font-weight:600;">${GDPR_STATUS_LABEL[r.status] || r.status}</span>
+          </div>
+          <div class="pmeta">${escapeHtml(r.email || '—')} ${r.telefon ? '· ' + escapeHtml(r.telefon) : ''} ${r.token_sejur ? '· cod sejur: ' + escapeHtml(r.token_sejur) : ''} · primită ${fmtData(r.creat_la)}</div>
+        </div>
+      </div>
+      ${r.detalii ? `<div class="pmeta" style="margin-top:8px;"><b>Detalii:</b> ${escapeHtml(r.detalii)}</div>` : ''}
+      <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--line);">
+        <textarea data-gdpr-raspuns="${r.id}" placeholder="Răspuns / notă internă (ex: se șterge la data X conform obligației legale)" style="width:100%; min-height:60px; border:1.5px solid var(--line); border-radius:8px; padding:8px 10px; font-size:12.5px; font-family:inherit; box-sizing:border-box;">${escapeHtml(r.raspuns || '')}</textarea>
+        <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+          <button class="pbtn" data-gdpr-status="${r.id}" data-value="in_procesare">În procesare</button>
+          <button class="pbtn primary" data-gdpr-status="${r.id}" data-value="rezolvata">✓ Marchează rezolvată</button>
+          <button class="pbtn" data-gdpr-status="${r.id}" data-value="respinsa" style="border-color:var(--brick); color:var(--brick);">Respinge</button>
+          <span id="gdpr-msg-${r.id}" class="esave-msg"></span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  listEl.querySelectorAll('[data-gdpr-status]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-gdpr-status');
+      const status = btn.getAttribute('data-value');
+      const textarea = listEl.querySelector(`[data-gdpr-raspuns="${id}"]`);
+      const raspuns = textarea ? textarea.value.trim() : null;
+      const msgEl = document.getElementById(`gdpr-msg-${id}`);
+      btn.disabled = true;
+      const { error } = await supabaseClient.from('cereri_gdpr')
+        .update({ status, raspuns: raspuns || null, rezolvat_la: (status === 'rezolvata' || status === 'respinsa') ? new Date().toISOString() : null })
+        .eq('id', id);
+      btn.disabled = false;
+      if (error) { if (msgEl) msgEl.textContent = 'Eroare la salvare.'; console.error(error); return; }
+      await loadGdprRequests();
+    });
+  });
 }
 
 function regOperatorName(operatorId) {
