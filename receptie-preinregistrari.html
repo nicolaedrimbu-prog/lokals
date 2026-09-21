@@ -155,7 +155,10 @@ function fmtDate(d) {
 async function loadPending() {
   const wrap = document.getElementById('pending-list');
   try {
-    const res = await sbFetch(`preinregistrari_hotel?operator_id=eq.${encodeURIComponent(operatorId)}&order=creat_la.desc&limit=30&select=*`);
+    const res = await sbFetch(`rpc/receptie_list_pending`, {
+      method: 'POST',
+      body: JSON.stringify({ p_operator_id: operatorId, p_limit: 30 }),
+    });
     const rows = await res.json();
     if (!rows || !rows.length) {
       wrap.innerHTML = '<div class="empty-hint">Nicio preînregistrare încă.</div>';
@@ -204,9 +207,9 @@ function showDetail(row) {
       btn.disabled = true;
       btn.textContent = 'Se confirmă…';
       try {
-        const res = await sbFetch(`preinregistrari_hotel?id=eq.${encodeURIComponent(row.id)}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ status: 'procesat', procesat_la: new Date().toISOString() }),
+        const res = await sbFetch(`rpc/receptie_mark_processed`, {
+          method: 'POST',
+          body: JSON.stringify({ p_operator_id: operatorId, p_id: row.id }),
         });
         if (res.ok) {
           row.status = 'procesat';
@@ -234,7 +237,10 @@ async function lookupCode(rawCode, source) {
   const code = (rawCode || '').trim().toUpperCase();
   if (!code) return;
   try {
-    const res = await sbFetch(`preinregistrari_hotel?operator_id=eq.${encodeURIComponent(operatorId)}&cod_scurt=eq.${encodeURIComponent(code)}&select=*`);
+    const res = await sbFetch(`rpc/receptie_lookup_by_code`, {
+      method: 'POST',
+      body: JSON.stringify({ p_operator_id: operatorId, p_cod_scurt: code }),
+    });
     const rows = await res.json();
     if (!rows || !rows.length) {
       errEl.textContent = `Nu am găsit nicio preînregistrare cu codul „${code}" la acest hotel.`;
@@ -267,7 +273,10 @@ async function openFisaOcupare() {
 
   let rows = [];
   try {
-    const res = await sbFetch(`preinregistrari_hotel?operator_id=eq.${encodeURIComponent(operatorId)}&status=eq.procesat&order=check_in.asc&limit=2000&select=*`);
+    const res = await sbFetch(`rpc/receptie_list_processed`, {
+      method: 'POST',
+      body: JSON.stringify({ p_operator_id: operatorId, p_limit: 2000 }),
+    });
     rows = await res.json();
     if (!Array.isArray(rows)) rows = [];
   } catch (e) {

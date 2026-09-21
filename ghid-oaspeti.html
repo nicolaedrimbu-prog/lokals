@@ -520,7 +520,10 @@ function formatPhoneRo(raw) {
 async function loadStay() {
   if (!stayToken) return;
   try {
-    const res = await sbFetch(`inregistrari_oaspeti?token=eq.${encodeURIComponent(stayToken)}&select=*`);
+    const res = await sbFetch(`rpc/guest_get_stay_by_token`, {
+      method: 'POST',
+      body: JSON.stringify({ p_token: stayToken }),
+    });
     const rows = await res.json();
     if (rows && rows[0]) {
       currentStay = rows[0];
@@ -544,7 +547,10 @@ async function resolveActiveStay() {
     // arhivată cu date de check-in/check-out care se suprapun din întâmplare cu o rezervare
     // reală viitoare ar fi găsită la fel de bine ca cea reală și arătată oaspetelui.
     // or=(...) tratează și rândurile vechi fără valoare pe arhivat (NULL) ca nearhivate.
-    const res = await sbFetch(`inregistrari_oaspeti?operator_id=eq.${encodeURIComponent(currentOperator.id)}&status=eq.validat&or=(arhivat.eq.false,arhivat.is.null)&select=*`);
+    const res = await sbFetch(`rpc/guest_resolve_active_stay`, {
+      method: 'POST',
+      body: JSON.stringify({ p_operator_id: currentOperator.id }),
+    });
     const rows = await res.json();
     if (!rows || !rows.length) return;
     const today = new Date().toISOString().slice(0, 10);
@@ -754,19 +760,17 @@ async function submitRegistration(e) {
   }
 
   const payload = {
-    prenume: document.getElementById('rg-prenume').value.trim(),
-    nume: document.getElementById('rg-nume').value.trim(),
-    email: document.getElementById('rg-email').value.trim(),
-    telefon: document.getElementById('rg-telefon').value.trim(),
-    act_tip: document.getElementById('rg-act-tip').value,
-    act_serie_numar: document.getElementById('rg-act-nr').value.trim(),
-    cetatenie: document.getElementById('rg-cetatenie').value.trim(),
-    check_in: checkIn,
-    check_out: checkOut,
-    nr_oaspeti: Number(document.getElementById('rg-nr-oaspeti').value) || 1,
-    status: 'asteptare_validare',
-    completat_la: new Date().toISOString(),
-    motiv_respingere: null,
+    p_token: stayToken,
+    p_prenume: document.getElementById('rg-prenume').value.trim(),
+    p_nume: document.getElementById('rg-nume').value.trim(),
+    p_email: document.getElementById('rg-email').value.trim(),
+    p_telefon: document.getElementById('rg-telefon').value.trim(),
+    p_act_tip: document.getElementById('rg-act-tip').value,
+    p_act_serie_numar: document.getElementById('rg-act-nr').value.trim(),
+    p_cetatenie: document.getElementById('rg-cetatenie').value.trim(),
+    p_check_in: checkIn,
+    p_check_out: checkOut,
+    p_nr_oaspeti: Number(document.getElementById('rg-nr-oaspeti').value) || 1,
   };
 
   if (fotoIdRequired()) {
@@ -778,7 +782,7 @@ async function submitRegistration(e) {
         btn.disabled = false;
         return;
       }
-      payload.foto_id_paths = paths;
+      payload.p_foto_id_paths = paths;
     } catch (err) {
       if (fidErrEl) fidErrEl.textContent = I18N[currentLang].gate.fotoErr;
       btn.disabled = false;
@@ -787,13 +791,14 @@ async function submitRegistration(e) {
   }
 
   try {
-    const res = await sbFetch(`inregistrari_oaspeti?token=eq.${encodeURIComponent(stayToken)}`, {
-      method: 'PATCH',
+    const res = await sbFetch(`rpc/guest_submit_stay`, {
+      method: 'POST',
       body: JSON.stringify(payload),
     });
     if (!res.ok) throw new Error('save failed');
     const rows = await res.json();
-    currentStay = (rows && rows[0]) ? rows[0] : { ...currentStay, ...payload };
+    if (!rows || !rows[0]) throw new Error('save failed');
+    currentStay = rows[0];
     applyRegistrationGate();
   } catch (err) {
     errEl.textContent = I18N[currentLang].gate.saveErr;
@@ -830,7 +835,6 @@ async function submitPreinregistrare(e) {
     nr_oaspeti: Number(document.getElementById('prb-nr').value) || 1,
     email: document.getElementById('prb-email').value.trim() || null,
     telefon: document.getElementById('prb-telefon').value.trim() || null,
-    status: 'trimis',
   };
 
   let codScurt = randomCode(6);
@@ -857,12 +861,32 @@ async function submitPreinregistrare(e) {
   let attempt = 0;
   let saved = null;
   while (attempt < 3 && !saved) {
-    const res = await sbFetch('preinregistrari_hotel', {
+    const res = await sbFetch('rpc/guest_submit_preinregistrare', {
       method: 'POST',
-      body: JSON.stringify({ ...payload, cod_scurt: codScurt }),
+      body: JSON.stringify({
+        p_operator_id: payload.operator_id,
+        p_prenume: payload.prenume,
+        p_nume: payload.nume,
+        p_tip_act: payload.tip_act,
+        p_act_serie_numar: payload.act_serie_numar,
+        p_cetatenie: payload.cetatenie,
+        p_check_in: payload.check_in,
+        p_check_out: payload.check_out,
+        p_nr_oaspeti: payload.nr_oaspeti,
+        p_email: payload.email,
+        p_telefon: payload.telefon,
+        p_cod_scurt: codScurt,
+        p_foto_id_paths: payload.foto_id_paths || null,
+      }),
     });
-    if (res.status === 201) {
-      saved = await res.json();
+    if (res.ok) {
+      const rows = await res.json();
+      saved = (rows && rows[0]) ? rows[0] : null;
+      if (!saved) {
+        errEl.textContent = I18N[currentLang].fac.preinregErr;
+        btn.disabled = false;
+        return;
+      }
     } else if (res.status === 409) {
       codScurt = randomCode(6);
       attempt++;
