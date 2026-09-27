@@ -257,6 +257,7 @@ function zonaLabelAcc(slug) {
 // arată doar înregistrările curente implicit — pe măsură ce se acumulează sejururi, lista
 // devine greu de parcurs, așa că gazda poate arhiva ce a încheiat și le revede oricând aici
 let REG_VIEW_ARCHIVED = {};
+let REG_HOTEL_VIEW_ARCHIVED = {};
 const REG_STATUS_LABEL = {
   asteptare_completare: 'Trimis, neîncepută', asteptare_validare: 'Așteaptă validare',
   validat: 'Validat', respins: 'Respins',
@@ -529,14 +530,30 @@ function renderRegHotelList(operatorId) {
   if (!panel) return;
   const listEl = panel.querySelector('[data-reg-hotel-list]');
   if (!listEl) return;
-  const rows = regHotelRowsFor(operatorId);
+  const allRows = regHotelRowsFor(operatorId);
+  const archivedCount = allRows.filter(r => r.arhivat).length;
+  const showArchived = REG_HOTEL_VIEW_ARCHIVED[operatorId] === true;
+  const rows = allRows.filter(r => showArchived ? r.arhivat : !r.arhivat);
+
+  const toggleHtml = archivedCount > 0 ? `
+    <div style="margin-bottom:10px;">
+      <button type="button" class="reg-btn" data-reg-hotel-toggle-archived="${operatorId}" style="font-size:11px;">
+        ${showArchived ? '← Înapoi la preînregistrările actuale' : `🗄 Vezi arhivate (${archivedCount})`}
+      </button>
+    </div>` : '';
 
   if (rows.length === 0) {
-    listEl.innerHTML = `<div class="reg-empty">Nicio preînregistrare încă.</div>`;
+    listEl.innerHTML = toggleHtml + `<div class="reg-empty">${showArchived ? 'Nicio preînregistrare arhivată.' : 'Nicio preînregistrare încă.'}</div>`;
+    listEl.querySelectorAll('[data-reg-hotel-toggle-archived]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        REG_HOTEL_VIEW_ARCHIVED[operatorId] = !REG_HOTEL_VIEW_ARCHIVED[operatorId];
+        renderRegHotelList(operatorId);
+      });
+    });
     return;
   }
 
-  listEl.innerHTML = rows.map(r => {
+  listEl.innerHTML = toggleHtml + rows.map(r => {
     const sc = REG_HOTEL_STATUS_COLOR[r.status] || REG_HOTEL_STATUS_COLOR.trimis;
     const numeOaspete = [r.prenume, r.nume].filter(Boolean).join(' ') || '— oaspetele nu a completat încă —';
     return `
@@ -562,8 +579,46 @@ function renderRegHotelList(operatorId) {
           <button class="reg-btn" type="button" style="padding:2px 8px; font-size:11.5px;" data-reg-hotel-view-semnatura="${r.id}">Vezi</button>
         </div>
       ` : ''}
+      <div class="reg-actions reg-actions-divider">
+        ${r.arhivat
+          ? `<button class="reg-btn" type="button" data-reg-hotel-restore="${r.id}">↩ Restaurează</button>`
+          : `<button class="reg-btn" type="button" data-reg-hotel-archive="${r.id}" style="border-color:var(--ink-soft); color:var(--ink-soft);" title="Iese din lista curentă, dar rămâne salvată — o poți restaura oricând">🗄 Arhivează</button>`}
+      </div>
     </div>`;
   }).join('');
+
+  listEl.querySelectorAll('[data-reg-hotel-toggle-archived]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      REG_HOTEL_VIEW_ARCHIVED[operatorId] = !REG_HOTEL_VIEW_ARCHIVED[operatorId];
+      renderRegHotelList(operatorId);
+    });
+  });
+
+  listEl.querySelectorAll('[data-reg-hotel-archive]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-reg-hotel-archive');
+      btn.disabled = true;
+      const { error } = await supabaseClient.from('preinregistrari_hotel').update({ arhivat: true }).eq('id', id);
+      btn.disabled = false;
+      if (error) { console.error(error); alert('Nu am putut arhiva — încearcă din nou.'); return; }
+      const row = regHotelRowsFor(operatorId).find(x => String(x.id) === String(id));
+      if (row) row.arhivat = true;
+      renderRegHotelList(operatorId);
+    });
+  });
+
+  listEl.querySelectorAll('[data-reg-hotel-restore]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-reg-hotel-restore');
+      btn.disabled = true;
+      const { error } = await supabaseClient.from('preinregistrari_hotel').update({ arhivat: false }).eq('id', id);
+      btn.disabled = false;
+      if (error) { console.error(error); alert('Nu am putut restaura — încearcă din nou.'); return; }
+      const row = regHotelRowsFor(operatorId).find(x => String(x.id) === String(id));
+      if (row) row.arhivat = false;
+      renderRegHotelList(operatorId);
+    });
+  });
 
   listEl.querySelectorAll('[data-reg-hotel-view-foto]').forEach(btn => {
     btn.addEventListener('click', async () => {

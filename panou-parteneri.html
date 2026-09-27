@@ -3306,9 +3306,10 @@ async function loadHotelPreregistrations() {
 function renderRegHotelChips() {
   const wrap = document.getElementById('reg-hotel-status-filter');
   if (!wrap) return;
-  const counts = { toate: REG_HOTEL_ROWS.length };
-  REG_HOTEL_ROWS.forEach(r => { counts[r.status] = (counts[r.status] || 0) + 1; });
-  const items = [['toate', 'Toate'], ['trimis', 'Trimise'], ['procesat', 'Procesate']];
+  const activeRows = REG_HOTEL_ROWS.filter(r => !r.arhivat);
+  const counts = { toate: activeRows.length, arhivat: REG_HOTEL_ROWS.filter(r => r.arhivat).length };
+  activeRows.forEach(r => { counts[r.status] = (counts[r.status] || 0) + 1; });
+  const items = [['toate', 'Toate'], ['trimis', 'Trimise'], ['procesat', 'Procesate'], ['arhivat', '🗄 Arhivă']];
   wrap.innerHTML = items.map(([key, label]) =>
     `<button class="chip ${regHotelStatusFilter === key ? 'active' : ''}" data-reg-hotel-filter="${key}">${label} <span class="n">${counts[key] || 0}</span></button>`
   ).join('');
@@ -3322,8 +3323,9 @@ function renderRegHotelList() {
   const countEl = document.getElementById('reg-hotel-count');
   const emptyEl = document.getElementById('reg-hotel-empty');
   if (!listEl) return;
-  countEl.textContent = REG_HOTEL_ROWS.length;
-  const rows = regHotelStatusFilter === 'toate' ? REG_HOTEL_ROWS : REG_HOTEL_ROWS.filter(r => r.status === regHotelStatusFilter);
+  countEl.textContent = REG_HOTEL_ROWS.filter(r => !r.arhivat).length;
+  const base = regHotelStatusFilter === 'arhivat' ? REG_HOTEL_ROWS.filter(r => r.arhivat) : REG_HOTEL_ROWS.filter(r => !r.arhivat);
+  const rows = (regHotelStatusFilter === 'toate' || regHotelStatusFilter === 'arhivat') ? base : base.filter(r => r.status === regHotelStatusFilter);
   emptyEl.style.display = rows.length === 0 ? 'block' : 'none';
   listEl.innerHTML = rows.map(r => {
     const sc = REG_HOTEL_STATUS_COLOR[r.status] || REG_HOTEL_STATUS_COLOR.trimis;
@@ -3354,8 +3356,41 @@ function renderRegHotelList() {
         <div style="margin-top:8px;">
           <button class="bo-copy" data-reg-hotel-view-semnatura="${r.id}">✍️ Vezi semnătura</button>
         </div>` : ''}
+      <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+        ${r.arhivat
+          ? `<button class="pbtn primary" data-reg-hotel-restore="${r.id}" title="Scoate din arhivă și pune-o înapoi în listă">↩ Restaurează</button>`
+          : `<button class="pbtn" data-reg-hotel-archive="${r.id}" style="border-color:var(--ink-soft); color:var(--ink-soft);" title="Mută în arhivă — iese din listă dar rămâne salvată, o poți restaura oricând">🗄 Arhivează</button>`}
+      </div>
     </div>`;
   }).join('');
+
+  listEl.querySelectorAll('[data-reg-hotel-archive]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-reg-hotel-archive');
+      btn.disabled = true;
+      const { error } = await supabaseClient.from('preinregistrari_hotel').update({ arhivat: true }).eq('id', id);
+      btn.disabled = false;
+      if (error) { console.error(error); alert('Nu am putut arhiva — încearcă din nou.'); return; }
+      const row = REG_HOTEL_ROWS.find(x => String(x.id) === String(id));
+      if (row) row.arhivat = true;
+      renderRegHotelChips();
+      renderRegHotelList();
+    });
+  });
+
+  listEl.querySelectorAll('[data-reg-hotel-restore]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-reg-hotel-restore');
+      btn.disabled = true;
+      const { error } = await supabaseClient.from('preinregistrari_hotel').update({ arhivat: false }).eq('id', id);
+      btn.disabled = false;
+      if (error) { console.error(error); alert('Nu am putut restaura — încearcă din nou.'); return; }
+      const row = REG_HOTEL_ROWS.find(x => String(x.id) === String(id));
+      if (row) row.arhivat = false;
+      renderRegHotelChips();
+      renderRegHotelList();
+    });
+  });
 
   listEl.querySelectorAll('[data-reg-hotel-view-foto]').forEach(btn => {
     btn.addEventListener('click', async () => {
