@@ -247,6 +247,7 @@ const REGISTRATION_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill=
 
 let OPERATORI_BY_ID = {};
 let REG_BY_OP = {};
+let REG_HOTEL_BY_OP = {};
 let CURRENT_EMAIL = null;
 let ZONE_LABELS = {};
 function zonaLabelAcc(slug) {
@@ -265,6 +266,11 @@ const REG_STATUS_COLOR = {
   asteptare_validare: { bg: 'var(--gold-soft)', color: '#8F6222' },
   validat: { bg: '#E3ECE4', color: 'var(--teal-deep)' },
   respins: { bg: '#F1E3DF', color: '#9C4536' },
+};
+const REG_HOTEL_STATUS_LABEL = { trimis: 'Trimisă, neprocesată', procesat: 'Procesată la recepție' };
+const REG_HOTEL_STATUS_COLOR = {
+  trimis: { bg: 'var(--gold-soft)', color: '#8F6222' },
+  procesat: { bg: '#E3ECE4', color: 'var(--teal-deep)' },
 };
 
 function fmtDataScurt(iso) {
@@ -514,6 +520,92 @@ function regRowsFor(operatorId) {
   return REG_BY_OP[operatorId] || [];
 }
 
+function regHotelRowsFor(operatorId) {
+  return REG_HOTEL_BY_OP[operatorId] || [];
+}
+
+function renderRegHotelList(operatorId) {
+  const panel = document.getElementById('reg-panel-' + operatorId);
+  if (!panel) return;
+  const listEl = panel.querySelector('[data-reg-hotel-list]');
+  if (!listEl) return;
+  const rows = regHotelRowsFor(operatorId);
+
+  if (rows.length === 0) {
+    listEl.innerHTML = `<div class="reg-empty">Nicio preînregistrare încă.</div>`;
+    return;
+  }
+
+  listEl.innerHTML = rows.map(r => {
+    const sc = REG_HOTEL_STATUS_COLOR[r.status] || REG_HOTEL_STATUS_COLOR.trimis;
+    const numeOaspete = [r.prenume, r.nume].filter(Boolean).join(' ') || '— oaspetele nu a completat încă —';
+    return `
+    <div class="reg-row${r.status === 'procesat' ? ' reg-row-validat' : ''}" data-reg-hotel-row="${r.id}">
+      <div class="reg-row-top">
+        <span class="reg-guest-name">${escapeHtmlAcc(numeOaspete)}</span>
+        <span class="reg-chip" style="background:${sc.bg}; color:${sc.color};">${REG_HOTEL_STATUS_LABEL[r.status] || r.status}</span>
+      </div>
+      <div class="reg-highlight">
+        ${r.check_in ? `<span class="reg-dates">📅 ${fmtDataScurt(r.check_in)} → ${fmtDataScurt(r.check_out)}</span>` : ''}
+        ${r.email ? `<span class="reg-contact">✉️ ${escapeHtmlAcc(r.email)}</span>` : ''}
+        ${r.telefon ? `<span class="reg-contact">📞 ${escapeHtmlAcc(r.telefon)}</span>` : ''}
+      </div>
+      <div class="reg-meta-secondary">generat ${fmtDataScurt(r.creat_la)}${r.procesat_la ? ' · procesată ' + fmtDataScurt(r.procesat_la) : ''}</div>
+      <div class="reg-meta-secondary">${r.tip_act === 'pasaport' ? 'Pașaport' : 'CI'}: ${escapeHtmlAcc(r.act_serie_numar || '—')} · Oaspeți: ${r.nr_oaspeti || '—'}</div>
+      ${Array.isArray(r.foto_id_paths) && r.foto_id_paths.length ? `
+        <div class="reg-meta-secondary">📷 ${r.foto_id_paths.length === 1 ? 'Poză act de identitate' : `${r.foto_id_paths.length} poze acte de identitate`} încărcate —
+          <button class="reg-btn" type="button" style="padding:2px 8px; font-size:11.5px;" data-reg-hotel-view-foto="${r.id}">Vezi</button>
+        </div>
+      ` : ''}
+      ${r.semnatura_path ? `
+        <div class="reg-meta-secondary">✍️ Semnătură —
+          <button class="reg-btn" type="button" style="padding:2px 8px; font-size:11.5px;" data-reg-hotel-view-semnatura="${r.id}">Vezi</button>
+        </div>
+      ` : ''}
+    </div>`;
+  }).join('');
+
+  listEl.querySelectorAll('[data-reg-hotel-view-foto]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-reg-hotel-view-foto');
+      const row = regHotelRowsFor(operatorId).find(x => String(x.id) === String(id));
+      const paths = (row && row.foto_id_paths) || [];
+      if (!paths.length) return;
+      btn.disabled = true;
+      try {
+        for (const path of paths) {
+          const { data, error } = await supabaseClient.storage.from('acte-identitate').createSignedUrl(path, 300);
+          if (error || !data || !data.signedUrl) throw error || new Error('lipsă url');
+          window.open(data.signedUrl, '_blank', 'noopener');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Nu am putut deschide pozele — încearcă din nou.');
+      }
+      btn.disabled = false;
+    });
+  });
+
+  listEl.querySelectorAll('[data-reg-hotel-view-semnatura]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-reg-hotel-view-semnatura');
+      const row = regHotelRowsFor(operatorId).find(x => String(x.id) === String(id));
+      const path = row && row.semnatura_path;
+      if (!path) return;
+      btn.disabled = true;
+      try {
+        const { data, error } = await supabaseClient.storage.from('semnaturi-oaspeti').createSignedUrl(path, 300);
+        if (error || !data || !data.signedUrl) throw error || new Error('lipsă url');
+        window.open(data.signedUrl, '_blank', 'noopener');
+      } catch (err) {
+        console.error(err);
+        alert('Nu am putut deschide semnătura — încearcă din nou.');
+      }
+      btn.disabled = false;
+    });
+  });
+}
+
 function renderRegPanel(operatorId) {
   const panel = document.getElementById('reg-panel-' + operatorId);
   if (!panel) return;
@@ -577,6 +669,8 @@ function renderRegPanel(operatorId) {
         </div>
         ${genBoxHtml}
       </div>
+      <div class="reg-list-title">Preînregistrările primite</div>
+      <div data-reg-hotel-list></div>
     `;
     // data-fotoid-hotel-toggle / data-fotoid-hotel-mode sunt gestionate de listener-ul delegat pe #list-cazari — nu mai e nevoie de handlere separate aici.
 
@@ -715,6 +809,8 @@ function renderRegPanel(operatorId) {
       if (op) op.foto_id_per_oaspete = perOaspete;
     });
   }
+
+  if (isHotel) renderRegHotelList(operatorId);
 
   panel.querySelector(`[data-reg-fisa="${operatorId}"]`).addEventListener('click', () => openFisaOcupare(operatorId));
 
@@ -1205,6 +1301,17 @@ async function init() {
         REG_BY_OP[r.operator_id].push(r);
       });
     } catch (e) { /* la fel, badge-ul de check-in e un extra — lista rămâne utilă chiar dacă nu s-au putut încărca înregistrările */ }
+
+    try {
+      const ids = cazari.map(r => r.id);
+      const { data: regHotelRows, error: regHotelErr } = await supabaseClient.from('preinregistrari_hotel').select('*').in('operator_id', ids).order('creat_la', { ascending: false });
+      if (regHotelErr) throw regHotelErr;
+      REG_HOTEL_BY_OP = {};
+      (regHotelRows || []).forEach(r => {
+        if (!REG_HOTEL_BY_OP[r.operator_id]) REG_HOTEL_BY_OP[r.operator_id] = [];
+        REG_HOTEL_BY_OP[r.operator_id].push(r);
+      });
+    } catch (e) { /* preînregistrările hotel sunt un extra — lista de cazări rămâne utilă chiar dacă nu s-au putut încărca */ }
 
     LAST_CAZARI_ROWS = cazari;
     LAST_UNREAD_COUNTS = unreadCounts;

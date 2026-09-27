@@ -663,6 +663,16 @@
       <div id="reg-empty" style="display:none; text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Nicio înregistrare pentru acest filtru.</div>
       <div id="reg-list" style="display:flex; flex-direction:column; gap:10px;"></div>
     </div>
+
+    <div class="bo-section">
+      <div class="bo-title">🏨 Preînregistrări hotel (Evantai) <span class="count" id="reg-hotel-count">…</span></div>
+      <div class="toolbar" style="margin-bottom:0;">
+        <div class="chips" id="reg-hotel-status-filter"></div>
+      </div>
+      <div id="reg-hotel-loading" style="text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Se încarcă...</div>
+      <div id="reg-hotel-empty" style="display:none; text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Nicio preînregistrare pentru acest filtru.</div>
+      <div id="reg-hotel-list" style="display:flex; flex-direction:column; gap:10px;"></div>
+    </div>
   </div>
   </div>
 
@@ -865,6 +875,7 @@ function enterPanel(email){
   loadZones();
   loadAfaceriGhid();
   loadRegistrations();
+  loadHotelPreregistrations();
   loadDemoGuides();
   loadDiscountCodes();
   loadClienti();
@@ -3270,6 +3281,123 @@ async function loadRegistrations() {
   REG_ROWS = data || [];
   renderRegChips();
   renderRegList();
+}
+
+// ---------- Preînregistrări hotel (Evantai, necondiționată la recepție) ----------
+let REG_HOTEL_ROWS = [];
+let regHotelStatusFilter = 'toate';
+const REG_HOTEL_STATUS_LABEL = { trimis: 'Trimisă, neprocesată', procesat: 'Procesată la recepție' };
+const REG_HOTEL_STATUS_COLOR = {
+  trimis: { bg: 'var(--gold-soft)', color: '#8F6222' },
+  procesat: { bg: 'var(--green-soft)', color: 'var(--green)' },
+};
+
+async function loadHotelPreregistrations() {
+  const loadingEl = document.getElementById('reg-hotel-loading');
+  if (loadingEl) loadingEl.style.display = 'block';
+  const { data, error } = await supabaseClient.from('preinregistrari_hotel').select('*').order('creat_la', { ascending: false });
+  if (loadingEl) loadingEl.style.display = 'none';
+  if (error) { console.error(error); return; }
+  REG_HOTEL_ROWS = data || [];
+  renderRegHotelChips();
+  renderRegHotelList();
+}
+
+function renderRegHotelChips() {
+  const wrap = document.getElementById('reg-hotel-status-filter');
+  if (!wrap) return;
+  const counts = { toate: REG_HOTEL_ROWS.length };
+  REG_HOTEL_ROWS.forEach(r => { counts[r.status] = (counts[r.status] || 0) + 1; });
+  const items = [['toate', 'Toate'], ['trimis', 'Trimise'], ['procesat', 'Procesate']];
+  wrap.innerHTML = items.map(([key, label]) =>
+    `<button class="chip ${regHotelStatusFilter === key ? 'active' : ''}" data-reg-hotel-filter="${key}">${label} <span class="n">${counts[key] || 0}</span></button>`
+  ).join('');
+  wrap.querySelectorAll('[data-reg-hotel-filter]').forEach(btn => {
+    btn.addEventListener('click', () => { regHotelStatusFilter = btn.getAttribute('data-reg-hotel-filter'); renderRegHotelChips(); renderRegHotelList(); });
+  });
+}
+
+function renderRegHotelList() {
+  const listEl = document.getElementById('reg-hotel-list');
+  const countEl = document.getElementById('reg-hotel-count');
+  const emptyEl = document.getElementById('reg-hotel-empty');
+  if (!listEl) return;
+  countEl.textContent = REG_HOTEL_ROWS.length;
+  const rows = regHotelStatusFilter === 'toate' ? REG_HOTEL_ROWS : REG_HOTEL_ROWS.filter(r => r.status === regHotelStatusFilter);
+  emptyEl.style.display = rows.length === 0 ? 'block' : 'none';
+  listEl.innerHTML = rows.map(r => {
+    const sc = REG_HOTEL_STATUS_COLOR[r.status] || REG_HOTEL_STATUS_COLOR.trimis;
+    const numeOaspete = [r.prenume, r.nume].filter(Boolean).join(' ') || '— oaspetele nu a completat încă —';
+    return `
+    <div class="prow">
+      <div class="prow-top">
+        <div class="picon" style="background:${sc.bg}; color:${sc.color}; font-size:13px; font-weight:700;">${(regOperatorName(r.operator_id) || '?').slice(0,1)}</div>
+        <div class="pinfo">
+          <div class="pname-row">
+            <span class="pname">${escapeHtml(regOperatorName(r.operator_id))}</span>
+            <span class="pmeta" style="background:${sc.bg}; color:${sc.color}; padding:3px 10px; border-radius:999px; font-weight:600;">${REG_HOTEL_STATUS_LABEL[r.status] || r.status}</span>
+          </div>
+          <div class="pmeta">${escapeHtml(numeOaspete)} ${r.email ? '· ' + escapeHtml(r.email) : ''} ${r.check_in ? '· ' + fmtData(r.check_in) + ' → ' + fmtData(r.check_out) : ''} · generat ${fmtData(r.creat_la)}</div>
+        </div>
+      </div>
+      <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--line); font-size:12.5px; color:var(--ink-soft); display:grid; grid-template-columns:1fr 1fr; gap:4px 16px;">
+        <div><b>Telefon:</b> ${escapeHtml(r.telefon || '—')}</div>
+        <div><b>${r.tip_act === 'pasaport' ? 'Pașaport' : 'CI'}:</b> ${escapeHtml(r.act_serie_numar || '—')}</div>
+        <div><b>Oaspeți:</b> ${r.nr_oaspeti || '—'}</div>
+        <div><b>Procesată:</b> ${r.procesat_la ? fmtData(r.procesat_la) : '—'}</div>
+      </div>
+      ${Array.isArray(r.foto_id_paths) && r.foto_id_paths.length ? `
+        <div style="margin-top:8px;">
+          <button class="bo-copy" data-reg-hotel-view-foto="${r.id}">📷 ${r.foto_id_paths.length === 1 ? 'Vezi poza actului' : `Vezi pozele actelor (${r.foto_id_paths.length})`}</button>
+        </div>` : ''}
+      ${r.semnatura_path ? `
+        <div style="margin-top:8px;">
+          <button class="bo-copy" data-reg-hotel-view-semnatura="${r.id}">✍️ Vezi semnătura</button>
+        </div>` : ''}
+    </div>`;
+  }).join('');
+
+  listEl.querySelectorAll('[data-reg-hotel-view-foto]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-reg-hotel-view-foto');
+      const row = REG_HOTEL_ROWS.find(x => String(x.id) === String(id));
+      const paths = (row && row.foto_id_paths) || [];
+      if (!paths.length) return;
+      btn.disabled = true;
+      btn.textContent = 'Se încarcă…';
+      try {
+        for (const path of paths) {
+          const { data, error } = await supabaseClient.storage.from('acte-identitate').createSignedUrl(path, 300);
+          if (error || !data || !data.signedUrl) throw error || new Error('lipsă url');
+          window.open(data.signedUrl, '_blank', 'noopener');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Nu am putut deschide pozele — încearcă din nou.');
+      }
+      btn.disabled = false;
+      btn.textContent = '📷 Vezi poza actului';
+    });
+  });
+
+  listEl.querySelectorAll('[data-reg-hotel-view-semnatura]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-reg-hotel-view-semnatura');
+      const row = REG_HOTEL_ROWS.find(x => String(x.id) === String(id));
+      const path = row && row.semnatura_path;
+      if (!path) return;
+      btn.disabled = true;
+      try {
+        const { data, error } = await supabaseClient.storage.from('semnaturi-oaspeti').createSignedUrl(path, 300);
+        if (error || !data || !data.signedUrl) throw error || new Error('lipsă url');
+        window.open(data.signedUrl, '_blank', 'noopener');
+      } catch (err) {
+        console.error(err);
+        alert('Nu am putut deschide semnătura — încearcă din nou.');
+      }
+      btn.disabled = false;
+    });
+  });
 }
 
 // ---------- Cereri GDPR (acces / rectificare / ștergere / opoziție) ----------
