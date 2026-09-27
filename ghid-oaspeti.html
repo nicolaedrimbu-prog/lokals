@@ -622,7 +622,7 @@ async function collectFotoIdPaths(prefix, operatorId, sejurId) {
         'x-file-ext': ext,
       },
       body: file,
-    });
+    }, 2, 1200); // acest endpoint face și el un apel intern (verificare operator) — 2 reîncercări
     if (!res.ok) throw new Error(`upload foto id a eșuat (${res.status})`);
     const data = await res.json();
     if (!data || !data.path) throw new Error('upload foto id — răspuns invalid');
