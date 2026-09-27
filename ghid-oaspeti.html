@@ -491,6 +491,7 @@ function fotoIdFieldsHtml(prefix, nrOaspeti, lang) {
 // Regenerează inputurile de poze cand se schimba "Numar oaspeti" (doar in modul per-oaspete
 // — in modul "o singura poza" numarul de inputuri nu depinde de cate persoane vin).
 function attachFotoIdCountSync(prefix, nrInputId) {
+  bindFotoIdInputs(prefix); // restaurează poza deja aleasă + urmărește alegerile noi (vezi mai jos)
   if (!fotoIdRequired() || currentOperator.foto_id_per_oaspete !== true) return;
   const nrInput = document.getElementById(nrInputId);
   const wrap = document.getElementById(`${prefix}-foto-wrap`);
@@ -498,6 +499,33 @@ function attachFotoIdCountSync(prefix, nrInputId) {
   nrInput.addEventListener('change', () => {
     wrap.outerHTML = fotoIdFieldsHtml(prefix, nrInput.value);
     attachFotoIdCountSync(prefix, nrInputId); // outerHTML a distrus elementul vechi — reatasam
+  });
+}
+
+// Poza actului de identitate aleasă de oaspete se pierde ori de câte ori HTML-ul din jurul
+// input-ului e rescris (schimbare de "Număr oaspeți" în modul per-oaspete, sau schimbare de
+// limbă RO/EN — vezi captureGateFormDraft/setLang mai jos, care redesenează tot formularul),
+// pentru că browserul nu poate reține fișierul unui <input type="file"> înlocuit din DOM.
+// Anterior asta ducea la mesajul confuz "e nevoie să încarci poza" chiar dacă oaspetele o
+// alesese deja. Ținem fișierele într-un cache separat, în afara DOM-ului, și le reaplicăm pe
+// input-urile noi (posibil prin DataTransfer) de fiecare dată când formularul e redesenat.
+const fotoIdFilesCache = {};
+
+function bindFotoIdInputs(prefix) {
+  document.querySelectorAll(`#${prefix}-foto-wrap [data-fid-input]`).forEach((input, i) => {
+    const key = `${prefix}-${i}`;
+    const cached = fotoIdFilesCache[key];
+    if (cached && (!input.files || !input.files[0])) {
+      try {
+        const dt = new DataTransfer();
+        dt.items.add(cached);
+        input.files = dt.files;
+      } catch (err) { /* browser vechi fără DataTransfer.items.add — oaspetele reselectează poza */ }
+    }
+    input.addEventListener('change', () => {
+      if (input.files && input.files[0]) fotoIdFilesCache[key] = input.files[0];
+      else delete fotoIdFilesCache[key];
+    });
   });
 }
 
@@ -526,13 +554,44 @@ function showSubmitError(fieldErrEl, formErrEl, message) {
   if (target && target.scrollIntoView) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
+// Comprimă poza actului de identitate înainte de upload: redimensionează la maximum 1600px
+// pe latura lungă și reexportă ca JPEG (calitate ~0.82) — suficient pentru ca textul de pe
+// act să rămână lizibil, dar mult sub dimensiunea unei poze făcute direct cu telefonul (care
+// poate trece de 5-10MB). Dacă browserul nu suportă canvas/createImageBitmap, sau comprimarea
+// nu reduce nimic (poză deja mică), întoarcem fișierul original neschimbat.
+async function compressImageFile(file, maxDim = 1600, quality = 0.82) {
+  try {
+    if (!file || !file.type || !/^image\//.test(file.type) || file.type === 'image/gif') return file;
+    if (typeof createImageBitmap !== 'function') return file;
+    const bitmap = await createImageBitmap(file).catch(() => null);
+    if (!bitmap) return file;
+    let { width, height } = bitmap;
+    const scale = Math.min(1, maxDim / Math.max(width, height));
+    if (scale < 1) { width = Math.round(width * scale); height = Math.round(height * scale); }
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    if (bitmap.close) bitmap.close();
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', quality));
+    if (!blob || blob.size >= file.size) return file; // comprimarea n-a ajutat — păstrăm originalul
+    return blob;
+  } catch (err) {
+    return file; // orice eroare de comprimare — trimitem fișierul original, nu blocăm oaspetele
+  }
+}
+
 // Încarcă toate fișierele selectate în inputurile #${prefix}-foto-N și întoarce căile din
 // bucket (de salvat în foto_id_paths). Dacă cerința e activă dar lipsește vreo poză, întoarce
 // missing:true și NU încarcă nimic — apelantul decide dacă blochează trimiterea formularului.
 async function collectFotoIdPaths(prefix, operatorId, sejurId) {
   if (!fotoIdRequired()) return { paths: [], missing: false };
   const inputs = Array.from(document.querySelectorAll(`#${prefix}-foto-wrap [data-fid-input]`));
-  const files = inputs.map(inp => (inp.files && inp.files[0]) || null);
+  // Preferăm fișierul curent din input; dacă lipsește (input recreat de un re-render, iar
+  // restaurarea prin DataTransfer nu e suportată de browser), recurgem la cache-ul păstrat
+  // în bindFotoIdInputs — plasă de siguranță ca oaspetele să nu fie nevoit să reselecteze poza.
+  const files = inputs.map((inp, i) => (inp.files && inp.files[0]) || fotoIdFilesCache[`${prefix}-${i}`] || null);
   if (files.some(f => !f)) return { paths: [], missing: true };
 
   // Upload-ul trece printr-un edge function (nu direct pe Storage cu cheia anon): cererea
@@ -542,10 +601,15 @@ async function collectFotoIdPaths(prefix, operatorId, sejurId) {
   // catre browser doar calea salvată, niciodată conținutul sau un link.
   const paths = [];
   for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    const extFromName = (file.name.split('.').pop() || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-    const ext = extFromName || 'jpg';
-    const contentType = (file.type && /^image\//.test(file.type)) ? file.type : 'image/jpeg';
+    const original = files[i];
+    // Comprimăm poza înainte de upload — reduce timpul de încărcare pe rețele mobile lente
+    // și dimensiunea stocată; dacă ceva eșuează (format neobișnuit, browser vechi), trimitem
+    // fișierul original, ca să nu blocăm înregistrarea din cauza unui pas de optimizare.
+    const file = await compressImageFile(original);
+    const compressed = file !== original;
+    const extFromName = (original.name || '').split('.').pop().toLowerCase().replace(/[^a-z0-9]/g, '');
+    const ext = compressed ? 'jpg' : (extFromName || 'jpg');
+    const contentType = compressed ? 'image/jpeg' : ((original.type && /^image\//.test(original.type)) ? original.type : 'image/jpeg');
     const res = await fetchEdgeWithRetry(`${SUPABASE_URL}/functions/v1/upload-id-photo`, {
       method: 'POST',
       headers: {
