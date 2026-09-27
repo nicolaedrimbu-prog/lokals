@@ -202,6 +202,24 @@
   .fid-note{font-size:11px; color:var(--ink-soft); line-height:1.5; margin-top:2px;}
   .fid-error{color:var(--brick); font-size:12px; margin-top:4px;}
 
+  /* ===== Semnătură oaspete — canvas (comun ambelor formulare) ===== */
+  .sig-wrap{border:1.5px solid var(--line); border-radius:12px; padding:11px 12px 12px; margin-bottom:14px; background:var(--bg);}
+  .sig-title{font-size:12px; font-weight:700; color:var(--ink); margin-bottom:8px;}
+  .sig-canvas-box{position:relative; border:1.5px dashed var(--line); border-radius:9px; background:#fff; touch-action:none;}
+  .sig-canvas-box canvas{display:block; width:100%; height:120px; border-radius:9px;}
+  .sig-canvas-box.done{border-style:solid; border-color:var(--spruce);}
+  .sig-placeholder{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:12px; color:var(--ink-soft); pointer-events:none;}
+  .sig-canvas-box.has-ink .sig-placeholder{display:none;}
+  .sig-actions{display:flex; justify-content:flex-end; margin-top:6px;}
+  .sig-clear{background:none; border:1px solid var(--line); border-radius:8px; padding:5px 11px; font-size:11.5px;
+    font-weight:600; color:var(--ink-soft); cursor:pointer; font-family:inherit;}
+  .sig-note{font-size:11px; color:var(--ink-soft); line-height:1.5; margin-top:8px;}
+  .sig-error{color:var(--brick); font-size:12px; margin-top:4px;}
+
+  /* ===== Consimțământ obligatoriu (procesare date identitate, GDPR) — comun ambelor formulare ===== */
+  .rg-consimt-check.required span b{color:var(--brick);}
+
   /* ===== Preînregistrare hotel (Evantai, necondiționată) ===== */
   .prb-field{margin-bottom:10px;}
   .prb-field label{display:block; font-size:11px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.03em; margin-bottom:4px;}
@@ -524,6 +542,133 @@ async function collectFotoIdPaths(prefix, operatorId, sejurId) {
   return { paths, missing: false };
 }
 
+// ===== Semnătură oaspete — canvas (comun ambelor formulare) =====
+// Cerută de HG 237/2001 (fișa de anunțare a sosirii/plecării turistului) — semnătura
+// turistului. Capturată direct cu degetul/mouse-ul pe un <canvas>, convertită la trimitere
+// în PNG și încărcată prin edge function (același model securizat ca la poza actului de
+// identitate — service_role, bucket privat, browserul primește înapoi doar calea salvată).
+const signaturePadState = {};
+
+function signaturePadHtml(prefix, lang) {
+  const useLang = lang || currentLang;
+  const si = I18N[useLang].sig;
+  return `
+    <div class="sig-wrap" id="${prefix}-sig-wrap">
+      <div class="sig-title">✍️ ${si.title}</div>
+      <div class="sig-canvas-box" id="${prefix}-sig-box">
+        <canvas id="${prefix}-sig-canvas"></canvas>
+        <div class="sig-placeholder">${si.placeholder}</div>
+      </div>
+      <div class="sig-actions"><button type="button" class="sig-clear" id="${prefix}-sig-clear">${si.clear}</button></div>
+      <div class="sig-note">${si.note}</div>
+      <div class="sig-error" id="${prefix}-sig-err"></div>
+    </div>`;
+}
+
+function initSignaturePad(prefix) {
+  const canvas = document.getElementById(`${prefix}-sig-canvas`);
+  const box = document.getElementById(`${prefix}-sig-box`);
+  if (!canvas || !box) return;
+
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+
+  // Formularul de preînregistrare hotel stă inițial închis într-un acordeon (display:none),
+  // deci la primul randare box-ul are lățime 0 — folosim ResizeObserver, nu doar un resize()
+  // o singură dată, ca să prindem și momentul în care oaspetele deschide secțiunea.
+  function resize() {
+    const rect = box.getBoundingClientRect();
+    if (rect.width < 1 || rect.height < 1) return; // încă ascuns — reîncercăm la următorul resize
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+    ctx.lineWidth = 2.2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#20291F';
+  }
+  resize();
+  if (window.ResizeObserver) {
+    new ResizeObserver(resize).observe(box);
+  }
+
+  let drawing = false;
+  let hasInk = false;
+  let last = null;
+
+  function posFromEvent(e) {
+    const rect = canvas.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  }
+  function start(e) {
+    drawing = true;
+    last = posFromEvent(e);
+    canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
+  }
+  function move(e) {
+    if (!drawing) return;
+    const p = posFromEvent(e);
+    ctx.beginPath();
+    ctx.moveTo(last.x, last.y);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    last = p;
+    if (!hasInk) { hasInk = true; box.classList.add('has-ink', 'done'); }
+  }
+  function end() { drawing = false; last = null; }
+
+  canvas.addEventListener('pointerdown', start);
+  canvas.addEventListener('pointermove', move);
+  canvas.addEventListener('pointerup', end);
+  canvas.addEventListener('pointerleave', end);
+  canvas.addEventListener('pointercancel', end);
+
+  const clearBtn = document.getElementById(`${prefix}-sig-clear`);
+  const doClear = () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    hasInk = false;
+    box.classList.remove('has-ink', 'done');
+    const errEl = document.getElementById(`${prefix}-sig-err`);
+    if (errEl) errEl.textContent = '';
+  };
+  if (clearBtn) clearBtn.addEventListener('click', doClear);
+
+  signaturePadState[prefix] = { canvas, hasInk: () => hasInk, clear: doClear };
+}
+
+function signatureIsEmpty(prefix) {
+  const st = signaturePadState[prefix];
+  return !st || !st.hasInk();
+}
+
+// Încarcă semnătura prin edge function-ul upload-signature (același model ca upload-id-photo)
+// și întoarce calea salvată (de pus în coloana semnatura_path). missing:true dacă nu s-a
+// desenat nimic pe canvas — apelantul decide dacă blochează trimiterea formularului.
+async function uploadSignature(prefix, operatorId, sejurId) {
+  const st = signaturePadState[prefix];
+  if (!st || !st.hasInk()) return { path: null, missing: true };
+
+  const blob = await new Promise(resolve => st.canvas.toBlob(resolve, 'image/png'));
+  if (!blob) return { path: null, missing: true };
+
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/upload-signature`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': 'image/png',
+      'x-operator-id': operatorId,
+      'x-sejur-id': sejurId,
+    },
+    body: blob,
+  });
+  if (!res.ok) throw new Error(`upload semnătură a eșuat (${res.status})`);
+  const data = await res.json();
+  if (!data || !data.path) throw new Error('upload semnătură — răspuns invalid');
+  return { path: data.path, missing: false };
+}
+
 function formatPhoneRo(raw) {
   const digits = (raw || '').replace(/\D/g, '');
   if (digits.startsWith('40')) return digits;
@@ -730,6 +875,17 @@ function renderGateForm() {
       </div>
       <div class="rg-field"><label for="rg-cetatenie">${g.cetatenie}</label><input id="rg-cetatenie" required value="${escapeHtmlGuide(s.cetatenie || defaultCetatenie)}"></div>
       <div class="rg-row2">
+        <div class="rg-field"><label for="rg-data-nasterii">${g.dataNasterii}</label><input id="rg-data-nasterii" type="date" required value="${s.data_nasterii || ''}"></div>
+        <div class="rg-field"><label for="rg-scop-sedere">${g.scopSedere}</label>
+          <select id="rg-scop-sedere">
+            <option value="turism" ${(s.scop_sedere || 'turism') === 'turism' ? 'selected' : ''}>${g.scopTurism}</option>
+            <option value="afaceri" ${s.scop_sedere === 'afaceri' ? 'selected' : ''}>${g.scopAfaceri}</option>
+            <option value="altul" ${s.scop_sedere === 'altul' ? 'selected' : ''}>${g.scopAltul}</option>
+          </select>
+        </div>
+      </div>
+      <div class="rg-field"><label for="rg-adresa-domiciliu">${g.adresaDomiciliu}</label><input id="rg-adresa-domiciliu" required value="${escapeHtmlGuide(s.adresa_domiciliu || '')}"></div>
+      <div class="rg-row2">
         <div class="rg-field"><label for="rg-checkin">${g.checkin}</label><input id="rg-checkin" type="date" required value="${s.check_in || ''}"></div>
         <div class="rg-field"><label for="rg-checkout">${g.checkout}</label><input id="rg-checkout" type="date" required value="${s.check_out || ''}"></div>
       </div>
@@ -740,16 +896,20 @@ function renderGateForm() {
         ? 'We collect this information because it is legally required for guest registration. See our'
         : 'Colectăm aceste date pentru că sunt cerute legal la înregistrarea oaspeților. Vezi'}
         <a href="politica-confidentialitate.html" target="_blank" rel="noopener">${currentLang === 'en' ? 'Privacy Policy' : 'Politica de confidențialitate'}</a>.</p>
+      <label class="rg-consimt-check required"><input type="checkbox" id="rg-consimt-gdpr" ${s.consimtamant_obligatoriu ? 'checked' : ''} required>
+        <span><b>*</b> ${g.consimtGdpr}</span></label>
       <label class="rg-consimt-check"><input type="checkbox" id="rg-consimt-opt" ${s.consimtamant_optional ? 'checked' : ''}>
         <span>${currentLang === 'en'
           ? 'I agree to be contacted (WhatsApp/email) about my stay and any benefits (optional).'
           : 'Sunt de acord să fiu contactat(ă) (WhatsApp/email) în legătură cu sejurul și eventuale beneficii (opțional).'}</span></label>
+      ${signaturePadHtml('rg')}
       <button type="submit" class="rg-submit" id="rg-submit-btn">${g.submit}</button>
       <div class="rg-error" id="rg-form-error"></div>
     </form>`;
 
   document.getElementById('rg-form').addEventListener('submit', submitRegistration);
   attachFotoIdCountSync('rg', 'rg-nr-oaspeti');
+  initSignaturePad('rg');
 }
 
 // Preia valorile deja completate în formularul gate-ului (dacă e afișat) înainte de a
@@ -762,6 +922,7 @@ function captureGateFormDraft() {
     ...(currentStay || {}),
     prenume: val('rg-prenume'), nume: val('rg-nume'), email: val('rg-email'), telefon: val('rg-telefon'),
     act_tip: val('rg-act-tip'), act_serie_numar: val('rg-act-nr'), cetatenie: val('rg-cetatenie'),
+    data_nasterii: val('rg-data-nasterii'), adresa_domiciliu: val('rg-adresa-domiciliu'), scop_sedere: val('rg-scop-sedere'),
     check_in: val('rg-checkin'), check_out: val('rg-checkout'), nr_oaspeti: val('rg-nr-oaspeti'),
   };
 }
@@ -781,6 +942,20 @@ async function submitRegistration(e) {
     return;
   }
 
+  if (!document.getElementById('rg-consimt-gdpr')?.checked) {
+    errEl.textContent = I18N[currentLang].gate.consimtGdprRequired;
+    btn.disabled = false;
+    return;
+  }
+
+  const sigErrEl = document.getElementById('rg-sig-err');
+  if (signatureIsEmpty('rg')) {
+    if (sigErrEl) sigErrEl.textContent = I18N[currentLang].gate.semnaturaRequired;
+    btn.disabled = false;
+    return;
+  }
+  if (sigErrEl) sigErrEl.textContent = '';
+
   const payload = {
     p_token: stayToken,
     p_prenume: document.getElementById('rg-prenume').value.trim(),
@@ -790,9 +965,13 @@ async function submitRegistration(e) {
     p_act_tip: document.getElementById('rg-act-tip').value,
     p_act_serie_numar: document.getElementById('rg-act-nr').value.trim(),
     p_cetatenie: document.getElementById('rg-cetatenie').value.trim(),
+    p_data_nasterii: document.getElementById('rg-data-nasterii').value,
+    p_adresa_domiciliu: document.getElementById('rg-adresa-domiciliu').value.trim(),
+    p_scop_sedere: document.getElementById('rg-scop-sedere').value,
     p_check_in: checkIn,
     p_check_out: checkOut,
     p_nr_oaspeti: Number(document.getElementById('rg-nr-oaspeti').value) || 1,
+    p_consimtamant_obligatoriu: true,
     p_consimtamant_optional: !!document.getElementById('rg-consimt-opt')?.checked,
     p_versiune_politica: GDPR_POLICY_VERSION,
   };
@@ -812,6 +991,20 @@ async function submitRegistration(e) {
       btn.disabled = false;
       return;
     }
+  }
+
+  try {
+    const { path: sigPath, missing: sigMissing } = await uploadSignature('rg', currentOperator.id, stayToken);
+    if (sigMissing) {
+      if (sigErrEl) sigErrEl.textContent = I18N[currentLang].gate.semnaturaRequired;
+      btn.disabled = false;
+      return;
+    }
+    payload.p_semnatura_path = sigPath;
+  } catch (err) {
+    if (sigErrEl) sigErrEl.textContent = I18N[currentLang].gate.semnaturaErr;
+    btn.disabled = false;
+    return;
   }
 
   try {
@@ -847,6 +1040,20 @@ async function submitPreinregistrare(e) {
     return;
   }
 
+  if (!document.getElementById('prb-consimt-gdpr')?.checked) {
+    errEl.textContent = I18N[currentLang].fac.consimtGdprRequired;
+    btn.disabled = false;
+    return;
+  }
+
+  const sigErrEl = document.getElementById('prb-sig-err');
+  if (signatureIsEmpty('prb')) {
+    if (sigErrEl) sigErrEl.textContent = I18N[currentLang].fac.semnaturaRequired;
+    btn.disabled = false;
+    return;
+  }
+  if (sigErrEl) sigErrEl.textContent = '';
+
   const payload = {
     operator_id: currentOperator.id,
     prenume: document.getElementById('prb-prenume').value.trim(),
@@ -854,6 +1061,9 @@ async function submitPreinregistrare(e) {
     tip_act: document.getElementById('prb-tip-act').value,
     act_serie_numar: document.getElementById('prb-act-nr').value.trim() || null,
     cetatenie: document.getElementById('prb-cetatenie').value.trim() || null,
+    data_nasterii: document.getElementById('prb-data-nasterii').value || null,
+    adresa_domiciliu: document.getElementById('prb-adresa-domiciliu').value.trim() || null,
+    scop_sedere: document.getElementById('prb-scop-sedere').value,
     check_in: checkIn,
     check_out: checkOut,
     nr_oaspeti: Number(document.getElementById('prb-nr').value) || 1,
@@ -862,13 +1072,13 @@ async function submitPreinregistrare(e) {
   };
 
   let codScurt = randomCode(6);
+  // Un singur id de upload pentru poză + semnătură, stabil chiar dacă codScurt se
+  // regenerează mai jos la o coliziune (409) — fișierele deja încărcate rămân valide.
+  const uploadId = (crypto.randomUUID && crypto.randomUUID()) || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   if (fotoIdRequired()) {
     const fidErrEl = document.getElementById('prb-foto-err');
     try {
-      // Folosim un id separat de codScurt pentru calea din storage — codScurt se poate
-      // regenera mai jos la o coliziune (409), iar poza trebuie să rămână validă oricum.
-      const uploadId = (crypto.randomUUID && crypto.randomUUID()) || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const { paths, missing } = await collectFotoIdPaths('prb', currentOperator.id, uploadId);
       if (missing) {
         if (fidErrEl) fidErrEl.textContent = 'Hotelul cere o poză a actului de identitate — te rugăm să o adaugi mai sus.';
@@ -882,6 +1092,21 @@ async function submitPreinregistrare(e) {
       return;
     }
   }
+
+  try {
+    const { path: sigPath, missing: sigMissing } = await uploadSignature('prb', currentOperator.id, uploadId);
+    if (sigMissing) {
+      if (sigErrEl) sigErrEl.textContent = I18N[currentLang].fac.semnaturaRequired;
+      btn.disabled = false;
+      return;
+    }
+    payload.semnatura_path = sigPath;
+  } catch (err) {
+    if (sigErrEl) sigErrEl.textContent = I18N[currentLang].fac.semnaturaErr;
+    btn.disabled = false;
+    return;
+  }
+
   let attempt = 0;
   let saved = null;
   while (attempt < 3 && !saved) {
@@ -894,6 +1119,9 @@ async function submitPreinregistrare(e) {
         p_tip_act: payload.tip_act,
         p_act_serie_numar: payload.act_serie_numar,
         p_cetatenie: payload.cetatenie,
+        p_data_nasterii: payload.data_nasterii,
+        p_adresa_domiciliu: payload.adresa_domiciliu,
+        p_scop_sedere: payload.scop_sedere,
         p_check_in: payload.check_in,
         p_check_out: payload.check_out,
         p_nr_oaspeti: payload.nr_oaspeti,
@@ -901,6 +1129,8 @@ async function submitPreinregistrare(e) {
         p_telefon: payload.telefon,
         p_cod_scurt: codScurt,
         p_foto_id_paths: payload.foto_id_paths || null,
+        p_semnatura_path: payload.semnatura_path,
+        p_consimtamant_obligatoriu: true,
         p_consimtamant_optional: !!document.getElementById('prb-consimt-opt')?.checked,
         p_versiune_politica: GDPR_POLICY_VERSION,
       }),
@@ -1185,12 +1415,24 @@ const I18N = {
       prenume: "Prenume", nume: "Nume", email: "Email", telefon: "Telefon",
       actTip: "Act identitate", actCI: "Carte de identitate", actPasaport: "Pașaport",
       actNr: "Serie și număr", cetatenie: "Cetățenie",
+      dataNasterii: "Data nașterii", adresaDomiciliu: "Adresă de domiciliu",
+      scopSedere: "Scopul șederii", scopTurism: "Turism", scopAfaceri: "Afaceri", scopAltul: "Altul",
       checkin: "Check-in", checkout: "Check-out", nrOaspeti: "Număr oaspeți",
       note: (host) => `Datele sunt văzute doar de ${host}, pentru verificarea identității la check-in — conform cerințelor locale de evidență a turiștilor.`,
+      consimtGdpr: "Sunt de acord cu prelucrarea datelor mele de identitate în scopul înregistrării legale a oaspeților (obligatoriu).",
+      consimtGdprRequired: "Trebuie să fii de acord cu prelucrarea datelor de identitate pentru a trimite înregistrarea.",
       submit: "Trimite înregistrarea",
       fotoMissing: (hostSubj) => `${hostSubj} cere o poză a actului de identitate — te rugăm să o adaugi mai sus.`,
       fotoErr: "Nu am putut încărca poza — încearcă din nou.",
+      semnaturaRequired: "Te rugăm să semnezi mai sus înainte de a trimite înregistrarea.",
+      semnaturaErr: "Nu am putut încărca semnătura — încearcă din nou.",
       saveErr: "Nu am putut trimite înregistrarea — încearcă din nou.",
+    },
+    sig: {
+      title: "Semnătura ta",
+      placeholder: "Semnează aici cu degetul sau mouse-ul",
+      clear: "Șterge",
+      note: "Semnătura confirmă exactitatea datelor completate mai sus, conform cerințelor legale de evidență a turiștilor.",
     },
     fid: {
       titlePerOaspete: "Poză act de identitate pentru fiecare oaspete",
@@ -1228,9 +1470,15 @@ const I18N = {
       preinregPrenume: "Prenume", preinregNume: "Nume", preinregTipActLabel: "Act identitate",
       preinregTipActCI: "Carte de identitate", preinregTipActPasaport: "Pașaport", preinregSerie: "Serie și număr act",
       preinregCetatenie: "Cetățenie",
+      dataNasterii: "Data nașterii", adresaDomiciliu: "Adresă de domiciliu",
+      scopSedere: "Scopul șederii", scopTurism: "Turism", scopAfaceri: "Afaceri", scopAltul: "Altul",
       preinregCheckin: "Check-in", preinregCheckout: "Check-out", preinregNr: "Număr oaspeți",
       preinregEmail: "Email", preinregTelefon: "Telefon",
       preinregFotoNota: "📷 Încărcare poză act de identitate — disponibil în curând în această regiune.",
+      consimtGdpr: "Sunt de acord cu prelucrarea datelor mele de identitate în scopul înregistrării legale a oaspeților (obligatoriu).",
+      consimtGdprRequired: "Trebuie să fii de acord cu prelucrarea datelor de identitate pentru a trimite înregistrarea.",
+      semnaturaRequired: "Te rugăm să semnezi mai sus înainte de a trimite înregistrarea.",
+      semnaturaErr: "Nu am putut încărca semnătura — încearcă din nou.",
       preinregSubmit: "Trimite înregistrarea",
       preinregNote: "Datele se salvează în sistemul hotelului, pentru pregătirea check-in-ului. Poți trimite și o notificare directă recepției mai jos.",
       preinregErr: "Nu am putut trimite înregistrarea — încearcă din nou.",
@@ -1296,12 +1544,24 @@ const I18N = {
       prenume: "First name", nume: "Last name", email: "Email", telefon: "Phone",
       actTip: "ID type", actCI: "ID card", actPasaport: "Passport",
       actNr: "ID / passport number", cetatenie: "Nationality",
+      dataNasterii: "Date of birth", adresaDomiciliu: "Home address",
+      scopSedere: "Purpose of stay", scopTurism: "Tourism", scopAfaceri: "Business", scopAltul: "Other",
       checkin: "Check-in", checkout: "Check-out", nrOaspeti: "Number of guests",
       note: (host) => `Your details are seen only by ${host}, for identity verification at check-in — as required by local tourist registration rules.`,
+      consimtGdpr: "I agree to the processing of my identity data for legally required guest registration (mandatory).",
+      consimtGdprRequired: "You must agree to the processing of your identity data to submit the registration.",
       submit: "Submit registration",
       fotoMissing: (hostSubj) => `${hostSubj} requires an ID photo — please add it above.`,
       fotoErr: "We couldn't upload the photo — please try again.",
+      semnaturaRequired: "Please sign above before submitting the registration.",
+      semnaturaErr: "We couldn't upload the signature — please try again.",
       saveErr: "We couldn't submit your registration — please try again.",
+    },
+    sig: {
+      title: "Your signature",
+      placeholder: "Sign here with your finger or mouse",
+      clear: "Clear",
+      note: "Your signature confirms the accuracy of the details above, as required by local tourist registration rules.",
     },
     fid: {
       titlePerOaspete: "ID photo for each guest",
@@ -1339,9 +1599,15 @@ const I18N = {
       preinregPrenume: "First name", preinregNume: "Last name", preinregTipActLabel: "ID type",
       preinregTipActCI: "ID card", preinregTipActPasaport: "Passport", preinregSerie: "ID / passport number",
       preinregCetatenie: "Nationality",
+      dataNasterii: "Date of birth", adresaDomiciliu: "Home address",
+      scopSedere: "Purpose of stay", scopTurism: "Tourism", scopAfaceri: "Business", scopAltul: "Other",
       preinregCheckin: "Check-in", preinregCheckout: "Check-out", preinregNr: "Number of guests",
       preinregEmail: "Email", preinregTelefon: "Phone",
       preinregFotoNota: "📷 ID/passport photo upload — coming soon to this region.",
+      consimtGdpr: "I agree to the processing of my identity data for legally required guest registration (mandatory).",
+      consimtGdprRequired: "You must agree to the processing of your identity data to submit the registration.",
+      semnaturaRequired: "Please sign above before submitting the registration.",
+      semnaturaErr: "We couldn't upload the signature — please try again.",
       preinregSubmit: "Submit registration",
       preinregNote: "Your details are saved in the hotel's system to prepare your check-in. You can also send a direct notification to the front desk below.",
       preinregErr: "We couldn't submit your registration — please try again.",
@@ -1581,6 +1847,18 @@ async function renderFacilitati() {
           </div>
           <div class="prb-field"><label>${t.preinregCetatenie}</label><input id="prb-cetatenie" value="România"></div>
           <div class="prb-row2">
+            <div class="prb-field"><label>${t.dataNasterii}</label><input id="prb-data-nasterii" type="date"></div>
+            <div class="prb-field">
+              <label>${t.scopSedere}</label>
+              <select id="prb-scop-sedere">
+                <option value="turism">${t.scopTurism}</option>
+                <option value="afaceri">${t.scopAfaceri}</option>
+                <option value="altul">${t.scopAltul}</option>
+              </select>
+            </div>
+          </div>
+          <div class="prb-field"><label>${t.adresaDomiciliu}</label><input id="prb-adresa-domiciliu"></div>
+          <div class="prb-row2">
             <div class="prb-field"><label>${t.preinregCheckin}</label><input id="prb-checkin" type="date"></div>
             <div class="prb-field"><label>${t.preinregCheckout}</label><input id="prb-checkout" type="date"></div>
           </div>
@@ -1595,10 +1873,13 @@ async function renderFacilitati() {
             ? 'We collect this information because it is legally required for guest registration. See our'
             : 'Colectăm aceste date pentru că sunt cerute legal la înregistrarea oaspeților. Vezi'}
             <a href="politica-confidentialitate.html" target="_blank" rel="noopener">${currentLang === 'en' ? 'Privacy Policy' : 'Politica de confidențialitate'}</a>.</p>
+          <label class="rg-consimt-check required"><input type="checkbox" id="prb-consimt-gdpr" required>
+            <span><b>*</b> ${t.consimtGdpr}</span></label>
           <label class="rg-consimt-check"><input type="checkbox" id="prb-consimt-opt">
             <span>${currentLang === 'en'
               ? 'I agree to be contacted (WhatsApp/email) about my stay and any benefits (optional).'
               : 'Sunt de acord să fiu contactat(ă) (WhatsApp/email) în legătură cu sejurul și eventuale beneficii (opțional).'}</span></label>
+          ${signaturePadHtml('prb')}
           <button type="submit" class="prb-submit" id="prb-submit-btn">${t.preinregSubmit}</button>
           <div class="prb-error" id="prb-form-error"></div>
         </form>
@@ -1792,6 +2073,7 @@ async function renderFacilitati() {
       const form = item.querySelector('#preinreg-form');
       if (form) form.addEventListener('submit', submitPreinregistrare);
       attachFotoIdCountSync('prb', 'prb-nr');
+      initSignaturePad('prb');
       // închisă implicit — oaspetele o deschide singur din acordeon, ca restul secțiunilor
     }
   });
