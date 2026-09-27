@@ -501,6 +501,31 @@ function attachFotoIdCountSync(prefix, nrInputId) {
   });
 }
 
+// Reîncercare unică pentru upload-urile către edge functions — un "cold start" sau un hiccup
+// tranzitoriu (503, eroare de rețea) nu trebuie să blocheze oaspetele fără nicio explicație:
+// mai încercăm o dată, cu o pauză scurtă, înainte să raportăm eroarea mai departe.
+async function fetchEdgeWithRetry(url, opts, retries = 1, delayMs = 1000) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const res = await fetch(url, opts);
+      if (res.ok || attempt >= retries || res.status < 500) return res;
+    } catch (err) {
+      if (attempt >= retries) throw err;
+    }
+    await new Promise(r => setTimeout(r, delayMs));
+  }
+}
+
+// Arată eroarea atât lângă câmpul vizat cât și în mesajul general al formularului (unele
+// erori apar sub un câmp aflat mai jos în pagină și pot trece neobservate) — și derulează
+// spre ea, ca oaspetele să nu rămână cu impresia că formularul e "blocat" fără explicație.
+function showSubmitError(fieldErrEl, formErrEl, message) {
+  if (fieldErrEl) fieldErrEl.textContent = message;
+  if (formErrEl) formErrEl.textContent = message;
+  const target = fieldErrEl || formErrEl;
+  if (target && target.scrollIntoView) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
 // Încarcă toate fișierele selectate în inputurile #${prefix}-foto-N și întoarce căile din
 // bucket (de salvat în foto_id_paths). Dacă cerința e activă dar lipsește vreo poză, întoarce
 // missing:true și NU încarcă nimic — apelantul decide dacă blochează trimiterea formularului.
@@ -521,7 +546,7 @@ async function collectFotoIdPaths(prefix, operatorId, sejurId) {
     const extFromName = (file.name.split('.').pop() || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     const ext = extFromName || 'jpg';
     const contentType = (file.type && /^image\//.test(file.type)) ? file.type : 'image/jpeg';
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/upload-id-photo`, {
+    const res = await fetchEdgeWithRetry(`${SUPABASE_URL}/functions/v1/upload-id-photo`, {
       method: 'POST',
       headers: {
         apikey: SUPABASE_ANON_KEY,
@@ -652,7 +677,7 @@ async function uploadSignature(prefix, operatorId, sejurId) {
   const blob = await new Promise(resolve => st.canvas.toBlob(resolve, 'image/png'));
   if (!blob) return { path: null, missing: true };
 
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/upload-signature`, {
+  const res = await fetchEdgeWithRetry(`${SUPABASE_URL}/functions/v1/upload-signature`, {
     method: 'POST',
     headers: {
       apikey: SUPABASE_ANON_KEY,
@@ -981,13 +1006,13 @@ async function submitRegistration(e) {
     try {
       const { paths, missing } = await collectFotoIdPaths('rg', currentOperator.id, stayToken);
       if (missing) {
-        if (fidErrEl) fidErrEl.textContent = I18N[currentLang].gate.fotoMissing(hostTeamLabel('subj'));
+        showSubmitError(fidErrEl, errEl, I18N[currentLang].gate.fotoMissing(hostTeamLabel('subj')));
         btn.disabled = false;
         return;
       }
       payload.p_foto_id_paths = paths;
     } catch (err) {
-      if (fidErrEl) fidErrEl.textContent = I18N[currentLang].gate.fotoErr;
+      showSubmitError(fidErrEl, errEl, I18N[currentLang].gate.fotoErr);
       btn.disabled = false;
       return;
     }
@@ -996,13 +1021,13 @@ async function submitRegistration(e) {
   try {
     const { path: sigPath, missing: sigMissing } = await uploadSignature('rg', currentOperator.id, stayToken);
     if (sigMissing) {
-      if (sigErrEl) sigErrEl.textContent = I18N[currentLang].gate.semnaturaRequired;
+      showSubmitError(sigErrEl, errEl, I18N[currentLang].gate.semnaturaRequired);
       btn.disabled = false;
       return;
     }
     payload.p_semnatura_path = sigPath;
   } catch (err) {
-    if (sigErrEl) sigErrEl.textContent = I18N[currentLang].gate.semnaturaErr;
+    showSubmitError(sigErrEl, errEl, I18N[currentLang].gate.semnaturaErr);
     btn.disabled = false;
     return;
   }
@@ -1018,7 +1043,7 @@ async function submitRegistration(e) {
     currentStay = rows[0];
     applyRegistrationGate();
   } catch (err) {
-    errEl.textContent = I18N[currentLang].gate.saveErr;
+    showSubmitError(null, errEl, I18N[currentLang].gate.saveErr);
     btn.disabled = false;
   }
 }
@@ -1081,13 +1106,13 @@ async function submitPreinregistrare(e) {
     try {
       const { paths, missing } = await collectFotoIdPaths('prb', currentOperator.id, uploadId);
       if (missing) {
-        if (fidErrEl) fidErrEl.textContent = 'Hotelul cere o poză a actului de identitate — te rugăm să o adaugi mai sus.';
+        showSubmitError(fidErrEl, errEl, 'Hotelul cere o poză a actului de identitate — te rugăm să o adaugi mai sus.');
         btn.disabled = false;
         return;
       }
       payload.foto_id_paths = paths;
     } catch (err) {
-      if (fidErrEl) fidErrEl.textContent = 'Nu am putut încărca poza — încearcă din nou.';
+      showSubmitError(fidErrEl, errEl, 'Nu am putut încărca poza — încearcă din nou.');
       btn.disabled = false;
       return;
     }
@@ -1096,13 +1121,13 @@ async function submitPreinregistrare(e) {
   try {
     const { path: sigPath, missing: sigMissing } = await uploadSignature('prb', currentOperator.id, uploadId);
     if (sigMissing) {
-      if (sigErrEl) sigErrEl.textContent = I18N[currentLang].fac.semnaturaRequired;
+      showSubmitError(sigErrEl, errEl, I18N[currentLang].fac.semnaturaRequired);
       btn.disabled = false;
       return;
     }
     payload.semnatura_path = sigPath;
   } catch (err) {
-    if (sigErrEl) sigErrEl.textContent = I18N[currentLang].fac.semnaturaErr;
+    showSubmitError(sigErrEl, errEl, I18N[currentLang].fac.semnaturaErr);
     btn.disabled = false;
     return;
   }
@@ -1139,7 +1164,7 @@ async function submitPreinregistrare(e) {
       const rows = await res.json();
       saved = (rows && rows[0]) ? rows[0] : null;
       if (!saved) {
-        errEl.textContent = I18N[currentLang].fac.preinregErr;
+        showSubmitError(null, errEl, I18N[currentLang].fac.preinregErr);
         btn.disabled = false;
         return;
       }
@@ -1147,13 +1172,13 @@ async function submitPreinregistrare(e) {
       codScurt = randomCode(6);
       attempt++;
     } else {
-      errEl.textContent = I18N[currentLang].fac.preinregErr;
+      showSubmitError(null, errEl, I18N[currentLang].fac.preinregErr);
       btn.disabled = false;
       return;
     }
   }
   if (!saved) {
-    errEl.textContent = I18N[currentLang].fac.preinregErr;
+    showSubmitError(null, errEl, I18N[currentLang].fac.preinregErr);
     btn.disabled = false;
     return;
   }
