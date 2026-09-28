@@ -8,6 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
     --teal-deep:#10302B; --teal:#1A4A42; --gold:#C98A2C; --gold-soft:#E8CE9E;
@@ -1529,11 +1530,23 @@ function openImportIstoric(operatorId) {
     const exampleApt = ['Popescu', 'Ion', '1800101123456', 'Română', '01.01.1980', 'CI', 'AB123456', '01.07.2025', '05.07.2025', '2'];
     const exampleHotel = ['Camera 101', 'Popescu', 'Ion', '1800101123456', 'Română', '01.01.1980', 'CI', 'AB123456', '01.07.2025', '05.07.2025', '2'];
     const example = isHotel ? exampleHotel : exampleApt;
+    const filenameBase = `sablon-import-cazari-${(numeCazare || 'cazare').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+
+    if (window.XLSX) {
+      const ws = XLSX.utils.aoa_to_sheet([headers, example]);
+      ws['!cols'] = headers.map(h => ({ wch: Math.max(14, h.length + 2) }));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Import cazări');
+      XLSX.writeFile(wb, `${filenameBase}.xlsx`);
+      return;
+    }
+
+    // rezervă, în cazul (improbabil) în care biblioteca Excel nu s-a încărcat
     const csv = [headers, example].map(r => r.map(csvEscapeField).join(',')).join('\n');
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `sablon-import-cazari-${(numeCazare || 'cazare').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.csv`;
+    a.download = `${filenameBase}.csv`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -1563,8 +1576,7 @@ function openImportIstoric(operatorId) {
     };
   }
 
-  function parseFile(text) {
-    const rows = parseCsvSimple(text);
+  function parseRows(rows) {
     if (!rows.length) { parsedRows = []; return; }
     const idx = mapHeaderIndexes(rows[0]);
     const dataRows = rows.slice(1);
@@ -1636,14 +1648,14 @@ function openImportIstoric(operatorId) {
         <div class="imp-steps">
           <div class="imp-step">
             <div class="imp-step-title">1. Descarcă șablonul</div>
-            <div class="imp-step-hint">Un fișier CSV (se deschide direct în Excel) cu exact coloanele cerute de Fișa de ocupare. Completează câte un rând pentru fiecare sejur mai vechi, apoi salvează fișierul.</div>
-            <button type="button" class="reg-btn primary" id="imp-download-template">⬇ Descarcă șablon CSV</button>
+            <div class="imp-step-hint">Un fișier Excel (.xlsx) cu exact coloanele cerute de Fișa de ocupare. Îl deschizi direct în Excel, completezi câte un rând pentru fiecare sejur mai vechi (poți copia-lipi din fișierele tale) și salvezi.</div>
+            <button type="button" class="reg-btn primary" id="imp-download-template">⬇ Descarcă șablon Excel</button>
           </div>
           <div class="imp-step">
             <div class="imp-step-title">2. Încarcă fișierul completat</div>
-            <div class="imp-step-hint">Acceptăm fișierul exact în formatul șablonului (.csv). Datele pot fi scrise ca ZZ.LL.AAAA sau AAAA-LL-ZZ.</div>
-            <label class="imp-drop" for="imp-file-input">📄 Alege fișierul CSV completat sau trage-l aici</label>
-            <input type="file" id="imp-file-input" accept=".csv,text/csv" style="display:none;">
+            <div class="imp-step-hint">Acceptăm fișierul Excel (.xlsx) completat, sau un CSV dacă preferi asta. Datele pot fi scrise ca ZZ.LL.AAAA sau AAAA-LL-ZZ.</div>
+            <label class="imp-drop" for="imp-file-input">📄 Alege fișierul completat (.xlsx sau .csv) sau trage-l aici</label>
+            <input type="file" id="imp-file-input" accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none;">
           </div>
           <div id="imp-preview-wrap" style="display:none;" class="imp-step">
             <div class="imp-step-title">3. Verifică și confirmă</div>
@@ -1681,13 +1693,31 @@ function openImportIstoric(operatorId) {
     });
 
     function handleFile(file) {
+      const isXlsx = /\.xlsx?$/i.test(file.name);
       const reader = new FileReader();
-      reader.onload = () => {
-        parseFile(String(reader.result || ''));
-        renderPreview();
-      };
       reader.onerror = () => alert('Nu am putut citi fișierul — încearcă din nou.');
-      reader.readAsText(file, 'UTF-8');
+      if (isXlsx) {
+        reader.onload = () => {
+          try {
+            const wb = XLSX.read(reader.result, { type: 'array', cellDates: false });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' })
+              .map(r => r.map(c => String(c == null ? '' : c)));
+            parseRows(rows);
+            renderPreview();
+          } catch (err) {
+            console.error(err);
+            alert('Nu am putut citi acest fișier Excel — verifică dacă e un .xlsx valid, sau încearcă șablonul descărcat.');
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      } else {
+        reader.onload = () => {
+          parseRows(parseCsvSimple(String(reader.result || '')));
+          renderPreview();
+        };
+        reader.readAsText(file, 'UTF-8');
+      }
     }
 
     function renderPreview() {
