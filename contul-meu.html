@@ -116,11 +116,27 @@
   .fisa-table{width:100%; border-collapse:collapse; font-size:11.5px; margin-top:4px;}
   .fisa-table th, .fisa-table td{border:1px solid var(--line); padding:6px 8px; text-align:left; vertical-align:top;}
   .fisa-table th{background:var(--cream); font-size:10px; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-soft);}
+  .fisa-oficial-page{font-family:Georgia,'Times New Roman',serif; color:#111; font-size:12.5px; padding:14px 4px; border-bottom:1px dashed var(--line); margin-bottom:18px;}
+  .fisa-oficial-page:last-child{border-bottom:none; margin-bottom:0;}
+  .fisa-oficial-box{display:inline-block; width:22px; height:26px; line-height:26px; text-align:center; border:1.3px solid #111; font-weight:700; margin:0 2px;}
+  .fisa-oficial-imobil{border:1.3px solid #111; padding:10px 12px;}
+  .fisa-oficial-field{display:inline-block; vertical-align:top; margin-right:14px;}
+  .fisa-oficial-field.wide{display:block; margin-bottom:8px;}
+  .fisa-oficial-field span{display:block; font-size:10px; color:var(--ink-soft); margin-bottom:2px;}
+  .fisa-oficial-row4{display:flex; gap:14px; flex-wrap:wrap; margin-top:6px;}
+  .fisa-oficial-row4 .fisa-oficial-field{flex:1; min-width:90px; margin-right:0;}
+  .fisa-oficial-line{border-bottom:1px solid #111; min-height:16px; padding:1px 2px;}
+  .fisa-oficial-table{width:100%; border-collapse:collapse; font-size:11px; margin-top:6px;}
+  .fisa-oficial-table th, .fisa-oficial-table td{border:1.1px solid #111; padding:4px 6px; text-align:left;}
+  .fisa-oficial-table th{text-align:center; font-weight:700; font-size:10.5px;}
+  .fisa-oficial-idx-row td{text-align:center; font-size:10px; color:var(--ink-soft); background:var(--cream);}
   @media print{
     body > *:not(.fisa-overlay){display:none !important;}
     .fisa-overlay{position:static; background:none; padding:0; display:block !important;}
     .fisa-card{box-shadow:none; max-width:none;}
     .fisa-no-print{display:none !important;}
+    .fisa-oficial-page{page-break-after:always; border-bottom:none; margin-bottom:0;}
+    .fisa-oficial-page:last-child{page-break-after:auto;}
   }
 </style>
 </head>
@@ -1142,12 +1158,98 @@ function fisaYearsFor(rows) {
   return Array.from(years).sort().reverse();
 }
 
+function fmtDataZzLlAaaa(dateStr) {
+  if (!dateStr) return '';
+  const parts = String(dateStr).slice(0, 10).split('-');
+  if (parts.length !== 3) return '';
+  const [y, m, d] = parts;
+  return `${d}/${m}/${y}`;
+}
+
+// Randarea fidelă a formularului oficial (conform modelului ANAF/Ministerul Turismului) — cea pe
+// care o cer autoritățile la control, „un formular per cameră". Paginăm câte 10 înregistrări
+// per pagină (ca pe formularul tipărit) și lăsăm rândurile goale pentru completare manuală.
+function fisaOficialPageHtml(op, numeCazare, chunkRows, year, pageIndex, totalPages) {
+  const adresa = (op && op.adresa) || '';
+  const yearStr = String(year || '');
+  const yearDigits = [0, 1, 2, 3].map(i => yearStr[i] || '');
+  const rowsHtml = Array.from({ length: 10 }).map((_, i) => {
+    const r = chunkRows[i];
+    return `<tr>
+      <td style="text-align:center;">${i + 1}</td>
+      <td>${r ? escapeHtmlAcc([r.prenume, r.nume].filter(Boolean).join(' ')) : ''}</td>
+      <td>${r ? escapeHtmlAcc(r.cnp || '') : ''}</td>
+      <td>${r ? escapeHtmlAcc(((r.act_tip === 'pasaport' ? 'Pașaport ' : 'CI ') + (r.act_serie_numar || '')).trim()) : ''}</td>
+      <td style="text-align:center;">${r ? fmtDataZzLlAaaa(r.check_in) : ''}</td>
+      <td style="text-align:center;">${r ? fmtDataZzLlAaaa(r.check_out) : ''}</td>
+    </tr>`;
+  }).join('');
+  return `
+    <div class="fisa-oficial-page">
+      <div style="text-align:center; font-weight:700; font-size:17px; letter-spacing:.03em;">FIȘA</div>
+      <div style="text-align:center; font-size:13px; margin-bottom:12px;">de ocupare a capacității de cazare</div>
+      <div style="text-align:center; margin-bottom:16px;">
+        Anul&nbsp;&nbsp;${yearDigits.map(d => `<span class="fisa-oficial-box">${escapeHtmlAcc(d)}</span>`).join('')}
+      </div>
+      <div style="font-weight:700; margin-bottom:6px;">I. Datele privind imobilul</div>
+      <div class="fisa-oficial-imobil">
+        <div class="fisa-oficial-field wide"><span>Stradă</span><div class="fisa-oficial-line">${escapeHtmlAcc(adresa)}</div></div>
+        <div class="fisa-oficial-row4">
+          <div class="fisa-oficial-field"><span>Număr</span><div class="fisa-oficial-line"></div></div>
+          <div class="fisa-oficial-field"><span>Bloc</span><div class="fisa-oficial-line"></div></div>
+          <div class="fisa-oficial-field"><span>Scară</span><div class="fisa-oficial-line"></div></div>
+          <div class="fisa-oficial-field"><span>Etaj</span><div class="fisa-oficial-line"></div></div>
+        </div>
+        <div class="fisa-oficial-row4">
+          <div class="fisa-oficial-field"><span>Ap.</span><div class="fisa-oficial-line"></div></div>
+          <div class="fisa-oficial-field"><span>Județ/Sector</span><div class="fisa-oficial-line"></div></div>
+          <div class="fisa-oficial-field"><span>Localitate</span><div class="fisa-oficial-line"></div></div>
+          <div class="fisa-oficial-field"><span>Cod poștal</span><div class="fisa-oficial-line"></div></div>
+        </div>
+      </div>
+      ${!adresa ? '<p style="color:#9C4536; font-size:11px; margin:4px 0 0;">Adresa imobilului e incompletă — completeaz-o la proprietate ca fișa să fie corectă la control.</p>' : ''}
+      <p style="font-weight:700; margin:16px 0 4px;">II. Datele de identificare a persoanelor care au ocupat camera/spațiul amenajat în scopul înnoptării, precum și perioada de ocupare<sup>*)</sup></p>
+      <p style="font-size:10px; color:var(--ink-soft); border-top:1px solid #000; padding-top:3px; max-width:65%;">*) Se completează pentru fiecare cameră închiriată/spațiul amenajat în scopul înnoptării, pentru o perioadă determinată, măsurată în zile.</p>
+      <p style="margin:12px 0 3px;">1. Elemente de identificare a camerei/spațiului amenajat în scopul înnoptării</p>
+      <div class="fisa-oficial-line">${escapeHtmlAcc(numeCazare)}</div>
+      <p style="margin:12px 0 4px;">2. Datele de identificare a persoanelor care au ocupat camera/spațiul amenajat în scopul înnoptării</p>
+      <table class="fisa-oficial-table">
+        <thead>
+          <tr>
+            <th rowspan="2">Nr.<br>crt.</th>
+            <th rowspan="2">Nume și prenume</th>
+            <th rowspan="2">Cod numeric personal</th>
+            <th rowspan="2">Seria și numărul documentului de identitate</th>
+            <th colspan="2">Perioada de ocupare a camerei/spațiului amenajat în scopul înnoptării (zz/ll/aaaa)</th>
+          </tr>
+          <tr><th>de la</th><th>până la</th></tr>
+        </thead>
+        <tbody>
+          <tr class="fisa-oficial-idx-row"><td>0</td><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td></tr>
+          ${rowsHtml}
+        </tbody>
+      </table>
+      <p style="text-align:center; font-size:10.5px; margin-top:12px;">${GDPR_FISA_FOOTER}</p>
+      <p style="font-size:10px; color:var(--ink-soft); margin-top:2px;">${escapeHtmlAcc(numeCazare)} · pagina ${pageIndex + 1}${totalPages > 1 ? ' din ' + totalPages : ''} · generat de Lokals la ${fmtDataScurt(new Date().toISOString())}</p>
+    </div>`;
+}
+
+function fisaOficialFormHtml(op, numeCazare, rows, year) {
+  if (!rows.length) {
+    return fisaOficialPageHtml(op, numeCazare, [], year, 0, 1);
+  }
+  const chunks = [];
+  for (let i = 0; i < rows.length; i += 10) chunks.push(rows.slice(i, i + 10));
+  return chunks.map((chunk, idx) => fisaOficialPageHtml(op, numeCazare, chunk, year, idx, chunks.length)).join('');
+}
+
 function openFisaOcupare(operatorId) {
   const op = OPERATORI_BY_ID[operatorId];
   const numeCazare = op ? (op.nume_afisat || op.nume_afacere) : '';
   const allRows = fisaRowsFor(operatorId).slice().sort((a, b) => String(a.check_in || '').localeCompare(String(b.check_in || '')));
   const years = fisaYearsFor(allRows);
   let selectedYear = years[0] || String(new Date().getFullYear());
+  let viewMode = 'tabel';
 
   let overlay = document.getElementById('fisa-overlay');
   if (!overlay) {
@@ -1165,6 +1267,29 @@ function openFisaOcupare(operatorId) {
     const rows = rowsForYear(selectedYear);
     const yearOptionsHtml = (years.length ? years : [selectedYear])
       .map(y => `<option value="${y}" ${y === selectedYear ? 'selected' : ''}>${y}</option>`).join('');
+
+    if (viewMode === 'oficial') {
+      overlay.innerHTML = `
+        <div class="fisa-card">
+          <div class="fisa-no-print" style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+            <button type="button" class="reg-btn" id="fisa-back">← Înapoi la fișă</button>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <select id="fisa-year">${yearOptionsHtml}</select>
+              <button type="button" class="reg-btn primary" id="fisa-oficial-print">🖨️ Tipărește / Salvează ca PDF</button>
+              <button type="button" class="reg-btn" id="fisa-close">✕ Închide</button>
+            </div>
+          </div>
+          ${fisaOficialFormHtml(op, numeCazare, rows, selectedYear)}
+        </div>`;
+      overlay.classList.add('open');
+      document.getElementById('fisa-close').addEventListener('click', () => overlay.classList.remove('open'));
+      document.getElementById('fisa-back').addEventListener('click', () => { viewMode = 'tabel'; render(); });
+      document.getElementById('fisa-oficial-print').addEventListener('click', () => window.print());
+      const yearSel = document.getElementById('fisa-year');
+      if (yearSel) yearSel.addEventListener('change', () => { selectedYear = yearSel.value; render(); });
+      return;
+    }
+
     overlay.innerHTML = `
       <div class="fisa-card">
         <div class="fisa-no-print" style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:12px;">
@@ -1204,6 +1329,7 @@ function openFisaOcupare(operatorId) {
         <p class="reg-meta-secondary" style="margin-top:8px; font-size:11px;">${GDPR_FISA_FOOTER}</p>`}
         <div class="fisa-no-print" style="display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;">
           <button type="button" class="reg-btn primary" id="fisa-print">🖨️ Printează</button>
+          <button type="button" class="reg-btn" id="fisa-oficial-btn">📄 Formular oficial (tipărire/PDF)</button>
           <button type="button" class="reg-btn" id="fisa-csv" ${rows.length === 0 ? 'disabled' : ''}>⬇ Exportă CSV</button>
           <button type="button" class="reg-btn" id="fisa-pdf" ${rows.length === 0 ? 'disabled' : ''}>⬇ Descarcă PDF</button>
           <button type="button" class="reg-btn" id="fisa-email" ${rows.length === 0 ? 'disabled' : ''}>✉️ Trimite pe email</button>
@@ -1213,6 +1339,7 @@ function openFisaOcupare(operatorId) {
     overlay.classList.add('open');
     document.getElementById('fisa-close').addEventListener('click', () => overlay.classList.remove('open'));
     document.getElementById('fisa-print').addEventListener('click', () => window.print());
+    document.getElementById('fisa-oficial-btn').addEventListener('click', () => { viewMode = 'oficial'; render(); });
     const yearSel = document.getElementById('fisa-year');
     if (yearSel) yearSel.addEventListener('change', () => { selectedYear = yearSel.value; render(); });
     const csvBtn = document.getElementById('fisa-csv');

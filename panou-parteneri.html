@@ -226,11 +226,36 @@
   .fisa-table{width:100%; border-collapse:collapse; font-size:11.5px; margin-top:4px;}
   .fisa-table th, .fisa-table td{border:1px solid var(--line); padding:6px 8px; text-align:left; vertical-align:top;}
   .fisa-table th{background:var(--cream); font-size:10px; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-soft);}
+  .fisa-oficial-page{font-family:Georgia,'Times New Roman',serif; color:#111; font-size:12.5px; padding:14px 4px; border-bottom:1px dashed var(--line); margin-bottom:18px;}
+  .fisa-oficial-page:last-child{border-bottom:none; margin-bottom:0;}
+  .fisa-oficial-box{display:inline-block; width:22px; height:26px; line-height:26px; text-align:center; border:1.3px solid #111; font-weight:700; margin:0 2px;}
+  .fisa-oficial-imobil{border:1.3px solid #111; padding:10px 12px;}
+  .fisa-oficial-field{display:inline-block; vertical-align:top; margin-right:14px;}
+  .fisa-oficial-field.wide{display:block; margin-bottom:8px;}
+  .fisa-oficial-field span{display:block; font-size:10px; color:var(--ink-soft); margin-bottom:2px;}
+  .fisa-oficial-row4{display:flex; gap:14px; flex-wrap:wrap; margin-top:6px;}
+  .fisa-oficial-row4 .fisa-oficial-field{flex:1; min-width:90px; margin-right:0;}
+  .fisa-oficial-line{border-bottom:1px solid #111; min-height:16px; padding:1px 2px;}
+  .fisa-oficial-table{width:100%; border-collapse:collapse; font-size:11px; margin-top:6px;}
+  .fisa-oficial-table th, .fisa-oficial-table td{border:1.1px solid #111; padding:4px 6px; text-align:left;}
+  .fisa-oficial-table th{text-align:center; font-weight:700; font-size:10.5px;}
+  .fisa-oficial-idx-row td{text-align:center; font-size:10px; color:var(--ink-soft); background:var(--cream);}
+  .insp-stats{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:14px 0;}
+  .insp-stat{border:1px solid var(--line); border-radius:12px; padding:12px; text-align:center;}
+  .insp-stat .n{font-size:22px; font-weight:700; color:var(--teal-deep);}
+  .insp-stat .l{font-size:10.5px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.03em; margin-top:2px;}
+  .insp-table{width:100%; border-collapse:collapse; font-size:11px; margin-top:6px;}
+  .insp-table th, .insp-table td{border:1px solid var(--line); padding:5px 7px; text-align:left; vertical-align:top;}
+  .insp-table th{background:var(--cream); font-size:10px; text-transform:uppercase; letter-spacing:.02em; color:var(--ink-soft);}
+  .insp-sign-row{display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:26px;}
+  .insp-sign-line{border-top:1px solid #111; margin-top:34px; padding-top:4px; font-size:11px; color:var(--ink-soft);}
   @media print{
     body > *:not(.fisa-overlay){display:none !important;}
     .fisa-overlay{position:static; background:none; padding:0; display:block !important;}
     .fisa-card{box-shadow:none; max-width:none;}
     .fisa-no-print{display:none !important;}
+    .fisa-oficial-page{page-break-after:always; border-bottom:none; margin-bottom:0;}
+    .fisa-oficial-page:last-child{page-break-after:auto;}
   }
 </style>
 </head>
@@ -701,6 +726,17 @@
       <div id="gdpr-loading" style="text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Se încarcă...</div>
       <div id="gdpr-empty" style="display:none; text-align:center; color:var(--ink-soft); font-size:13.5px; padding:16px 0;">Nicio cerere pentru acest filtru.</div>
       <div id="gdpr-list" style="display:flex; flex-direction:column; gap:10px;"></div>
+    </div>
+
+    <div class="bo-section">
+      <div class="bo-title">🔍 Raport de inspecție</div>
+      <p class="lead" style="font-size:12.5px;">Document pregătit pentru un eventual control: ce date colectăm despre turiști, unde sunt, ce e arhivat și ce cereri de ștergere am rezolvat, într-un interval ales.</p>
+      <div class="toolbar" style="align-items:flex-end; gap:12px; flex-wrap:wrap; margin-bottom:0;">
+        <label style="font-size:12px; font-weight:600; color:var(--teal-deep);">De la<br><input type="date" id="insp-from" style="margin-top:3px;"></label>
+        <label style="font-size:12px; font-weight:600; color:var(--teal-deep);">Până la<br><input type="date" id="insp-to" style="margin-top:3px;"></label>
+        <label style="font-size:12px; font-weight:600; color:var(--teal-deep);">Unitatea<br><select id="insp-unitate" style="margin-top:3px;"><option value="">Toate</option></select></label>
+        <button class="pbtn primary" id="insp-generate">Generează raportul</button>
+      </div>
     </div>
   </div>
   </div>
@@ -3483,6 +3519,164 @@ async function loadGdprRequests() {
   }
   renderGdprChips();
   renderGdprList();
+  populateInspUnitateSelect();
+}
+
+// Raport de inspecție — document de conformitate pentru un eventual control: ce date colectăm
+// despre turiști, unde sunt, ce e arhivat (arhivarea nu șterge nimic — doar ascunde din lista
+// curentă) și ce cereri de ștergere GDPR am rezolvat efectiv, într-un interval + unitate alese.
+// Spre deosebire de alte platforme, nu pretindem ștergeri/purjări automate pe care nu le facem —
+// raportul descrie exact ce face platforma noastră.
+function populateInspUnitateSelect() {
+  const sel = document.getElementById('insp-unitate');
+  if (!sel) return;
+  const current = sel.value;
+  const opts = ROWS.filter(r => r.source === 'operatori')
+    .slice()
+    .sort((a, b) => (a.raw.nume_afisat || a.raw.nume_afacere || '').localeCompare(b.raw.nume_afisat || b.raw.nume_afacere || '', 'ro'))
+    .map(r => `<option value="${escapeHtml(r.id)}">${escapeHtml(r.raw.nume_afisat || r.raw.nume_afacere || '(fără nume)')}</option>`).join('');
+  sel.innerHTML = `<option value="">Toate</option>${opts}`;
+  if (current) sel.value = current;
+}
+
+function inspDataColectateList(r, isHotel) {
+  const items = ['nume'];
+  if (r.data_nasterii) items.push('data nașterii');
+  if (r.cetatenie) items.push('cetățenie');
+  if (r.adresa_domiciliu) items.push('adresă de domiciliu');
+  if (r.cnp) items.push('CNP');
+  if (r.act_serie_numar) items.push('act de identitate');
+  if (r.email) items.push('e-mail');
+  if (r.telefon) items.push('telefon');
+  if (Array.isArray(r.foto_id_paths) && r.foto_id_paths.length) items.push('poză act');
+  if (r.semnatura_path) items.push('semnătură');
+  if (r.consimtamant_obligatoriu) items.push('acord GDPR');
+  return items.join(', ');
+}
+
+function buildInspectionReportHtml(fromStr, toStr, operatorId) {
+  const inRange = (checkIn) => {
+    if (!checkIn) return false;
+    if (fromStr && checkIn < fromStr) return false;
+    if (toStr && checkIn > toStr) return false;
+    return true;
+  };
+  let aptRows = REG_ROWS.filter(r => r.status === 'validat' && inRange(r.check_in));
+  let hotelRows = REG_HOTEL_ROWS.filter(r => inRange(r.check_in));
+  if (operatorId) {
+    aptRows = aptRows.filter(r => String(r.operator_id) === String(operatorId));
+    hotelRows = hotelRows.filter(r => String(r.operator_id) === String(operatorId));
+  }
+  const allEvidenta = [
+    ...aptRows.map(r => ({ ...r, _isHotel: false, _completat: r.completat_la })),
+    ...hotelRows.map(r => ({ ...r, _isHotel: true, act_serie_numar: r.act_serie_numar, act_tip: r.tip_act, _completat: r.creat_la })),
+  ].sort((a, b) => String(a.check_in || '').localeCompare(String(b.check_in || '')));
+  const archivedRows = allEvidenta.filter(r => r.arhivat);
+
+  const gdprDeletions = GDPR_ROWS.filter(r => r.tip_cerere === 'stergere' && r.status === 'rezolvata' && r.rezolvat_la
+    && (!fromStr || r.rezolvat_la.slice(0, 10) >= fromStr) && (!toStr || r.rezolvat_la.slice(0, 10) <= toStr));
+
+  const numeUnitate = operatorId ? regOperatorName(operatorId) : 'Toate unitățile';
+  const perioadaTxt = `${fromStr ? fmtData(fromStr) : '—'} — ${toStr ? fmtData(toStr) : '—'}`;
+
+  const rowsEvidentaHtml = allEvidenta.length ? allEvidenta.map(r => `
+    <tr>
+      <td>${escapeHtml([r.prenume, r.nume].filter(Boolean).join(' ') || '—')}</td>
+      <td>${escapeHtml(regOperatorName(r.operator_id))}</td>
+      <td>${r.check_in ? fmtData(r.check_in) : '—'}${r.check_out ? '–' + fmtData(r.check_out) : ''}</td>
+      <td>${escapeHtml(inspDataColectateList(r, r._isHotel))}</td>
+      <td>${r._completat ? fmtData(r._completat) : '—'}</td>
+      <td>${r.arhivat ? 'Arhivat' : 'Activ'}</td>
+    </tr>`).join('') : `<tr><td colspan="6" style="text-align:center; color:var(--ink-soft);">Nicio înregistrare în intervalul selectat.</td></tr>`;
+
+  const rowsArhivateHtml = archivedRows.length ? archivedRows.map(r => `
+    <tr>
+      <td>${escapeHtml([r.prenume, r.nume].filter(Boolean).join(' ') || '—')}</td>
+      <td>${escapeHtml(regOperatorName(r.operator_id))}</td>
+      <td>${r.check_in ? fmtData(r.check_in) : '—'}${r.check_out ? '–' + fmtData(r.check_out) : ''}</td>
+    </tr>`).join('') : '';
+
+  const rowsStergeriHtml = gdprDeletions.length ? gdprDeletions.map(r => `
+    <tr>
+      <td>${escapeHtml(r.nume || '—')}</td>
+      <td>${escapeHtml(r.email || '—')}</td>
+      <td>${fmtData(r.rezolvat_la)}</td>
+      <td>${escapeHtml(r.raspuns || '—')}</td>
+    </tr>`).join('') : '';
+
+  return `
+    <div style="font-family:Georgia,'Times New Roman',serif; color:#111; font-size:12.5px;">
+      <div style="text-align:center; font-weight:700; font-size:17px; letter-spacing:.03em;">RAPORT DE INSPECȚIE</div>
+      <div style="text-align:center; font-size:13px; margin-top:2px;">Evidența datelor turiștilor · ${escapeHtml(numeUnitate)} · ${perioadaTxt}</div>
+      <div style="text-align:center; font-size:11px; color:var(--ink-soft); margin-top:2px;">${escapeHtml(ADMIN_EMAIL)} · generat la ${fmtData(new Date().toISOString())}</div>
+
+      <div class="insp-stats">
+        <div class="insp-stat"><div class="n">${allEvidenta.length}</div><div class="l">fișe în evidență</div></div>
+        <div class="insp-stat"><div class="n">${archivedRows.length}</div><div class="l">arhivate (nu șterse)</div></div>
+        <div class="insp-stat"><div class="n">${gdprDeletions.length}</div><div class="l">cereri de ștergere rezolvate</div></div>
+      </div>
+
+      <p style="font-weight:700; margin:16px 0 4px;">1. Ce date se colectează și unde se află</p>
+      <table class="insp-table">
+        <thead><tr><th>Persoană</th><th>Unitate/cameră</th><th>Ședere</th><th>Date colectate</th><th>Completat</th><th>Statut</th></tr></thead>
+        <tbody>${rowsEvidentaHtml}</tbody>
+      </table>
+      <p style="font-size:10.5px; color:var(--ink-soft); margin-top:6px;">Stocare: bază de date Supabase (PostgreSQL), acces restricționat prin autentificare și politici Row Level Security — fiecare proprietar vede doar datele propriilor unități, administratorul vede tot. Pozele actelor de identitate și semnăturile sunt în spațiu de stocare separat, cu acces restricționat identic.</p>
+
+      <p style="font-weight:700; margin:16px 0 4px;">2. Ce s-a păstrat după arhivare</p>
+      ${archivedRows.length ? `<table class="insp-table"><thead><tr><th>Persoană</th><th>Unitate/cameră</th><th>Ședere</th></tr></thead><tbody>${rowsArhivateHtml}</tbody></table>
+      <p style="font-size:10.5px; color:var(--ink-soft); margin-top:6px;">Arhivarea este o mutare organizatorică — scoate înregistrarea din lista curentă de lucru, dar nu șterge niciun câmp; toate datele de mai sus rămân disponibile și pot fi restaurate.</p>`
+      : '<p style="font-style:italic; color:var(--ink-soft);">Nicio înregistrare arhivată în intervalul selectat.</p>'}
+
+      <p style="font-weight:700; margin:16px 0 4px;">3. Ștergeri efectuate</p>
+      ${gdprDeletions.length ? `<table class="insp-table"><thead><tr><th>Persoană</th><th>Email</th><th>Rezolvată la</th><th>Notă</th></tr></thead><tbody>${rowsStergeriHtml}</tbody></table>`
+      : '<p style="font-style:italic; color:var(--ink-soft);">Nicio cerere de ștergere rezolvată în intervalul selectat.</p>'}
+      <p style="font-size:10.5px; color:var(--ink-soft); margin-top:6px;">Platforma nu șterge automat date — ștergerea se face doar la cererea expresă a persoanei vizate (formular GDPR), procesată manual și înregistrată în tabelul de mai sus.</p>
+
+      <p style="font-weight:700; margin:16px 0 4px;">4. Politici de păstrare aplicate</p>
+      <table class="insp-table">
+        <thead><tr><th>Domeniu</th><th>Politică</th><th>Temei</th></tr></thead>
+        <tbody>
+          <tr><td>Fișa de ocupare (apartamente/hotel)</td><td>Se păstrează pe durata contului platformei, la dispoziția proprietarului pentru un eventual control</td><td>OPANAF nr. 381/2026 — obligația de păstrare revine contribuabilului</td></tr>
+          <tr><td>Cereri GDPR</td><td>Se păstrează istoricul cererilor și răspunsurilor, ca dovadă a conformării</td><td>Regulamentul (UE) 2016/679, art. 5(2) — responsabilitate demonstrabilă</td></tr>
+          <tr><td>Fotografii acte identitate și semnături</td><td>Stocate cu acces restricționat, șterse doar la cerere sau la ștergerea completă a înregistrării</td><td>Necesitate operațională — verificare identitate la check-in</td></tr>
+        </tbody>
+      </table>
+
+      <div class="insp-sign-row">
+        <div class="insp-sign-line">Întocmit — nume și semnătură</div>
+        <div class="insp-sign-line">Luat la cunoștință — organ de control</div>
+      </div>
+      <p style="font-size:10px; color:var(--ink-soft); margin-top:14px;">Raport generat automat din evidențele Lokals, pe baza datelor efectiv stocate la momentul generării.</p>
+    </div>`;
+}
+
+function openInspectionReport() {
+  const fromStr = document.getElementById('insp-from').value || '';
+  const toStr = document.getElementById('insp-to').value || '';
+  const operatorId = document.getElementById('insp-unitate').value || '';
+
+  let overlay = document.getElementById('fisa-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'fisa-overlay';
+    overlay.className = 'fisa-overlay';
+    document.body.appendChild(overlay);
+  }
+  overlay.innerHTML = `
+    <div class="fisa-card">
+      <div class="fisa-no-print" style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:12px;">
+        <div class="reg-list-title" style="margin:0;">Raport de inspecție</div>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="pbtn primary" id="insp-print">🖨️ Tipărește / Salvează ca PDF</button>
+          <button type="button" class="pbtn" id="fisa-close">✕ Închide</button>
+        </div>
+      </div>
+      ${buildInspectionReportHtml(fromStr, toStr, operatorId)}
+    </div>`;
+  overlay.classList.add('open');
+  document.getElementById('fisa-close').addEventListener('click', () => overlay.classList.remove('open'));
+  document.getElementById('insp-print').addEventListener('click', () => window.print());
 }
 
 function renderGdprChips() {
@@ -3588,12 +3782,96 @@ function fisaYearsForAdmin(rows) {
   return Array.from(years).sort().reverse();
 }
 
+function fmtDataZzLlAaaa(dateStr) {
+  if (!dateStr) return '';
+  const parts = String(dateStr).slice(0, 10).split('-');
+  if (parts.length !== 3) return '';
+  const [y, m, d] = parts;
+  return `${d}/${m}/${y}`;
+}
+
+// Randarea fidelă a formularului oficial (conform modelului ANAF/Ministerul Turismului) — cea pe
+// care o cer autoritățile la control, „un formular per cameră". Paginăm câte 10 înregistrări
+// per pagină (ca pe formularul tipărit) și lăsăm rândurile goale pentru completare manuală.
+function fisaOficialPageHtmlAdmin(op, numeCazare, chunkRows, year, pageIndex, totalPages) {
+  const adresa = (op && op.adresa) || '';
+  const yearStr = String(year || '');
+  const yearDigits = [0, 1, 2, 3].map(i => yearStr[i] || '');
+  const rowsHtml = Array.from({ length: 10 }).map((_, i) => {
+    const r = chunkRows[i];
+    return `<tr>
+      <td style="text-align:center;">${i + 1}</td>
+      <td>${r ? escapeHtml([r.prenume, r.nume].filter(Boolean).join(' ')) : ''}</td>
+      <td>${r ? escapeHtml(r.cnp || '') : ''}</td>
+      <td>${r ? escapeHtml(((r.act_tip === 'pasaport' ? 'Pașaport ' : 'CI ') + (r.act_serie_numar || '')).trim()) : ''}</td>
+      <td style="text-align:center;">${r ? fmtDataZzLlAaaa(r.check_in) : ''}</td>
+      <td style="text-align:center;">${r ? fmtDataZzLlAaaa(r.check_out) : ''}</td>
+    </tr>`;
+  }).join('');
+  return `
+    <div class="fisa-oficial-page">
+      <div style="text-align:center; font-weight:700; font-size:17px; letter-spacing:.03em;">FIȘA</div>
+      <div style="text-align:center; font-size:13px; margin-bottom:12px;">de ocupare a capacității de cazare</div>
+      <div style="text-align:center; margin-bottom:16px;">
+        Anul&nbsp;&nbsp;${yearDigits.map(d => `<span class="fisa-oficial-box">${escapeHtml(d)}</span>`).join('')}
+      </div>
+      <div style="font-weight:700; margin-bottom:6px;">I. Datele privind imobilul</div>
+      <div class="fisa-oficial-imobil">
+        <div class="fisa-oficial-field wide"><span>Stradă</span><div class="fisa-oficial-line">${escapeHtml(adresa)}</div></div>
+        <div class="fisa-oficial-row4">
+          <div class="fisa-oficial-field"><span>Număr</span><div class="fisa-oficial-line"></div></div>
+          <div class="fisa-oficial-field"><span>Bloc</span><div class="fisa-oficial-line"></div></div>
+          <div class="fisa-oficial-field"><span>Scară</span><div class="fisa-oficial-line"></div></div>
+          <div class="fisa-oficial-field"><span>Etaj</span><div class="fisa-oficial-line"></div></div>
+        </div>
+        <div class="fisa-oficial-row4">
+          <div class="fisa-oficial-field"><span>Ap.</span><div class="fisa-oficial-line"></div></div>
+          <div class="fisa-oficial-field"><span>Județ/Sector</span><div class="fisa-oficial-line"></div></div>
+          <div class="fisa-oficial-field"><span>Localitate</span><div class="fisa-oficial-line"></div></div>
+          <div class="fisa-oficial-field"><span>Cod poștal</span><div class="fisa-oficial-line"></div></div>
+        </div>
+      </div>
+      ${!adresa ? '<p style="color:#9C4536; font-size:11px; margin:4px 0 0;">Adresa imobilului e incompletă — completeaz-o la proprietate ca fișa să fie corectă la control.</p>' : ''}
+      <p style="font-weight:700; margin:16px 0 4px;">II. Datele de identificare a persoanelor care au ocupat camera/spațiul amenajat în scopul înnoptării, precum și perioada de ocupare<sup>*)</sup></p>
+      <p style="font-size:10px; color:var(--ink-soft); border-top:1px solid #000; padding-top:3px; max-width:65%;">*) Se completează pentru fiecare cameră închiriată/spațiul amenajat în scopul înnoptării, pentru o perioadă determinată, măsurată în zile.</p>
+      <p style="margin:12px 0 3px;">1. Elemente de identificare a camerei/spațiului amenajat în scopul înnoptării</p>
+      <div class="fisa-oficial-line">${escapeHtml(numeCazare)}</div>
+      <p style="margin:12px 0 4px;">2. Datele de identificare a persoanelor care au ocupat camera/spațiul amenajat în scopul înnoptării</p>
+      <table class="fisa-oficial-table">
+        <thead>
+          <tr>
+            <th rowspan="2">Nr.<br>crt.</th>
+            <th rowspan="2">Nume și prenume</th>
+            <th rowspan="2">Cod numeric personal</th>
+            <th rowspan="2">Seria și numărul documentului de identitate</th>
+            <th colspan="2">Perioada de ocupare a camerei/spațiului amenajat în scopul înnoptării (zz/ll/aaaa)</th>
+          </tr>
+          <tr><th>de la</th><th>până la</th></tr>
+        </thead>
+        <tbody>
+          <tr class="fisa-oficial-idx-row"><td>0</td><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td></tr>
+          ${rowsHtml}
+        </tbody>
+      </table>
+      <p style="text-align:center; font-size:10.5px; margin-top:12px;">${GDPR_FISA_FOOTER}</p>
+      <p style="font-size:10px; color:var(--ink-soft); margin-top:2px;">${escapeHtml(numeCazare)} · pagina ${pageIndex + 1}${totalPages > 1 ? ' din ' + totalPages : ''} · generat de Lokals la ${fmtData(new Date().toISOString())}</p>
+    </div>`;
+}
+
+function fisaOficialFormHtmlAdmin(op, numeCazare, rows, year) {
+  if (!rows.length) return fisaOficialPageHtmlAdmin(op, numeCazare, [], year, 0, 1);
+  const chunks = [];
+  for (let i = 0; i < rows.length; i += 10) chunks.push(rows.slice(i, i + 10));
+  return chunks.map((chunk, idx) => fisaOficialPageHtmlAdmin(op, numeCazare, chunk, year, idx, chunks.length)).join('');
+}
+
 function openFisaOcupareAdmin(operatorId) {
   const op = operatorRawById(operatorId);
   const numeCazare = op ? (op.nume_afisat || op.nume_afacere) : '';
   const allRows = fisaRowsForAdmin(operatorId).slice().sort((a, b) => String(a.check_in || '').localeCompare(String(b.check_in || '')));
   const years = fisaYearsForAdmin(allRows);
   let selectedYear = years[0] || String(new Date().getFullYear());
+  let viewMode = 'tabel';
 
   let overlay = document.getElementById('fisa-overlay');
   if (!overlay) {
@@ -3611,6 +3889,29 @@ function openFisaOcupareAdmin(operatorId) {
     const rows = rowsForYear(selectedYear);
     const yearOptionsHtml = (years.length ? years : [selectedYear])
       .map(y => `<option value="${y}" ${y === selectedYear ? 'selected' : ''}>${y}</option>`).join('');
+
+    if (viewMode === 'oficial') {
+      overlay.innerHTML = `
+        <div class="fisa-card">
+          <div class="fisa-no-print" style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+            <button type="button" class="pbtn" id="fisa-back">← Înapoi la fișă</button>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <select id="fisa-year">${yearOptionsHtml}</select>
+              <button type="button" class="pbtn primary" id="fisa-oficial-print">🖨️ Tipărește / Salvează ca PDF</button>
+              <button type="button" class="pbtn" id="fisa-close">✕ Închide</button>
+            </div>
+          </div>
+          ${fisaOficialFormHtmlAdmin(op, numeCazare, rows, selectedYear)}
+        </div>`;
+      overlay.classList.add('open');
+      document.getElementById('fisa-close').addEventListener('click', () => overlay.classList.remove('open'));
+      document.getElementById('fisa-back').addEventListener('click', () => { viewMode = 'tabel'; render(); });
+      document.getElementById('fisa-oficial-print').addEventListener('click', () => window.print());
+      const yearSel = document.getElementById('fisa-year');
+      if (yearSel) yearSel.addEventListener('change', () => { selectedYear = yearSel.value; render(); });
+      return;
+    }
+
     overlay.innerHTML = `
       <div class="fisa-card">
         <div class="fisa-no-print" style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:12px;">
@@ -3650,6 +3951,7 @@ function openFisaOcupareAdmin(operatorId) {
         <p class="pmeta" style="margin-top:8px; font-size:11px;">${GDPR_FISA_FOOTER}</p>`}
         <div class="fisa-no-print" style="display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;">
           <button type="button" class="pbtn primary" id="fisa-print">🖨️ Printează</button>
+          <button type="button" class="pbtn" id="fisa-oficial-btn">📄 Formular oficial (tipărire/PDF)</button>
           <button type="button" class="pbtn" id="fisa-csv" ${rows.length === 0 ? 'disabled' : ''}>⬇ Exportă CSV</button>
           <button type="button" class="pbtn" id="fisa-pdf" ${rows.length === 0 ? 'disabled' : ''}>⬇ Descarcă PDF</button>
           <button type="button" class="pbtn" id="fisa-email" ${rows.length === 0 ? 'disabled' : ''}>✉️ Trimite pe email</button>
@@ -3659,6 +3961,7 @@ function openFisaOcupareAdmin(operatorId) {
     overlay.classList.add('open');
     document.getElementById('fisa-close').addEventListener('click', () => overlay.classList.remove('open'));
     document.getElementById('fisa-print').addEventListener('click', () => window.print());
+    document.getElementById('fisa-oficial-btn').addEventListener('click', () => { viewMode = 'oficial'; render(); });
     const yearSel = document.getElementById('fisa-year');
     if (yearSel) yearSel.addEventListener('change', () => { selectedYear = yearSel.value; render(); });
     const csvBtn = document.getElementById('fisa-csv');
@@ -4154,6 +4457,15 @@ document.getElementById('reg-gen-form').addEventListener('submit', async (e) => 
   e.target.reset();
   loadRegistrations();
 });
+
+(function initInspectionReport() {
+  const fromEl = document.getElementById('insp-from');
+  const toEl = document.getElementById('insp-to');
+  if (fromEl && !fromEl.value) fromEl.value = `${new Date().getFullYear()}-01-01`;
+  if (toEl && !toEl.value) toEl.value = new Date().toISOString().slice(0, 10);
+  const btn = document.getElementById('insp-generate');
+  if (btn) btn.addEventListener('click', () => { populateInspUnitateSelect(); openInspectionReport(); });
+})();
 </script>
 </body>
 </html>
