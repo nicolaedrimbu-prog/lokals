@@ -38,6 +38,18 @@
   .qr-frame img, .qr-frame canvas{width:280px; height:280px; display:block;}
   .scan-txt{font-size:16px; font-weight:700; color:#fff; text-align:center; margin-bottom:6px;}
   .scan-sub{font-size:13px; color:var(--sage); text-align:center; font-style:italic; margin-bottom:40px;}
+
+  /* Cod QR secundar — conectare directă la Wi-Fi, încadrat vizibil ca să nu fie confundat
+     cu QR-ul principal al ghidului (afișat doar dacă gazda a completat rețeaua în Setări cazare) */
+  .wifi-box{position:relative; border:2px solid var(--gold); border-radius:16px; padding:16px 20px 14px; margin-bottom:36px; background:rgba(255,255,255,0.05); max-width:420px;}
+  .wifi-badge{position:absolute; top:-13px; left:18px; background:var(--gold); color:var(--teal-deep); font-size:10.5px; font-weight:700; letter-spacing:.07em; padding:4px 12px; border-radius:999px; text-transform:uppercase;}
+  .wifi-row{display:flex; align-items:center; gap:16px;}
+  .wifi-qr{background:var(--cream); border-radius:10px; padding:7px; flex-shrink:0;}
+  .wifi-qr canvas, .wifi-qr img{width:72px; height:72px; display:block;}
+  .wifi-text{display:flex; flex-direction:column; gap:5px;}
+  .wifi-line{font-size:12.5px; color:#fff; line-height:1.3;}
+  .wifi-label{color:var(--sage); font-weight:600; margin-right:6px;}
+  .wifi-value{font-family:'Courier New', monospace; font-weight:700; letter-spacing:.4px;}
   .steps{display:flex; gap:28px; margin-top:auto; padding-top:16px;}
   .step{display:flex; flex-direction:column; align-items:center; text-align:center; width:150px;}
   .step-num{width:30px; height:30px; border-radius:50%; background:var(--gold); color:var(--teal-deep); font-weight:700; font-size:14px;
@@ -70,6 +82,7 @@
     .subline{margin-bottom:24px;}
     .qr-frame{margin-bottom:20px;}
     .scan-sub{margin-bottom:24px;}
+    .wifi-box{margin-bottom:24px;}
     .steps{margin-top:0;}
     .footer{margin-top:20px;}
     @page{ size:A4; margin:10mm; }
@@ -101,6 +114,16 @@
   </div>
   <div class="scan-txt">Scanează — e ghidul tău local</div>
   <div class="scan-sub" id="scan-sub">—</div>
+  <div class="wifi-box" id="wifi-box" style="display:none;">
+    <span class="wifi-badge">📶 Wi-Fi</span>
+    <div class="wifi-row">
+      <div class="wifi-qr"><div id="wifi-qr-holder"></div></div>
+      <div class="wifi-text">
+        <div class="wifi-line"><span class="wifi-label">Rețea</span><span class="wifi-value" id="wifi-ssid-text"></span></div>
+        <div class="wifi-line" id="wifi-pass-row" style="display:none;"><span class="wifi-label">Parolă</span><span class="wifi-value" id="wifi-pass-text"></span></div>
+      </div>
+    </div>
+  </div>
   <div class="steps">
     <div class="step">
       <div class="step-num">1</div>
@@ -166,7 +189,7 @@ async function init() {
   }
 
   const [res, zoneList] = await Promise.all([
-    fetch(`${SUPABASE_URL}/rest/v1/operatori?slug=eq.${encodeURIComponent(slug)}&select=nume_afacere,nume_afisat,zona,adresa,slug&limit=1`, {
+    fetch(`${SUPABASE_URL}/rest/v1/operatori?slug=eq.${encodeURIComponent(slug)}&select=nume_afacere,nume_afisat,zona,adresa,slug,facilitati_cazare&limit=1`, {
       headers: { apikey: SUPABASE_KEY },
     }),
     LokalsZones.load(SUPABASE_URL, SUPABASE_KEY),
@@ -195,6 +218,24 @@ async function init() {
     text: guideUrl, width: 280, height: 280,
     colorDark: '#10302B', colorLight: '#F7F2E8',
   });
+
+  // QR secundar de Wi-Fi — apare doar dacă gazda a completat rețeaua în Setări cazare.
+  // Scanarea lui conectează telefonul direct la rețea, fără să mai fie nevoie să scrii parola.
+  const wifi = (row.facilitati_cazare && row.facilitati_cazare.wifi) || {};
+  if (wifi.ssid) {
+    document.getElementById('wifi-ssid-text').textContent = wifi.ssid;
+    if (wifi.parola) {
+      document.getElementById('wifi-pass-text').textContent = wifi.parola;
+      document.getElementById('wifi-pass-row').style.display = '';
+    }
+    const wifiPayload = `WIFI:T:WPA;S:${wifi.ssid.replace(/([\\;,:"])/g, '\\$1')};P:${(wifi.parola || '').replace(/([\\;,:"])/g, '\\$1')};;`;
+    new QRCode(document.getElementById('wifi-qr-holder'), {
+      text: wifiPayload, width: 72, height: 72,
+      colorDark: '#10302B', colorLight: '#F7F2E8',
+    });
+    document.getElementById('wifi-box').style.display = '';
+  }
+
   document.title = `Afiș QR — ${nume}`;
 
   document.getElementById('poster').style.display = '';

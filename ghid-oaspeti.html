@@ -114,6 +114,10 @@
   .fac-code{font-family:'JetBrains Mono', monospace; font-size:15px; font-weight:600; letter-spacing:1.5px; background:var(--gold-soft); color:var(--ink); padding:6px 12px; border-radius:8px; display:inline-block; margin:2px 0 6px;}
   .fac-code-big{font-family:'JetBrains Mono', monospace; font-size:30px; font-weight:700; letter-spacing:3px; background:var(--gold-soft); color:var(--ink); padding:12px 22px; border-radius:12px; display:inline-block; margin:4px 0 8px;}
   .fac-wifi-qr{background:#fff; padding:10px; border-radius:12px; display:inline-block; margin-top:8px;}
+  .copy-row{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;}
+  .copy-row:last-child{margin-bottom:0;}
+  .copy-btn{border:1.5px solid var(--line); background:#fff; color:var(--ink); font-size:11.5px; font-weight:600; padding:5px 11px; border-radius:8px; cursor:pointer; font-family:inherit; flex-shrink:0;}
+  .copy-btn:active{transform:scale(.96);}
   .fac-toggle-off{color:var(--ink-soft);}
   /* Check-in restructurat — campuri separate, in ordinea: ora, cod acces, camera/apartament, note */
   .ci-row{margin-bottom:12px;}
@@ -1562,6 +1566,7 @@ const I18N = {
       tabelServiciu: "Serviciu", tabelOrar: "Orar", tabelLocatie: "Locație", tabelTelefon: "Telefon",
       minibar: "Minibar", minibarPoza: "Poză preț",
       wifiConnect: "Scanează pentru conectare automată",
+      copy: "Copiază", copied: "✓ Copiat",
       preinreg: "Înregistrare rapidă la check-in",
       preinregBadge: "nou",
       preinregIntro: "Completează datele înainte de sosire ca să scurtezi timpul la recepție. Este opțional — poți continua să răsfoiești ghidul oricând, cu sau fără să completezi acest formular.",
@@ -1693,6 +1698,7 @@ const I18N = {
       tabelServiciu: "Service", tabelOrar: "Hours", tabelLocatie: "Location", tabelTelefon: "Phone",
       minibar: "Minibar", minibarPoza: "Price list photo",
       wifiConnect: "Scan to connect automatically",
+      copy: "Copy", copied: "✓ Copied",
       preinreg: "Quick check-in registration",
       preinregBadge: "new",
       preinregIntro: "Fill in your details before arrival to speed up check-in at the front desk. It's optional — you can keep browsing the guide any time, with or without filling this in.",
@@ -2042,8 +2048,8 @@ async function renderFacilitati() {
   // WiFi — Essential
   if (ghidUnlocked('wifi') && wifi.ssid) {
     const wifiPayload = `WIFI:T:WPA;S:${(wifi.ssid || '').replace(/([\\;,:"])/g, '\\$1')};P:${(wifi.parola || '').replace(/([\\;,:"])/g, '\\$1')};;`;
-    let body = `<div class="fac-row"><b>SSID:</b>&nbsp;${fmt(wifi.ssid)}</div>`;
-    if (wifi.parola) body += `<div class="fac-row"><b>${currentLang === 'en' ? 'Password' : 'Parolă'}:</b>&nbsp;${fmt(wifi.parola)}</div>`;
+    let body = `<div class="copy-row"><span><b>SSID:</b>&nbsp;<span class="fac-code">${fmt(wifi.ssid)}</span></span><button type="button" class="copy-btn" data-copy-value="${escapeHtmlGuide(wifi.ssid)}" data-label="${escapeHtmlGuide(t.copy)}">${t.copy}</button></div>`;
+    if (wifi.parola) body += `<div class="copy-row"><span><b>${currentLang === 'en' ? 'Password' : 'Parolă'}:</b>&nbsp;<span class="fac-code">${fmt(wifi.parola)}</span></span><button type="button" class="copy-btn" data-copy-value="${escapeHtmlGuide(wifi.parola)}" data-label="${escapeHtmlGuide(t.copy)}">${t.copy}</button></div>`;
     body += `<div id="fac-wifi-qr-${currentOperator.id}" class="fac-wifi-qr"></div><div style="font-size:11.5px; margin-top:6px;">${t.wifiConnect}</div>`;
     sections.push({ key: 'wifi', title: t.wifi, body, wifiPayload, wifiId: `fac-wifi-qr-${currentOperator.id}` });
   }
@@ -2150,6 +2156,25 @@ async function renderFacilitati() {
 
   const container = document.getElementById('facilitati-sections');
   container.innerHTML = '';
+  if (!container.dataset.copyBound) {
+    container.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-copy-value]');
+      if (!btn) return;
+      const value = btn.getAttribute('data-copy-value') || '';
+      const original = btn.getAttribute('data-label') || btn.textContent;
+      const t2 = I18N[currentLang].fac;
+      const showCopied = () => {
+        btn.textContent = t2.copied;
+        setTimeout(() => { btn.textContent = original; }, 1600);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(value).then(showCopied).catch(() => alert(value));
+      } else {
+        alert(value);
+      }
+    });
+    container.dataset.copyBound = '1';
+  }
   sections.forEach((sec) => {
     const item = document.createElement('div');
     item.className = 'fac-item';
