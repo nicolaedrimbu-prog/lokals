@@ -153,9 +153,32 @@
   .cf-msg{font-size:13px; margin-top:10px; min-height:16px;}
   .cf-msg.err{color:#9C4536;}
   .cf-msg.ok{color:var(--teal-deep); font-weight:600;}
-  .company-legal{max-width:1000px; margin:28px auto 0; padding:0 20px; text-align:center; color:var(--ink-soft); font-size:11.5px; line-height:1.7;}
-  footer{max-width:1000px; margin:0 auto; padding:24px 20px 40px; text-align:center;
-    color:var(--ink-soft); font-size:12.5px; border-top:1px solid var(--line); margin-top:20px; padding-top:24px;}
+  /* ===================== SUBSOL (footer) ===================== */
+  .site-footer{background:var(--teal-deep); margin-top:40px;}
+  .sf-inner{max-width:1000px; margin:0 auto; padding:48px 20px 28px;}
+  .sf-top{display:flex; gap:40px; flex-wrap:wrap;}
+  .sf-brand{width:260px; flex-shrink:0; display:flex; flex-direction:column; gap:14px;}
+  .sf-brand-row{display:flex; align-items:center; gap:9px;}
+  .sf-brand-dot{width:22px; height:22px; border-radius:50%; background:var(--gold); position:relative; display:inline-block; flex-shrink:0;}
+  .sf-brand-dot::after{content:''; position:absolute; inset:6px; border-radius:50%; background:var(--teal-deep);}
+  .sf-brand-word{font-family:'Poppins', sans-serif; font-weight:700; color:#F7F2E8; font-size:18px;}
+  .sf-tagline{font-size:13px; line-height:1.6; color:rgba(247,242,232,0.6);}
+  .sf-divider-short{height:1px; background:rgba(232,206,158,0.18); width:180px; margin:2px 0;}
+  .sf-legal-block{font-size:11.5px; line-height:1.75; color:rgba(247,242,232,0.5);}
+  .sf-cols{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:24px; flex-grow:1;}
+  .sf-col{display:flex; flex-direction:column;}
+  .sf-heading{font-family:'Poppins', sans-serif; font-weight:700; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--gold); margin-bottom:12px;}
+  .sf-link{color:rgba(247,242,232,0.72); text-decoration:none; font-size:13.5px; line-height:1.85;}
+  .sf-link:hover{color:#F7F2E8; text-decoration:underline;}
+  .sf-divider-full{height:1px; background:rgba(232,206,158,0.18); margin:36px 0 18px;}
+  .sf-bottom{display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;}
+  .sf-copyright{font-size:11.5px; color:rgba(247,242,232,0.5);}
+  .sf-badge img{height:44px; width:auto; display:block; border-radius:5px;}
+  @media (max-width:640px){
+    .sf-top{flex-direction:column; gap:32px;}
+    .sf-brand{width:auto;}
+    .sf-cols{grid-template-columns:1fr 1fr; row-gap:28px;}
+  }
 
   /* ===================== AUTH MODAL ===================== */
   .modal-overlay{display:none; position:fixed; inset:0; background:rgba(16,48,43,0.55); z-index:1000;
@@ -463,17 +486,64 @@
     </div>
   </div>
 
-  <div class="company-legal">
-    Platforma lokals.ro este operată de <b>S.C. AFINERO ECOPROD S.R.L.</b> · CIF RO41664561 · Reg. Com. J08/2956/2019<br>
-    Str. Nouă, nr. 89, mun. Săcele, jud. Brașov, România
-  </div>
+
 </main>
-<footer>
-  lokals.ro · activ acum în Râșnov și zonele învecinate
-  <br>
-  <a href="politica-confidentialitate.html" style="color:inherit;">Politica de confidențialitate</a>
-  &nbsp;·&nbsp;
-  <a href="solicitare-gdpr.html" style="color:inherit;">Datele tale personale</a>
+<footer class="site-footer">
+  <div class="sf-inner">
+
+    <div class="sf-top">
+      <div class="sf-brand">
+        <div class="sf-brand-row">
+          <span class="sf-brand-dot"></span>
+          <span class="sf-brand-word">lokals</span>
+        </div>
+        <div class="sf-tagline">Platforma care gestionează cazările, fișele oficiale, oaspeții și beneficiile oferite de afaceri în toate regiunile turistice din România — totul într-un singur loc.</div>
+        <div class="sf-divider-short"></div>
+        <div class="sf-legal-block">
+          S.C. AFINERO ECOPROD S.R.L.<br>
+          CIF RO41664561 · Reg. Com. J08/2956/2019<br>
+          Str. Nouă, nr. 89, mun. Săcele, jud. Brașov
+        </div>
+      </div>
+
+      <div class="sf-cols">
+        <div class="sf-col">
+          <div class="sf-heading">Produs</div>
+          <a class="sf-link" href="ghid-oaspeti.html">Ghidul de oaspeți</a>
+          <a class="sf-link" href="contul-meu.html">Fișa de ocupare</a>
+          <a class="sf-link" href="contul-meu.html">Panoul proprietarului</a>
+          <a class="sf-link" href="preturi.html">Prețuri</a>
+          <a class="sf-link" href="inregistrare-partener.html">Începe gratuit</a>
+        </div>
+
+        <div class="sf-col">
+          <div class="sf-heading">Resurse</div>
+          <a class="sf-link" href="#">Cum funcționează</a>
+          <a class="sf-link" href="sectiune-contact-faq.html">Întrebări frecvente</a>
+          <a class="sf-link" href="#">Certificare SITUR</a>
+          <a class="sf-link" href="#">Ghid check-in oaspeți</a>
+        </div>
+
+        <div class="sf-col">
+          <div class="sf-heading">Legal</div>
+          <a class="sf-link" href="#">Termeni și condiții</a>
+          <a class="sf-link" href="politica-confidentialitate.html">Politica de confidențialitate</a>
+          <a class="sf-link" href="#">Politica de cookie-uri</a>
+          <a class="sf-link" href="solicitare-gdpr.html">Datele tale personale</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="sf-divider-full"></div>
+
+    <div class="sf-bottom">
+      <div class="sf-copyright">© 2026 Lokals · un produs S.C. AFINERO ECOPROD S.R.L. · Toate drepturile rezervate</div>
+      <a class="sf-badge" href="https://anpc.ro/ce-este-sal/" target="_blank" rel="noopener">
+        <img src="img/anpc-sal.png" alt="ANPC — Soluționarea alternativă a litigiilor">
+      </a>
+    </div>
+
+  </div>
 </footer>
 
 <!-- ===================== AUTH MODAL ===================== -->
