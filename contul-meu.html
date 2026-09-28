@@ -143,6 +143,21 @@
   .insp-filters{display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap; margin-bottom:14px;}
   .insp-filters label{font-size:12px; font-weight:600; color:var(--teal-deep);}
   .insp-filters input, .insp-filters select{margin-top:3px; border:1.5px solid var(--line); border-radius:8px; padding:6px 8px; font-family:inherit; font-size:12.5px;}
+  /* ===== Import date vechi (fișă de ocupare din fișiere istorice) ===== */
+  .imp-steps{display:flex; flex-direction:column; gap:14px; margin-bottom:16px;}
+  .imp-step{border:1px solid var(--line); border-radius:12px; padding:14px 16px;}
+  .imp-step .imp-step-title{font-weight:700; font-size:13.5px; color:var(--teal-deep); margin-bottom:6px;}
+  .imp-step .imp-step-hint{font-size:12px; color:var(--ink-soft); margin-bottom:10px;}
+  .imp-drop{border:1.5px dashed var(--line); border-radius:10px; padding:18px; text-align:center; cursor:pointer; font-size:12.5px; color:var(--ink-soft);}
+  .imp-drop.drag{border-color:var(--teal-deep); background:var(--cream);}
+  .imp-table{width:100%; border-collapse:collapse; font-size:11px; margin-top:10px;}
+  .imp-table th, .imp-table td{border:1px solid var(--line); padding:5px 7px; text-align:left; vertical-align:top; white-space:nowrap;}
+  .imp-table th{background:var(--cream); font-size:10px; text-transform:uppercase; letter-spacing:.02em; color:var(--ink-soft);}
+  .imp-row-err{background:#FBEAE6;}
+  .imp-row-warn td:not(:first-child){background:#FFF8E6;}
+  .imp-row-err-msg{font-size:10.5px; color:#9C4536; white-space:normal;}
+  .imp-summary{display:flex; gap:16px; flex-wrap:wrap; font-size:12.5px; margin:10px 0;}
+  .imp-summary b{color:var(--teal-deep);}
   @media print{
     body > *:not(.fisa-overlay){display:none !important;}
     .fisa-overlay{position:static; background:none; padding:0; display:block !important;}
@@ -346,6 +361,7 @@ function renderCazari(rows, unreadCounts) {
         ${isEssential ? `
           <button class="action-btn" type="button" data-action="arhiva-cazari" data-op-id="${row.id}">🗄 Arhivă cazări</button>
           <button class="action-btn" type="button" data-action="fisa-ocupare" data-op-id="${row.id}">📋 Fișă de ocupare</button>
+          <button class="action-btn" type="button" data-action="import-istoric" data-op-id="${row.id}">⬆ Import date vechi</button>
         ` : ''}
         <div class="share-wrap">
           <button class="action-btn" type="button" data-action="share" data-slug="${row.slug}" data-nume="${nume.replace(/"/g, '&quot;')}">${SHARE_ICON} Distribuie</button>
@@ -522,6 +538,11 @@ document.getElementById('list-cazari').addEventListener('click', (e) => {
 
   if (action === 'fisa-ocupare') {
     openFisaOcupare(btn.dataset.opId);
+    return;
+  }
+
+  if (action === 'import-istoric') {
+    openImportIstoric(btn.dataset.opId);
     return;
   }
 });
@@ -1426,6 +1447,326 @@ function openArhivaCazari(operatorId) {
         }
       });
     });
+  }
+
+  render();
+}
+
+// ===== Import date vechi — permite proprietarilor să încarce (CSV) cazările mai vechi
+// (aflate în fișiere/registre proprii) pentru a le converti automat în Fișa de ocupare oficială =====
+const IMPORT_ISTORIC_HEADERS_APT = ['Nume', 'Prenume', 'CNP', 'Cetatenie', 'Data nasterii (ZZ.LL.AAAA)', 'Tip act (CI sau Pasaport)', 'Serie si numar act', 'Check-in (ZZ.LL.AAAA)', 'Check-out (ZZ.LL.AAAA)', 'Nr. oaspeti'];
+const IMPORT_ISTORIC_HEADERS_HOTEL = ['Camera / Unitate', 'Nume', 'Prenume', 'CNP', 'Cetatenie', 'Data nasterii (ZZ.LL.AAAA)', 'Tip act (CI sau Pasaport)', 'Serie si numar act', 'Check-in (ZZ.LL.AAAA)', 'Check-out (ZZ.LL.AAAA)', 'Nr. oaspeti'];
+
+function normalizeHeaderKey(h) {
+  return String(h || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/\([^)]*\)/g, '')
+    .replace(/[^a-z0-9]+/g, '');
+}
+
+function parseCsvSimple(text) {
+  // parser CSV minimal, cu suport pentru câmpuri între ghilimele și separator , sau ;
+  const rows = [];
+  let row = [];
+  let field = '';
+  let inQuotes = false;
+  const s = String(text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (s[i + 1] === '"') { field += '"'; i++; }
+        else inQuotes = false;
+      } else field += c;
+    } else {
+      if (c === '"') inQuotes = true;
+      else if (c === ',' || c === ';') { row.push(field); field = ''; }
+      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+      else field += c;
+    }
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(c => String(c).trim() !== ''));
+}
+
+function csvEscapeField(v) {
+  const s = String(v == null ? '' : v);
+  if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+function parseDataFlexibila(str) {
+  const s = String(str || '').trim();
+  if (!s) return null;
+  let m = s.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);
+  if (m) {
+    const d = m[1].padStart(2, '0'), mo = m[2].padStart(2, '0'), y = m[3];
+    return `${y}-${mo}-${d}`;
+  }
+  m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+  return null;
+}
+
+function openImportIstoric(operatorId) {
+  const op = OPERATORI_BY_ID[operatorId];
+  const isHotel = !!(op && op.tip === 'hotel');
+  const numeCazare = op ? (op.nume_afisat || op.nume_afacere) : '';
+  const headers = isHotel ? IMPORT_ISTORIC_HEADERS_HOTEL : IMPORT_ISTORIC_HEADERS_APT;
+
+  let overlay = document.getElementById('fisa-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'fisa-overlay';
+    overlay.className = 'fisa-overlay';
+    document.body.appendChild(overlay);
+  }
+
+  let parsedRows = []; // { raw, errors, warnings, payload, valid }
+
+  function downloadTemplate() {
+    const exampleApt = ['Popescu', 'Ion', '1800101123456', 'Română', '01.01.1980', 'CI', 'AB123456', '01.07.2025', '05.07.2025', '2'];
+    const exampleHotel = ['Camera 101', 'Popescu', 'Ion', '1800101123456', 'Română', '01.01.1980', 'CI', 'AB123456', '01.07.2025', '05.07.2025', '2'];
+    const example = isHotel ? exampleHotel : exampleApt;
+    const csv = [headers, example].map(r => r.map(csvEscapeField).join(',')).join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `sablon-import-cazari-${(numeCazare || 'cazare').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  function mapHeaderIndexes(headerRow) {
+    const keys = headerRow.map(normalizeHeaderKey);
+    const find = (...names) => {
+      for (const n of names) {
+        const idx = keys.indexOf(normalizeHeaderKey(n));
+        if (idx !== -1) return idx;
+      }
+      return -1;
+    };
+    return {
+      camera: find('Camera / Unitate', 'Camera', 'Unitate'),
+      nume: find('Nume'),
+      prenume: find('Prenume'),
+      cnp: find('CNP'),
+      cetatenie: find('Cetatenie'),
+      nastere: find('Data nasterii (ZZ.LL.AAAA)', 'Data nasterii'),
+      actTip: find('Tip act (CI sau Pasaport)', 'Tip act'),
+      actSerie: find('Serie si numar act'),
+      checkIn: find('Check-in (ZZ.LL.AAAA)', 'Check-in'),
+      checkOut: find('Check-out (ZZ.LL.AAAA)', 'Check-out'),
+      nrOaspeti: find('Nr. oaspeti'),
+    };
+  }
+
+  function parseFile(text) {
+    const rows = parseCsvSimple(text);
+    if (!rows.length) { parsedRows = []; return; }
+    const idx = mapHeaderIndexes(rows[0]);
+    const dataRows = rows.slice(1);
+    parsedRows = dataRows.map(cols => {
+      const get = (i) => (i >= 0 && i < cols.length ? String(cols[i] || '').trim() : '');
+      const nume = get(idx.nume);
+      const prenume = get(idx.prenume);
+      const cnp = get(idx.cnp);
+      const cetatenie = get(idx.cetatenie);
+      const nasterRaw = get(idx.nastere);
+      const actTipRaw = get(idx.actTip).toLowerCase();
+      const actTip = actTipRaw.startsWith('pas') ? 'pasaport' : 'ci';
+      const actSerie = get(idx.actSerie);
+      const checkInRaw = get(idx.checkIn);
+      const checkOutRaw = get(idx.checkOut);
+      const nrOaspetiRaw = get(idx.nrOaspeti);
+      const camera = isHotel ? get(idx.camera) : '';
+
+      const checkIn = parseDataFlexibila(checkInRaw);
+      const checkOut = parseDataFlexibila(checkOutRaw);
+      const nasterea = parseDataFlexibila(nasterRaw);
+
+      const errors = [];
+      if (!nume && !prenume) errors.push('Lipsește numele oaspetelui');
+      if (!checkInRaw) errors.push('Lipsește check-in');
+      else if (!checkIn) errors.push('Check-in are un format de dată nerecunoscut');
+      if (!checkOutRaw) errors.push('Lipsește check-out');
+      else if (!checkOut) errors.push('Check-out are un format de dată nerecunoscut');
+      if (checkIn && checkOut && checkOut < checkIn) errors.push('Check-out este înainte de check-in');
+      if (isHotel && !camera) errors.push('Lipsește camera / unitatea');
+      if (nasterRaw && !nasterea) errors.push('Data nașterii are un format nerecunoscut');
+
+      const warnings = [];
+      if (!cnp && !actSerie) warnings.push('Fără CNP și fără serie act — rândul din fișă va rămâne parțial completat');
+
+      const nrOaspeti = nrOaspetiRaw ? parseInt(nrOaspetiRaw, 10) : null;
+
+      const payloadBase = {
+        operator_id: operatorId,
+        prenume: prenume || null,
+        nume: nume || null,
+        cnp: cnp || null,
+        cetatenie: cetatenie || null,
+        data_nasterii: nasterea,
+        act_serie_numar: actSerie || null,
+        check_in: checkIn,
+        check_out: checkOut,
+        nr_oaspeti: Number.isFinite(nrOaspeti) && nrOaspeti > 0 ? nrOaspeti : null,
+        arhivat: false,
+      };
+      const payload = isHotel
+        ? { ...payloadBase, cod_scurt: camera || null, tip_act: actTip, status: 'procesat' }
+        : { ...payloadBase, apt: (op && op.slug) || 'import', act_tip: actTip, status: 'validat', sursa: 'import_istoric' };
+
+      return {
+        raw: { camera, nume, prenume, cnp, cetatenie, nasterRaw, actTipRaw, actSerie, checkInRaw, checkOutRaw, nrOaspetiRaw },
+        errors, warnings, payload, valid: errors.length === 0,
+      };
+    });
+  }
+
+  function render() {
+    overlay.innerHTML = `
+      <div class="fisa-card fisa-no-print">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:12px;">
+          <div class="reg-list-title" style="margin:0;">Import date vechi — ${escapeHtmlAcc(numeCazare)}</div>
+          <button type="button" class="reg-btn" id="imp-close">✕ Închide</button>
+        </div>
+        <div class="imp-steps">
+          <div class="imp-step">
+            <div class="imp-step-title">1. Descarcă șablonul</div>
+            <div class="imp-step-hint">Un fișier CSV (se deschide direct în Excel) cu exact coloanele cerute de Fișa de ocupare. Completează câte un rând pentru fiecare sejur mai vechi, apoi salvează fișierul.</div>
+            <button type="button" class="reg-btn primary" id="imp-download-template">⬇ Descarcă șablon CSV</button>
+          </div>
+          <div class="imp-step">
+            <div class="imp-step-title">2. Încarcă fișierul completat</div>
+            <div class="imp-step-hint">Acceptăm fișierul exact în formatul șablonului (.csv). Datele pot fi scrise ca ZZ.LL.AAAA sau AAAA-LL-ZZ.</div>
+            <label class="imp-drop" for="imp-file-input">📄 Alege fișierul CSV completat sau trage-l aici</label>
+            <input type="file" id="imp-file-input" accept=".csv,text/csv" style="display:none;">
+          </div>
+          <div id="imp-preview-wrap" style="display:none;" class="imp-step">
+            <div class="imp-step-title">3. Verifică și confirmă</div>
+            <div class="imp-summary">
+              <span><b id="imp-count-total">0</b> rânduri citite</span>
+              <span style="color:var(--teal-deep);"><b id="imp-count-ok">0</b> gata de import</span>
+              <span style="color:#9C4536;"><b id="imp-count-err">0</b> cu erori (nu se importă)</span>
+            </div>
+            <div style="max-height:340px; overflow:auto;">
+              <table class="imp-table" id="imp-preview-table"></table>
+            </div>
+            <div style="margin-top:12px; display:flex; gap:8px; align-items:center;">
+              <button type="button" class="reg-btn primary" id="imp-confirm-btn" disabled>Importă rândurile valide</button>
+              <span class="reg-msg" id="imp-msg"></span>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+    overlay.classList.add('open');
+    document.getElementById('imp-close').addEventListener('click', () => overlay.classList.remove('open'));
+    document.getElementById('imp-download-template').addEventListener('click', downloadTemplate);
+
+    const fileInput = document.getElementById('imp-file-input');
+    const dropLabel = overlay.querySelector('.imp-drop');
+    dropLabel.addEventListener('dragover', (e) => { e.preventDefault(); dropLabel.classList.add('drag'); });
+    dropLabel.addEventListener('dragleave', () => dropLabel.classList.remove('drag'));
+    dropLabel.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropLabel.classList.remove('drag');
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files && fileInput.files[0]) handleFile(fileInput.files[0]);
+    });
+
+    function handleFile(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        parseFile(String(reader.result || ''));
+        renderPreview();
+      };
+      reader.onerror = () => alert('Nu am putut citi fișierul — încearcă din nou.');
+      reader.readAsText(file, 'UTF-8');
+    }
+
+    function renderPreview() {
+      const wrap = document.getElementById('imp-preview-wrap');
+      wrap.style.display = 'block';
+      const validCount = parsedRows.filter(r => r.valid).length;
+      document.getElementById('imp-count-total').textContent = String(parsedRows.length);
+      document.getElementById('imp-count-ok').textContent = String(validCount);
+      document.getElementById('imp-count-err').textContent = String(parsedRows.length - validCount);
+      const confirmBtn = document.getElementById('imp-confirm-btn');
+      confirmBtn.disabled = validCount === 0;
+      confirmBtn.textContent = `Importă ${validCount} ${validCount === 1 ? 'rând valid' : 'rânduri valide'}`;
+
+      const table = document.getElementById('imp-preview-table');
+      const cols = ['#', ...(isHotel ? ['Cameră'] : []), 'Nume', 'CNP', 'Act', 'Check-in', 'Check-out', 'Observații'];
+      table.innerHTML = `
+        <thead><tr>${cols.map(c => `<th>${c}</th>`).join('')}</tr></thead>
+        <tbody>
+          ${parsedRows.map((r, i) => {
+            const cls = !r.valid ? 'imp-row-err' : (r.warnings.length ? 'imp-row-warn' : '');
+            const numeAfisat = [r.raw.prenume, r.raw.nume].filter(Boolean).join(' ') || '—';
+            const note = r.valid
+              ? escapeHtmlAcc(r.warnings.join('; '))
+              : `<span class="imp-row-err-msg">${escapeHtmlAcc(r.errors.join('; '))}</span>`;
+            return `<tr class="${cls}">
+              <td>${i + 1}</td>
+              ${isHotel ? `<td>${escapeHtmlAcc(r.raw.camera || '—')}</td>` : ''}
+              <td>${escapeHtmlAcc(numeAfisat)}</td>
+              <td>${escapeHtmlAcc(r.raw.cnp || '—')}</td>
+              <td>${escapeHtmlAcc(r.raw.actSerie || '—')}</td>
+              <td>${escapeHtmlAcc(r.raw.checkInRaw || '—')}</td>
+              <td>${escapeHtmlAcc(r.raw.checkOutRaw || '—')}</td>
+              <td>${note}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>`;
+
+      document.getElementById('imp-confirm-btn').addEventListener('click', doImport);
+    }
+
+    async function doImport() {
+      const validPayloads = parsedRows.filter(r => r.valid).map(r => r.payload);
+      if (!validPayloads.length) return;
+      const btn = document.getElementById('imp-confirm-btn');
+      const msgEl = document.getElementById('imp-msg');
+      btn.disabled = true;
+      msgEl.className = 'reg-msg'; msgEl.textContent = 'Se importă…';
+      const table = isHotel ? 'preinregistrari_hotel' : 'inregistrari_oaspeti';
+      const CHUNK = 200;
+      let imported = [];
+      try {
+        for (let i = 0; i < validPayloads.length; i += CHUNK) {
+          const chunk = validPayloads.slice(i, i + CHUNK);
+          const { data, error } = await supabaseClient.from(table).insert(chunk).select();
+          if (error) throw error;
+          imported = imported.concat(data || []);
+        }
+      } catch (err) {
+        console.error(err);
+        msgEl.className = 'reg-msg err';
+        msgEl.textContent = 'Nu am putut importa toate rândurile — încearcă din nou.';
+        btn.disabled = false;
+        return;
+      }
+      if (isHotel) {
+        if (!REG_HOTEL_BY_OP[operatorId]) REG_HOTEL_BY_OP[operatorId] = [];
+        REG_HOTEL_BY_OP[operatorId] = imported.concat(REG_HOTEL_BY_OP[operatorId]);
+        const panel = document.getElementById('reg-panel-' + operatorId);
+        if (panel && panel.dataset.built) renderRegHotelList(operatorId);
+      } else {
+        if (!REG_BY_OP[operatorId]) REG_BY_OP[operatorId] = [];
+        REG_BY_OP[operatorId] = imported.concat(REG_BY_OP[operatorId]);
+        const panel = document.getElementById('reg-panel-' + operatorId);
+        if (panel && panel.dataset.built) renderRegList(operatorId);
+      }
+      msgEl.className = 'reg-msg';
+      msgEl.textContent = `✓ Importate ${imported.length} înregistrări. Le găsești acum în Fișa de ocupare.`;
+      btn.textContent = 'Importat';
+    }
   }
 
   render();
