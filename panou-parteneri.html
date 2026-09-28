@@ -3794,7 +3794,9 @@ function fmtDataZzLlAaaa(dateStr) {
 // care o cer autoritățile la control, „un formular per cameră". Paginăm câte 10 înregistrări
 // per pagină (ca pe formularul tipărit) și lăsăm rândurile goale pentru completare manuală.
 function fisaOficialPageHtmlAdmin(op, numeCazare, chunkRows, year, pageIndex, totalPages) {
-  const adresa = (op && op.adresa) || '';
+  const adresaFisa = (op && op.facilitati_cazare && op.facilitati_cazare.adresa_fisa) || {};
+  const adresa = adresaFisa.strada || (op && op.adresa) || '';
+  const adresaCompleta = !!(adresaFisa.strada && adresaFisa.numar && adresaFisa.judet && adresaFisa.localitate);
   const yearStr = String(year || '');
   const yearDigits = [0, 1, 2, 3].map(i => yearStr[i] || '');
   const rowsHtml = Array.from({ length: 10 }).map((_, i) => {
@@ -3819,19 +3821,19 @@ function fisaOficialPageHtmlAdmin(op, numeCazare, chunkRows, year, pageIndex, to
       <div class="fisa-oficial-imobil">
         <div class="fisa-oficial-field wide"><span>Stradă</span><div class="fisa-oficial-line">${escapeHtml(adresa)}</div></div>
         <div class="fisa-oficial-row4">
-          <div class="fisa-oficial-field"><span>Număr</span><div class="fisa-oficial-line"></div></div>
-          <div class="fisa-oficial-field"><span>Bloc</span><div class="fisa-oficial-line"></div></div>
-          <div class="fisa-oficial-field"><span>Scară</span><div class="fisa-oficial-line"></div></div>
-          <div class="fisa-oficial-field"><span>Etaj</span><div class="fisa-oficial-line"></div></div>
+          <div class="fisa-oficial-field"><span>Număr</span><div class="fisa-oficial-line">${escapeHtml(adresaFisa.numar || '')}</div></div>
+          <div class="fisa-oficial-field"><span>Bloc</span><div class="fisa-oficial-line">${escapeHtml(adresaFisa.bloc || '')}</div></div>
+          <div class="fisa-oficial-field"><span>Scară</span><div class="fisa-oficial-line">${escapeHtml(adresaFisa.scara || '')}</div></div>
+          <div class="fisa-oficial-field"><span>Etaj</span><div class="fisa-oficial-line">${escapeHtml(adresaFisa.etaj || '')}</div></div>
         </div>
         <div class="fisa-oficial-row4">
-          <div class="fisa-oficial-field"><span>Ap.</span><div class="fisa-oficial-line"></div></div>
-          <div class="fisa-oficial-field"><span>Județ/Sector</span><div class="fisa-oficial-line"></div></div>
-          <div class="fisa-oficial-field"><span>Localitate</span><div class="fisa-oficial-line"></div></div>
-          <div class="fisa-oficial-field"><span>Cod poștal</span><div class="fisa-oficial-line"></div></div>
+          <div class="fisa-oficial-field"><span>Ap.</span><div class="fisa-oficial-line">${escapeHtml(adresaFisa.ap || '')}</div></div>
+          <div class="fisa-oficial-field"><span>Județ/Sector</span><div class="fisa-oficial-line">${escapeHtml(adresaFisa.judet || '')}</div></div>
+          <div class="fisa-oficial-field"><span>Localitate</span><div class="fisa-oficial-line">${escapeHtml(adresaFisa.localitate || '')}</div></div>
+          <div class="fisa-oficial-field"><span>Cod poștal</span><div class="fisa-oficial-line">${escapeHtml(adresaFisa.cod_postal || '')}</div></div>
         </div>
       </div>
-      ${!adresa ? '<p style="color:#9C4536; font-size:11px; margin:4px 0 0;">Adresa imobilului e incompletă — completeaz-o la proprietate ca fișa să fie corectă la control.</p>' : ''}
+      ${!adresaCompleta ? '<p style="color:#9C4536; font-size:11px; margin:4px 0 0;">Adresa imobilului e incompletă — proprietarul o poate completa la „Date imobil — pentru Fișa de ocupare" din Setări cazare, ca fișa să fie corectă la control.</p>' : ''}
       <p style="font-weight:700; margin:16px 0 4px;">II. Datele de identificare a persoanelor care au ocupat camera/spațiul amenajat în scopul înnoptării, precum și perioada de ocupare<sup>*)</sup></p>
       <p style="font-size:10px; color:var(--ink-soft); border-top:1px solid #000; padding-top:3px; max-width:65%;">*) Se completează pentru fiecare cameră închiriată/spațiul amenajat în scopul înnoptării, pentru o perioadă determinată, măsurată în zile.</p>
       <p style="margin:12px 0 3px;">1. Elemente de identificare a camerei/spațiului amenajat în scopul înnoptării</p>

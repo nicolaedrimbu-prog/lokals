@@ -199,6 +199,54 @@
           <input id="f-parcare" class="field" type="text" placeholder="ex. Curte interioară, 6 locuri">
         </div>
       </div>
+      <div class="field-group" style="margin-top:16px; padding-top:14px; border-top:1px solid var(--line);">
+        <label style="font-weight:700;">Date imobil — pentru Fișa de ocupare</label>
+        <div class="hint" style="margin-top:2px; margin-bottom:10px;">Aceste câmpuri completează automat secțiunea „I. Datele privind imobilul" din formularul oficial (Fișa de ocupare a capacității de cazare), la fel cum apar în modelul cerut de autorități.</div>
+      </div>
+      <div class="two-col">
+        <div>
+          <label for="f-fisa-strada">Stradă</label>
+          <input id="f-fisa-strada" class="field" type="text" placeholder="ex. Str. Teilor">
+        </div>
+        <div>
+          <label for="f-fisa-numar">Număr</label>
+          <input id="f-fisa-numar" class="field" type="text" placeholder="16">
+        </div>
+      </div>
+      <div class="two-col">
+        <div>
+          <label for="f-fisa-bloc">Bloc</label>
+          <input id="f-fisa-bloc" class="field" type="text">
+        </div>
+        <div>
+          <label for="f-fisa-scara">Scară</label>
+          <input id="f-fisa-scara" class="field" type="text">
+        </div>
+      </div>
+      <div class="two-col">
+        <div>
+          <label for="f-fisa-etaj">Etaj</label>
+          <input id="f-fisa-etaj" class="field" type="text">
+        </div>
+        <div>
+          <label for="f-fisa-ap">Ap.</label>
+          <input id="f-fisa-ap" class="field" type="text">
+        </div>
+      </div>
+      <div class="two-col">
+        <div>
+          <label for="f-fisa-judet">Județ/Sector</label>
+          <input id="f-fisa-judet" class="field" type="text" placeholder="ex. Brașov">
+        </div>
+        <div>
+          <label for="f-fisa-localitate">Localitate</label>
+          <input id="f-fisa-localitate" class="field" type="text" placeholder="ex. Râșnov">
+        </div>
+      </div>
+      <div class="field-group" style="margin-bottom:0;">
+        <label for="f-fisa-cod-postal">Cod poștal</label>
+        <input id="f-fisa-cod-postal" class="field" type="text" style="max-width:200px;">
+      </div>
       <div class="map-preview" id="locatie-map-wrap"><iframe id="locatie-map-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>
       <div class="hint" id="locatie-map-hint" style="display:none;">Așa arată harta pe care o va vedea oaspetele — verifică dacă pinul e la locul corect.</div>
     </div>
@@ -848,6 +896,17 @@ function fillForm(row) {
   document.getElementById('f-parcare').value = loc.parcare || '';
   updateLocatieMapPreview();
 
+  const adresaFisa = f.adresa_fisa || {};
+  document.getElementById('f-fisa-strada').value = adresaFisa.strada || '';
+  document.getElementById('f-fisa-numar').value = adresaFisa.numar || '';
+  document.getElementById('f-fisa-bloc').value = adresaFisa.bloc || '';
+  document.getElementById('f-fisa-scara').value = adresaFisa.scara || '';
+  document.getElementById('f-fisa-etaj').value = adresaFisa.etaj || '';
+  document.getElementById('f-fisa-ap').value = adresaFisa.ap || '';
+  document.getElementById('f-fisa-judet').value = adresaFisa.judet || '';
+  document.getElementById('f-fisa-localitate').value = adresaFisa.localitate || '';
+  document.getElementById('f-fisa-cod-postal').value = adresaFisa.cod_postal || '';
+
   document.getElementById('f-checkin-ora').value = checkin.ora || '';
   document.getElementById('f-cod-locker').value = checkin.cod_acces || '';
   document.getElementById('f-locker-loc').value = checkin.locker_locatie || '';
@@ -1194,6 +1253,17 @@ document.getElementById('btn-save').addEventListener('click', async () => {
       locatie: {
         gps: document.getElementById('f-gps').value.trim(),
         parcare: document.getElementById('f-parcare').value.trim(),
+      },
+      adresa_fisa: {
+        strada: document.getElementById('f-fisa-strada').value.trim(),
+        numar: document.getElementById('f-fisa-numar').value.trim(),
+        bloc: document.getElementById('f-fisa-bloc').value.trim(),
+        scara: document.getElementById('f-fisa-scara').value.trim(),
+        etaj: document.getElementById('f-fisa-etaj').value.trim(),
+        ap: document.getElementById('f-fisa-ap').value.trim(),
+        judet: document.getElementById('f-fisa-judet').value.trim(),
+        localitate: document.getElementById('f-fisa-localitate').value.trim(),
+        cod_postal: document.getElementById('f-fisa-cod-postal').value.trim(),
       },
       checkin: {
         ora: document.getElementById('f-checkin-ora').value.trim(),
