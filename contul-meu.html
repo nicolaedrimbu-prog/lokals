@@ -326,6 +326,10 @@ function renderCazari(rows, unreadCounts) {
       <div class="card-actions">
         <a class="action-btn" href="facturare.html?slug=${encodeURIComponent(row.slug)}">${BILLING_ICON} Facturare</a>
         <button class="action-btn" type="button" data-action="qr" data-slug="${row.slug}">${QR_ICON} ${row.tip === 'hotel' ? 'Afiș QR cameră' : 'Afiș QR apt.'}</button>
+        ${isEssential ? `
+          <button class="action-btn" type="button" data-action="arhiva-cazari" data-op-id="${row.id}">🗄 Arhivă cazări</button>
+          <button class="action-btn" type="button" data-action="fisa-ocupare" data-op-id="${row.id}">📋 Fișă de ocupare</button>
+        ` : ''}
         <div class="share-wrap">
           <button class="action-btn" type="button" data-action="share" data-slug="${row.slug}" data-nume="${nume.replace(/"/g, '&quot;')}">${SHARE_ICON} Distribuie</button>
           <div class="share-popover" data-popover-for="${row.slug}" data-step="1">
@@ -354,7 +358,6 @@ function renderCazari(rows, unreadCounts) {
           <button class="action-btn action-btn-long action-btn-cta" type="button" style="position:relative;" data-action="reginfo" data-op-id="${row.id}">${REGISTRATION_ICON} Înregistrare oaspeți${regPending ? `<span class="fb-badge">${regPending}</span>` : ''}</button>
         ` : ''}
       </div>
-      ${row.inregistrare_activa ? `<div class="reg-note">🔒 Verificare identitate activă — „Vezi ghidul” și „Distribuie” arată automat ghidul oaspetelui validat azi. Exportul PDF e dezactivat (nu poate cere verificarea identității).</div>` : ''}
       ${row.tip === 'hotel' && !row.preinregistrare_activa ? `<div class="reg-note">🧾 Preînregistrare recepție — dezactivată. Odată activată din panoul administratorului, poți copia link-ul de recepție și printa afișul cu cod QR pentru front-desk.</div>` : ''}
       ${isEssential ? `<div class="reg-panel" id="reg-panel-${row.id}"></div>` : ''}
     `;
@@ -494,6 +497,16 @@ document.getElementById('list-cazari').addEventListener('click', (e) => {
     }
     panel.classList.add('open');
   }
+
+  if (action === 'arhiva-cazari') {
+    openArhivaCazari(btn.dataset.opId);
+    return;
+  }
+
+  if (action === 'fisa-ocupare') {
+    openFisaOcupare(btn.dataset.opId);
+    return;
+  }
 });
 
 document.getElementById('list-cazari').addEventListener('change', async (e) => {
@@ -548,30 +561,14 @@ function renderRegHotelList(operatorId) {
   if (!panel) return;
   const listEl = panel.querySelector('[data-reg-hotel-list]');
   if (!listEl) return;
-  const allRows = regHotelRowsFor(operatorId);
-  const archivedCount = allRows.filter(r => r.arhivat).length;
-  const showArchived = REG_HOTEL_VIEW_ARCHIVED[operatorId] === true;
-  const rows = allRows.filter(r => showArchived ? r.arhivat : !r.arhivat);
-
-  const toggleHtml = archivedCount > 0 ? `
-    <div style="margin-bottom:10px;">
-      <button type="button" class="reg-btn" data-reg-hotel-toggle-archived="${operatorId}" style="font-size:11px;">
-        ${showArchived ? '← Înapoi la preînregistrările actuale' : `🗄 Vezi arhivate (${archivedCount})`}
-      </button>
-    </div>` : '';
+  const rows = regHotelRowsFor(operatorId).filter(r => !r.arhivat);
 
   if (rows.length === 0) {
-    listEl.innerHTML = toggleHtml + `<div class="reg-empty">${showArchived ? 'Nicio preînregistrare arhivată.' : 'Nicio preînregistrare încă.'}</div>`;
-    listEl.querySelectorAll('[data-reg-hotel-toggle-archived]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        REG_HOTEL_VIEW_ARCHIVED[operatorId] = !REG_HOTEL_VIEW_ARCHIVED[operatorId];
-        renderRegHotelList(operatorId);
-      });
-    });
+    listEl.innerHTML = `<div class="reg-empty">Nicio preînregistrare încă.</div>`;
     return;
   }
 
-  listEl.innerHTML = toggleHtml + rows.map(r => {
+  listEl.innerHTML = rows.map(r => {
     const sc = REG_HOTEL_STATUS_COLOR[r.status] || REG_HOTEL_STATUS_COLOR.trimis;
     const numeOaspete = [r.prenume, r.nume].filter(Boolean).join(' ') || '— oaspetele nu a completat încă —';
     return `
@@ -598,19 +595,10 @@ function renderRegHotelList(operatorId) {
         </div>
       ` : ''}
       <div class="reg-actions reg-actions-divider">
-        ${r.arhivat
-          ? `<button class="reg-btn" type="button" data-reg-hotel-restore="${r.id}">↩ Restaurează</button>`
-          : `<button class="reg-btn" type="button" data-reg-hotel-archive="${r.id}" style="border-color:var(--ink-soft); color:var(--ink-soft);" title="Iese din lista curentă, dar rămâne salvată — o poți restaura oricând">🗄 Arhivează</button>`}
+        <button class="reg-btn" type="button" data-reg-hotel-archive="${r.id}" style="border-color:var(--ink-soft); color:var(--ink-soft);" title="Iese din lista curentă, dar rămâne salvată — o poți restaura oricând din „Arhivă cazări”">🗄 Arhivează</button>
       </div>
     </div>`;
   }).join('');
-
-  listEl.querySelectorAll('[data-reg-hotel-toggle-archived]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      REG_HOTEL_VIEW_ARCHIVED[operatorId] = !REG_HOTEL_VIEW_ARCHIVED[operatorId];
-      renderRegHotelList(operatorId);
-    });
-  });
 
   listEl.querySelectorAll('[data-reg-hotel-archive]').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -621,19 +609,6 @@ function renderRegHotelList(operatorId) {
       if (error) { console.error(error); alert('Nu am putut arhiva — încearcă din nou.'); return; }
       const row = regHotelRowsFor(operatorId).find(x => String(x.id) === String(id));
       if (row) row.arhivat = true;
-      renderRegHotelList(operatorId);
-    });
-  });
-
-  listEl.querySelectorAll('[data-reg-hotel-restore]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const id = btn.getAttribute('data-reg-hotel-restore');
-      btn.disabled = true;
-      const { error } = await supabaseClient.from('preinregistrari_hotel').update({ arhivat: false }).eq('id', id);
-      btn.disabled = false;
-      if (error) { console.error(error); alert('Nu am putut restaura — încearcă din nou.'); return; }
-      const row = regHotelRowsFor(operatorId).find(x => String(x.id) === String(id));
-      if (row) row.arhivat = false;
       renderRegHotelList(operatorId);
     });
   });
@@ -703,15 +678,13 @@ function renderRegPanel(operatorId) {
       </form>
       <div class="reg-result" data-reg-gen-result style="display:none;"></div>
     </div>
-    <div class="reg-list-title" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-      <span>Înregistrările acestei cazări</span>
-      <button type="button" class="reg-btn" data-reg-fisa="${operatorId}" style="text-transform:none; letter-spacing:normal; font-weight:600;">📋 Fișă de ocupare</button>
-    </div>
+    <div class="reg-list-title">Înregistrările acestei cazări</div>
     <div data-reg-list></div>
   `;
 
   if (isHotel) {
     panel.innerHTML = `
+      <div class="reg-note">ℹ️ Preînregistrarea este opțională pentru turiști — le reduce timpul de așteptare la recepție și pregătește check-in-ul mai rapid.</div>
       <div class="reg-toggle-row">
         <div>
           <div class="reg-toggle-label">Preînregistrare la check-in</div>
@@ -789,6 +762,7 @@ function renderRegPanel(operatorId) {
     });
   } else {
     panel.innerHTML = `
+      <div class="reg-note" id="reg-note-${operatorId}" style="${op && op.inregistrare_activa ? '' : 'display:none;'}">🔒 Verificare identitate activă — „Vezi ghidul” și „Distribuie” arată automat ghidul oaspetelui validat azi. Exportul PDF e dezactivat (nu poate cere verificarea identității).</div>
       <div class="reg-toggle-row">
         <div>
           <div class="reg-toggle-label">Verificare identitate oaspeți</div>
@@ -834,17 +808,10 @@ function renderRegPanel(operatorId) {
       }
       if (op) op.inregistrare_activa = activ;
       panel.querySelector(`#reg-gen-wrap-${operatorId}`).style.display = activ ? '' : 'none';
-      // reflectăm nota + dezactivarea exportului PDF fără să reconstruim tot cardul
+      // reflectăm nota (acum în panoul de Înregistrare oaspeți, nu permanent pe card) + dezactivarea exportului PDF
+      const note = panel.querySelector('#reg-note-' + operatorId);
+      if (note) note.style.display = activ ? '' : 'none';
       const card = document.getElementById('reg-panel-' + operatorId).closest('.card');
-      let note = card.querySelector('.reg-note');
-      if (activ && !note) {
-        note = document.createElement('div');
-        note.className = 'reg-note';
-        note.textContent = '🔒 Verificare identitate activă — „Vezi ghidul” și „Distribuie” arată automat ghidul oaspetelui validat azi. Exportul PDF e dezactivat (nu poate cere verificarea identității).';
-        card.querySelector('.card-actions').insertAdjacentElement('afterend', note);
-      } else if (!activ && note) {
-        note.remove();
-      }
       const pdfBtn = card.querySelector('[data-choose="pdf"]');
       if (activ && pdfBtn) pdfBtn.remove();
       if (!activ && !pdfBtn) {
@@ -884,8 +851,6 @@ function renderRegPanel(operatorId) {
   }
 
   if (isHotel) renderRegHotelList(operatorId);
-
-  panel.querySelector(`[data-reg-fisa="${operatorId}"]`).addEventListener('click', () => openFisaOcupare(operatorId));
 
   panel.querySelector(`[data-reg-gen-form="${operatorId}"]`).addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -939,30 +904,14 @@ function renderRegList(operatorId) {
   if (!panel) return;
   const listEl = panel.querySelector('[data-reg-list]');
   if (!listEl) return;
-  const allRows = regRowsFor(operatorId);
-  const archivedCount = allRows.filter(r => r.arhivat).length;
-  const showArchived = REG_VIEW_ARCHIVED[operatorId] === true;
-  const rows = allRows.filter(r => showArchived ? r.arhivat : !r.arhivat);
-
-  const toggleHtml = archivedCount > 0 ? `
-    <div style="margin-bottom:10px;">
-      <button type="button" class="reg-btn" data-reg-toggle-archived="${operatorId}" style="font-size:11px;">
-        ${showArchived ? '← Înapoi la înregistrările actuale' : `🗄 Vezi arhivate (${archivedCount})`}
-      </button>
-    </div>` : '';
+  const rows = regRowsFor(operatorId).filter(r => !r.arhivat);
 
   if (rows.length === 0) {
-    listEl.innerHTML = toggleHtml + `<div class="reg-empty">${showArchived ? 'Nicio înregistrare arhivată.' : 'Nicio înregistrare curentă.'}</div>`;
-    listEl.querySelectorAll('[data-reg-toggle-archived]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        REG_VIEW_ARCHIVED[operatorId] = !REG_VIEW_ARCHIVED[operatorId];
-        renderRegList(operatorId);
-      });
-    });
+    listEl.innerHTML = `<div class="reg-empty">Nicio înregistrare curentă.</div>`;
     return;
   }
 
-  listEl.innerHTML = toggleHtml + rows.map(r => {
+  listEl.innerHTML = rows.map(r => {
     const sc = REG_STATUS_COLOR[r.status] || REG_STATUS_COLOR.asteptare_completare;
     const numeOaspete = [r.prenume, r.nume].filter(Boolean).join(' ') || '— oaspetele nu a completat încă —';
     const link = `https://lokals.ro/ghid-oaspeti.html?stay=${r.token}`;
@@ -1001,20 +950,11 @@ function renderRegList(operatorId) {
       <div class="reg-actions reg-actions-divider">
         <button class="reg-btn" type="button" data-reg-copy="${link}">Copiază link</button>
         <a class="reg-btn" style="text-decoration:none;" href="https://wa.me/?text=${waText}" target="_blank" rel="noopener">WhatsApp</a>
-        ${r.arhivat
-          ? `<button class="reg-btn" type="button" data-reg-restore="${r.id}">↩ Restaurează</button>`
-          : `<button class="reg-btn" type="button" data-reg-archive="${r.id}" style="border-color:var(--ink-soft); color:var(--ink-soft);" title="Iese din lista curentă, dar rămâne salvată — o poți restaura oricând">🗄 Arhivează</button>`}
+        <button class="reg-btn" type="button" data-reg-archive="${r.id}" style="border-color:var(--ink-soft); color:var(--ink-soft);" title="Iese din lista curentă, dar rămâne salvată — o poți restaura oricând din „Arhivă cazări”">🗄 Arhivează</button>
       </div>
       <div class="reg-msg" data-reg-row-msg="${r.id}"></div>
     </div>`;
   }).join('');
-
-  listEl.querySelectorAll('[data-reg-toggle-archived]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      REG_VIEW_ARCHIVED[operatorId] = !REG_VIEW_ARCHIVED[operatorId];
-      renderRegList(operatorId);
-    });
-  });
 
   listEl.querySelectorAll('[data-reg-archive]').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -1026,19 +966,6 @@ function renderRegList(operatorId) {
       if (error) { console.error(error); alert('Nu am putut arhiva — încearcă din nou.'); return; }
       const row = regRowsFor(operatorId).find(x => String(x.id) === String(id));
       if (row) row.arhivat = true;
-      renderRegList(operatorId);
-    });
-  });
-
-  listEl.querySelectorAll('[data-reg-restore]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const id = btn.getAttribute('data-reg-restore');
-      btn.disabled = true;
-      const { error } = await supabaseClient.from('inregistrari_oaspeti').update({ arhivat: false }).eq('id', id);
-      btn.disabled = false;
-      if (error) { console.error(error); alert('Nu am putut restaura — încearcă din nou.'); return; }
-      const row = regRowsFor(operatorId).find(x => String(x.id) === String(id));
-      if (row) row.arhivat = false;
       renderRegList(operatorId);
     });
   });
@@ -1241,6 +1168,80 @@ function fisaOficialFormHtml(op, numeCazare, rows, year) {
   const chunks = [];
   for (let i = 0; i < rows.length; i += 10) chunks.push(rows.slice(i, i + 10));
   return chunks.map((chunk, idx) => fisaOficialPageHtml(op, numeCazare, chunk, year, idx, chunks.length)).join('');
+}
+
+function openArhivaCazari(operatorId) {
+  const op = OPERATORI_BY_ID[operatorId];
+  const isHotel = !!(op && op.tip === 'hotel');
+  const numeCazare = op ? (op.nume_afisat || op.nume_afacere) : '';
+  const table = isHotel ? 'preinregistrari_hotel' : 'inregistrari_oaspeti';
+
+  let overlay = document.getElementById('fisa-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'fisa-overlay';
+    overlay.className = 'fisa-overlay';
+    document.body.appendChild(overlay);
+  }
+
+  function rows() {
+    const all = isHotel ? regHotelRowsFor(operatorId) : regRowsFor(operatorId);
+    return all.filter(r => r.arhivat);
+  }
+
+  function render() {
+    const list = rows();
+    overlay.innerHTML = `
+      <div class="fisa-card">
+        <div class="fisa-no-print" style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:12px;">
+          <div class="reg-list-title" style="margin:0;">Arhivă cazări</div>
+          <button type="button" class="reg-btn" id="arhiva-close">✕ Închide</button>
+        </div>
+        <div style="margin-bottom:10px;">
+          <div style="font-weight:700; font-size:15px; color:var(--teal-deep);">${escapeHtmlAcc(numeCazare)}</div>
+          <div class="reg-meta-secondary">${list.length} ${list.length === 1 ? 'cazare arhivată' : 'cazări arhivate'}</div>
+        </div>
+        ${list.length === 0 ? '<div class="reg-empty">Nicio cazare arhivată încă.</div>' : list.map(r => {
+          const numeOaspete = [r.prenume, r.nume].filter(Boolean).join(' ') || '— fără nume —';
+          const dataGen = isHotel ? r.creat_la : r.created_at;
+          return `
+          <div class="reg-row" data-arhiva-row="${r.id}">
+            <div class="reg-row-top">
+              <span class="reg-guest-name">${escapeHtmlAcc(numeOaspete)}</span>
+            </div>
+            <div class="reg-highlight">
+              ${r.check_in ? `<span class="reg-dates">📅 ${fmtDataScurt(r.check_in)} → ${fmtDataScurt(r.check_out)}</span>` : ''}
+            </div>
+            <div class="reg-meta-secondary">generat ${fmtDataScurt(dataGen)}</div>
+            <div class="reg-actions reg-actions-divider">
+              <button class="reg-btn" type="button" data-arhiva-restore="${r.id}">↩ Restaurează</button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+
+    overlay.classList.add('open');
+    document.getElementById('arhiva-close').addEventListener('click', () => overlay.classList.remove('open'));
+    overlay.querySelectorAll('[data-arhiva-restore]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-arhiva-restore');
+        btn.disabled = true;
+        const { error } = await supabaseClient.from(table).update({ arhivat: false }).eq('id', id);
+        btn.disabled = false;
+        if (error) { console.error(error); alert('Nu am putut restaura — încearcă din nou.'); return; }
+        const all = isHotel ? regHotelRowsFor(operatorId) : regRowsFor(operatorId);
+        const row = all.find(x => String(x.id) === String(id));
+        if (row) row.arhivat = false;
+        render();
+        const panel = document.getElementById('reg-panel-' + operatorId);
+        if (panel && panel.dataset.built) {
+          if (isHotel) renderRegHotelList(operatorId); else renderRegList(operatorId);
+        }
+      });
+    });
+  }
+
+  render();
 }
 
 function openFisaOcupare(operatorId) {

@@ -1886,46 +1886,12 @@ async function renderFacilitati() {
 
   const sections = [];
 
-  // Check-in — campuri separate, in ordine: data sosirii (doar sejur validat, Essential),
-  // ora generala, cod de acces, camera/apartament, note optionale
-  if (checkin.ora || codAccesEfectiv || checkin.unitate || checkin.instructiuni || receptie.program || dataSosireLabel) {
-    let body = '';
-    // Fără eticheta "Data sosirii" — secțiunea se numește deja "Check-in", eticheta era
-    // redundantă; rămâne doar data calendaristică, ca subtitlu deasupra orei.
-    if (dataSosireLabel) body += `<div class="ci-row"><div class="ci-value">${dataSosireLabel}</div></div>`;
-    if (checkin.ora) body += `<div class="ci-row"><div class="stat-value">${fmt(checkin.ora)}</div></div>`;
-    if (codAccesEfectiv) body += `<div class="ci-row"><div class="ci-label">${t.codAcces}</div><span class="fac-code-big">${fmt(codAccesEfectiv)}</span></div>`;
-    if (checkin.locker_locatie || checkin.locker_numar) {
-      const parts = [checkin.locker_locatie, checkin.locker_numar].filter(Boolean).join(' · ');
-      body += `<div class="fac-row">${FAC_ICONS.pin}<span><b>${t.locker}:</b> ${parts}</span></div>`;
-    }
-    if (checkin.locker_foto_url) {
-      body += `<img src="${checkin.locker_foto_url}" alt="${t.locker}" style="width:100%; max-height:220px; object-fit:cover; border-radius:11px; margin:6px 0;">`;
-    }
-    if (checkin.usa_intrare_foto_url) {
-      body += `<div class="ci-label" style="margin-top:8px;">${t.usaIntrare}</div><img src="${checkin.usa_intrare_foto_url}" alt="${t.usaIntrare}" style="width:100%; max-height:220px; object-fit:cover; border-radius:11px; margin:4px 0 6px;">`;
-    }
-    // "Cameră/Apartament" e o singură valoare per-cazare — corectă la apartament (o cazare =
-    // un ghid), dar înșelătoare la hotel (același ghid, comun tuturor camerelor, ar arăta
-    // aceeași "cameră" oricărui oaspete) — de aceea nu o mai afișăm deloc la hotel, chiar
-    // dacă a rămas o valoare veche completată înainte de această schimbare.
-    if (checkin.unitate && !isHotel) {
-      body += `<div class="ci-row"><div class="ci-label">${t.apartament}</div><div class="ci-value">${fmt(checkin.unitate)}</div></div>`;
-    }
-    if (checkin.instructiuni) body += `<div class="ci-row"><div class="ci-label">${t.noteSuplimentare}</div><div class="ci-value ci-note note-bullet">${tr(checkin.instructiuni)}</div></div>`;
-    if (receptie.program || receptie.contact_urgenta) {
-      body += `<div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--line);"><b>${t.receptie}</b>`;
-      if (receptie.program) body += `<div class="fac-row" style="margin-top:6px;">${t.program}: ${fmt(receptie.program)}</div>`;
-      if (receptie.contact_urgenta) body += `<div class="fac-row">${t.urgentaReceptie}: ${tr(receptie.contact_urgenta)}</div>`;
-      body += `</div>`;
-    }
-    sections.push({ key: 'checkin', title: t.checkin, body });
-  }
-
   // Preînregistrare — formular necondiționat, independent de sejurul validat/token-ul de
   // personalizare. La submit: salvăm rândul în preinregistrari_hotel, generăm un cod scurt
   // (afișat ca QR) pentru identificare rapidă la recepție, și — dacă hotelul a configurat
   // un contact — pregătim o notificare (email/WhatsApp) precompletată către recepție.
+  // Afișată ÎNAINTEA secțiunii Check-in (mai jos) — coerență logică: întâi te înregistrezi,
+  // apoi faci check-in.
   if (preinregActiva) {
     const body = `
       <p>${t.preinregIntro}</p>
@@ -1997,6 +1963,42 @@ async function renderFacilitati() {
       </div>
     `;
     sections.push({ key: 'preinregistrare', title: t.preinreg, body, preinregBadge: t.preinregBadge });
+  }
+
+  // Check-in — campuri separate, in ordine: data sosirii (doar sejur validat, Essential),
+  // ora generala, cod de acces, camera/apartament, note optionale
+  if (checkin.ora || codAccesEfectiv || checkin.unitate || checkin.instructiuni || receptie.program || dataSosireLabel) {
+    let body = '';
+    // Fără eticheta "Data sosirii" — secțiunea se numește deja "Check-in", eticheta era
+    // redundantă; rămâne doar data calendaristică, ca subtitlu deasupra orei.
+    if (dataSosireLabel) body += `<div class="ci-row"><div class="ci-value">${dataSosireLabel}</div></div>`;
+    if (checkin.ora) body += `<div class="ci-row"><div class="stat-value">${fmt(checkin.ora)}</div></div>`;
+    if (codAccesEfectiv) body += `<div class="ci-row"><div class="ci-label">${t.codAcces}</div><span class="fac-code-big">${fmt(codAccesEfectiv)}</span></div>`;
+    if (checkin.locker_locatie || checkin.locker_numar) {
+      const parts = [checkin.locker_locatie, checkin.locker_numar].filter(Boolean).join(' · ');
+      body += `<div class="fac-row">${FAC_ICONS.pin}<span><b>${t.locker}:</b> ${parts}</span></div>`;
+    }
+    if (checkin.locker_foto_url) {
+      body += `<img src="${checkin.locker_foto_url}" alt="${t.locker}" style="width:100%; max-height:220px; object-fit:cover; border-radius:11px; margin:6px 0;">`;
+    }
+    if (checkin.usa_intrare_foto_url) {
+      body += `<div class="ci-label" style="margin-top:8px;">${t.usaIntrare}</div><img src="${checkin.usa_intrare_foto_url}" alt="${t.usaIntrare}" style="width:100%; max-height:220px; object-fit:cover; border-radius:11px; margin:4px 0 6px;">`;
+    }
+    // "Cameră/Apartament" e o singură valoare per-cazare — corectă la apartament (o cazare =
+    // un ghid), dar înșelătoare la hotel (același ghid, comun tuturor camerelor, ar arăta
+    // aceeași "cameră" oricărui oaspete) — de aceea nu o mai afișăm deloc la hotel, chiar
+    // dacă a rămas o valoare veche completată înainte de această schimbare.
+    if (checkin.unitate && !isHotel) {
+      body += `<div class="ci-row"><div class="ci-label">${t.apartament}</div><div class="ci-value">${fmt(checkin.unitate)}</div></div>`;
+    }
+    if (checkin.instructiuni) body += `<div class="ci-row"><div class="ci-label">${t.noteSuplimentare}</div><div class="ci-value ci-note note-bullet">${tr(checkin.instructiuni)}</div></div>`;
+    if (receptie.program || receptie.contact_urgenta) {
+      body += `<div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--line);"><b>${t.receptie}</b>`;
+      if (receptie.program) body += `<div class="fac-row" style="margin-top:6px;">${t.program}: ${fmt(receptie.program)}</div>`;
+      if (receptie.contact_urgenta) body += `<div class="fac-row">${t.urgentaReceptie}: ${tr(receptie.contact_urgenta)}</div>`;
+      body += `</div>`;
+    }
+    sections.push({ key: 'checkin', title: t.checkin, body });
   }
 
   // Check-out — data plecarii (doar sejur validat, Essential), apoi ora generala
