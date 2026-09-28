@@ -136,6 +136,24 @@
   .contact-card .icon svg{width:22px; height:22px;}
   .contact-card .label{font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--gold-soft); margin-bottom:2px;}
   .contact-card .value{font-weight:600; font-size:15px; color:#fff;}
+  .contact-form-wrap{background:var(--surface,#FBF8F1); border:1px solid var(--line); border-radius:18px; padding:24px 22px; margin-top:16px;}
+  .contact-form-wrap h3{font-family:'Fraunces', Georgia, serif; font-size:18px; margin:0 0 4px; color:var(--teal-deep);}
+  .contact-form-wrap > p{color:var(--ink-soft); font-size:13.5px; margin:0 0 18px;}
+  .cf-field{margin-bottom:14px;}
+  .cf-field label{display:block; font-size:12.5px; font-weight:600; color:var(--teal-deep); margin-bottom:5px;}
+  .cf-field input[type="text"], .cf-field input[type="email"], .cf-field select, .cf-field textarea{
+    width:100%; border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px;
+    font-family:inherit; color:var(--ink); background:#fff; box-sizing:border-box;}
+  .cf-field textarea{resize:vertical; min-height:90px;}
+  .cf-consimt{display:flex; align-items:flex-start; gap:9px; font-size:12.5px; color:var(--ink-soft); line-height:1.5; margin-bottom:16px;}
+  .cf-consimt input{margin-top:3px; flex-shrink:0;}
+  .cf-consimt a{color:var(--amber-deep,#8F6222); font-weight:600;}
+  .cf-submit{width:100%; background:var(--teal-deep); color:#fff; border:none; border-radius:999px; padding:13px; font-size:14.5px; font-weight:700; cursor:pointer; font-family:inherit;}
+  .cf-submit:disabled{opacity:.6; cursor:default;}
+  .cf-msg{font-size:13px; margin-top:10px; min-height:16px;}
+  .cf-msg.err{color:#9C4536;}
+  .cf-msg.ok{color:var(--teal-deep); font-weight:600;}
+  .company-legal{max-width:1000px; margin:28px auto 0; padding:0 20px; text-align:center; color:var(--ink-soft); font-size:11.5px; line-height:1.7;}
   footer{max-width:1000px; margin:0 auto; padding:24px 20px 40px; text-align:center;
     color:var(--ink-soft); font-size:12.5px; border-top:1px solid var(--line); margin-top:20px; padding-top:24px;}
 
@@ -407,6 +425,47 @@
         </div>
       </a>
     </div>
+
+    <div class="contact-form-wrap">
+      <h3 class="serif">Sau scrie-ne direct un mesaj</h3>
+      <p>Completează formularul și îți răspundem pe email, de obicei în aceeași zi lucrătoare.</p>
+      <form id="contact-form">
+        <div class="cf-field">
+          <label for="cf-nume">Nume</label>
+          <input id="cf-nume" type="text" required>
+        </div>
+        <div class="cf-field">
+          <label for="cf-tip">Firmă sau persoană fizică</label>
+          <select id="cf-tip">
+            <option value="persoana_fizica">Persoană fizică</option>
+            <option value="firma">Firmă</option>
+          </select>
+        </div>
+        <div class="cf-field" id="cf-firma-wrap" style="display:none;">
+          <label for="cf-firma">Numele firmei</label>
+          <input id="cf-firma" type="text">
+        </div>
+        <div class="cf-field">
+          <label for="cf-email">Adresa de email</label>
+          <input id="cf-email" type="email" required>
+        </div>
+        <div class="cf-field">
+          <label for="cf-mesaj">Mesajul tău</label>
+          <textarea id="cf-mesaj" required></textarea>
+        </div>
+        <label class="cf-consimt">
+          <input type="checkbox" id="cf-consimt" required>
+          <span>Am citit și sunt de acord cu <a href="politica-confidentialitate.html" target="_blank" rel="noopener">Politica de confidențialitate</a> — datele de mai sus sunt folosite doar pentru a răspunde solicitării tale.</span>
+        </label>
+        <button type="submit" class="cf-submit" id="cf-submit-btn">Trimite mesajul</button>
+        <div class="cf-msg" id="cf-msg"></div>
+      </form>
+    </div>
+  </div>
+
+  <div class="company-legal">
+    Platforma lokals.ro este operată de <b>S.C. AFINERO ECOPROD S.R.L.</b> · CIF RO41664561 · Reg. Com. J08/2956/2019<br>
+    Str. Nouă, nr. 89, mun. Săcele, jud. Brașov, România
   </div>
 </main>
 <footer>
@@ -843,6 +902,55 @@ document.getElementById('plan-type-hotel').addEventListener('click', () => { pla
 document.getElementById('plan-tier-gratuit').addEventListener('click', () => { planDemoTier = 'gratuit'; renderPlanDemo(); });
 document.getElementById('plan-tier-essential').addEventListener('click', () => { planDemoTier = 'essential'; renderPlanDemo(); });
 renderPlanDemo();
+
+// ===== Formular de contact (landing page) =====
+const cfTip = document.getElementById('cf-tip');
+const cfFirmaWrap = document.getElementById('cf-firma-wrap');
+cfTip.addEventListener('change', () => {
+  cfFirmaWrap.style.display = cfTip.value === 'firma' ? '' : 'none';
+});
+
+document.getElementById('contact-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('cf-submit-btn');
+  const msgEl = document.getElementById('cf-msg');
+  msgEl.textContent = '';
+  msgEl.className = 'cf-msg';
+  btn.disabled = true;
+  btn.textContent = 'Se trimite...';
+
+  const body = {
+    p_nume: document.getElementById('cf-nume').value.trim(),
+    p_tip_solicitant: cfTip.value,
+    p_nume_firma: cfTip.value === 'firma' ? document.getElementById('cf-firma').value.trim() : null,
+    p_email: document.getElementById('cf-email').value.trim(),
+    p_mesaj: document.getElementById('cf-mesaj').value.trim(),
+    p_consimtamant: document.getElementById('cf-consimt').checked,
+  };
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/submit_mesaj_contact`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_KEY,
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation',
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error('save failed');
+    document.getElementById('contact-form').reset();
+    cfFirmaWrap.style.display = 'none';
+    msgEl.textContent = '✓ Mulțumim! Mesajul a fost trimis — îți răspundem pe email cât mai curând.';
+    msgEl.className = 'cf-msg ok';
+  } catch (err) {
+    msgEl.textContent = 'Nu am putut trimite mesajul — încearcă din nou sau scrie-ne direct la contact@lokals.ro.';
+    msgEl.className = 'cf-msg err';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Trimite mesajul';
+  }
+});
 </script>
 </body>
 </html>
