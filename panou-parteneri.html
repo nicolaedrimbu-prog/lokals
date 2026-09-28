@@ -220,6 +220,18 @@
   .redeem-source-chip{font-size:9.5px; font-weight:700; padding:2px 7px; border-radius:999px;}
   .redeem-source-chip.scan{background:#E4EFE2; color:#3C6B3F;}
   .redeem-source-chip.manual{background:var(--gold-soft); color:#8F6222;}
+  .fisa-overlay{display:none; position:fixed; inset:0; background:rgba(24,30,27,0.55); z-index:60; align-items:flex-start; justify-content:center; padding:24px 16px; overflow:auto;}
+  .fisa-overlay.open{display:flex;}
+  .fisa-card{background:#fff; border-radius:16px; max-width:960px; width:100%; padding:20px; box-shadow:0 20px 60px rgba(16,48,43,0.25);}
+  .fisa-table{width:100%; border-collapse:collapse; font-size:11.5px; margin-top:4px;}
+  .fisa-table th, .fisa-table td{border:1px solid var(--line); padding:6px 8px; text-align:left; vertical-align:top;}
+  .fisa-table th{background:var(--cream); font-size:10px; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-soft);}
+  @media print{
+    body > *:not(.fisa-overlay){display:none !important;}
+    .fisa-overlay{position:static; background:none; padding:0; display:block !important;}
+    .fisa-card{box-shadow:none; max-width:none;}
+    .fisa-no-print{display:none !important;}
+  }
 </style>
 </head>
 <body>
@@ -1317,6 +1329,9 @@ function renderClientiList(){
   document.getElementById('client-empty').style.display = list.length ? 'none' : 'block';
   listEl.innerHTML = list.map(c => clientCardHtml(c)).join('');
 
+  listEl.querySelectorAll('[data-client-fisa]').forEach(btn => {
+    btn.addEventListener('click', () => openFisaGrupClient(btn.dataset.clientFisa));
+  });
   listEl.querySelectorAll('[data-client-toggle-payform]').forEach(btn => {
     btn.addEventListener('click', () => toggleClientPayForm(btn.dataset.clientTogglePayform));
   });
@@ -1392,6 +1407,7 @@ function clientCardHtml(c){
           <div class="pmeta">${escapeHtml(c.persoana_contact || '—')} &nbsp;·&nbsp; ${escapeHtml(c.email || '—')} &nbsp;·&nbsp; ${escapeHtml(c.telefon || '—')}${zone.length ? ' &nbsp;·&nbsp; ' + escapeHtml(zone.map(z => zonaLabel(z)).join(', ')) : ''}</div>
         </div>
         <div class="pactions">
+          ${opRows.length ? `<button class="pbtn" data-client-fisa="${escapeHtml(c.id)}" style="border-color:var(--teal); color:var(--teal);" title="Fișele de ocupare ale tuturor locațiilor acestui client, grupate">📁 Fișe de ocupare</button>` : ''}
           <button class="pbtn" data-client-toggle-payform="${escapeHtml(c.id)}">+ Plată</button>
           <button class="pbtn" data-client-toggle-edit="${escapeHtml(c.id)}">Editează</button>
           <button class="pbtn brick" data-client-delete="${escapeHtml(c.id)}">Șterge</button>
@@ -3345,6 +3361,7 @@ function renderRegHotelList() {
       <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--line); font-size:12.5px; color:var(--ink-soft); display:grid; grid-template-columns:1fr 1fr; gap:4px 16px;">
         <div><b>Telefon:</b> ${escapeHtml(r.telefon || '—')}</div>
         <div><b>${r.tip_act === 'pasaport' ? 'Pașaport' : 'CI'}:</b> ${escapeHtml(r.act_serie_numar || '—')}</div>
+        <div><b>CNP:</b> ${escapeHtml(r.cnp || '—')}</div>
         <div><b>Oaspeți:</b> ${r.nr_oaspeti || '—'}</div>
         <div><b>Procesată:</b> ${r.procesat_la ? fmtData(r.procesat_la) : '—'}</div>
       </div>
@@ -3357,12 +3374,17 @@ function renderRegHotelList() {
           <button class="bo-copy" data-reg-hotel-view-semnatura="${r.id}">✍️ Vezi semnătura</button>
         </div>` : ''}
       <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+        <button class="pbtn" data-reg-hotel-fisa="${escapeHtml(r.operator_id)}" style="border-color:var(--teal); color:var(--teal);" title="Deschide fișa de ocupare oficială a acestei cazări">📋 Fișă de ocupare</button>
         ${r.arhivat
           ? `<button class="pbtn primary" data-reg-hotel-restore="${r.id}" title="Scoate din arhivă și pune-o înapoi în listă">↩ Restaurează</button>`
           : `<button class="pbtn" data-reg-hotel-archive="${r.id}" style="border-color:var(--ink-soft); color:var(--ink-soft);" title="Mută în arhivă — iese din listă dar rămâne salvată, o poți restaura oricând">🗄 Arhivează</button>`}
       </div>
     </div>`;
   }).join('');
+
+  listEl.querySelectorAll('[data-reg-hotel-fisa]').forEach(btn => {
+    btn.addEventListener('click', () => openFisaOcupareAdmin(btn.getAttribute('data-reg-hotel-fisa')));
+  });
 
   listEl.querySelectorAll('[data-reg-hotel-archive]').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -3536,6 +3558,368 @@ function regOperatorName(operatorId) {
   return row ? (row.raw.nume_afisat || row.raw.nume_afacere) : '—';
 }
 
+function operatorRawById(operatorId) {
+  const row = ROWS.find(r => r.source === 'operatori' && String(r.id) === String(operatorId));
+  return row ? row.raw : null;
+}
+
+// Fișă de ocupare a capacității de cazare — formularul oficial (OPANAF nr. 381/2026), disponibil
+// și din panoul de administrare, pentru cazurile în care gazda apelează la noi să-i pregătim sau
+// să-i trimitem documentele solicitate de autorități. Aceeași logică ca în contul-meu.html.
+const GDPR_FISA_FOOTER = 'Document care conţine date cu caracter personal protejate de prevederile Regulamentului (UE) 2016/679.';
+
+function fisaRowsForAdmin(operatorId) {
+  const op = operatorRawById(operatorId);
+  const isHotel = !!(op && op.tip === 'hotel');
+  if (isHotel) {
+    return REG_HOTEL_ROWS.filter(r => String(r.operator_id) === String(operatorId) && !r.arhivat)
+      .map(r => ({
+        prenume: r.prenume, nume: r.nume, cetatenie: r.cetatenie, cnp: r.cnp,
+        act_tip: r.tip_act, act_serie_numar: r.act_serie_numar,
+        data_nasterii: r.data_nasterii, check_in: r.check_in, check_out: r.check_out,
+      }));
+  }
+  return REG_ROWS.filter(r => String(r.operator_id) === String(operatorId) && r.status === 'validat');
+}
+
+function fisaYearsForAdmin(rows) {
+  const years = new Set();
+  rows.forEach(r => { const y = String(r.check_in || '').slice(0, 4); if (y) years.add(y); });
+  return Array.from(years).sort().reverse();
+}
+
+function openFisaOcupareAdmin(operatorId) {
+  const op = operatorRawById(operatorId);
+  const numeCazare = op ? (op.nume_afisat || op.nume_afacere) : '';
+  const allRows = fisaRowsForAdmin(operatorId).slice().sort((a, b) => String(a.check_in || '').localeCompare(String(b.check_in || '')));
+  const years = fisaYearsForAdmin(allRows);
+  let selectedYear = years[0] || String(new Date().getFullYear());
+
+  let overlay = document.getElementById('fisa-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'fisa-overlay';
+    overlay.className = 'fisa-overlay';
+    document.body.appendChild(overlay);
+  }
+
+  function rowsForYear(year) {
+    return allRows.filter(r => String(r.check_in || '').slice(0, 4) === String(year));
+  }
+
+  function render() {
+    const rows = rowsForYear(selectedYear);
+    const yearOptionsHtml = (years.length ? years : [selectedYear])
+      .map(y => `<option value="${y}" ${y === selectedYear ? 'selected' : ''}>${y}</option>`).join('');
+    overlay.innerHTML = `
+      <div class="fisa-card">
+        <div class="fisa-no-print" style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:12px;">
+          <div class="reg-list-title" style="margin:0;">Fișă de ocupare a capacității de cazare</div>
+          <button type="button" class="pbtn" id="fisa-close">✕ Închide</button>
+        </div>
+        <div style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:flex-end; gap:10px; flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:700; font-size:15px; color:var(--teal-deep);">${escapeHtml(numeCazare)}</div>
+            <div class="pmeta">${escapeHtml((op && op.adresa) || '')}</div>
+            <div class="pmeta">Generat ${fmtData(new Date().toISOString())} · ${rows.length} ${rows.length === 1 ? 'înregistrare' : 'înregistrări'} · temei legal OPANAF nr. 381/2026</div>
+          </div>
+          <div class="fisa-no-print">
+            <label style="font-size:12px; font-weight:600; color:var(--teal-deep); display:block; margin-bottom:3px;">Anul</label>
+            <select id="fisa-year">${yearOptionsHtml}</select>
+          </div>
+        </div>
+        ${rows.length === 0 ? '<div class="reg-empty" style="text-align:center; color:var(--ink-soft); padding:16px 0;">Nicio înregistrare pentru anul selectat încă.</div>' : `
+        <table class="fisa-table">
+          <thead><tr>
+            <th>Nr.</th><th>Nume și prenume</th><th>CNP</th><th>Act identitate</th><th>Cetățenie</th><th>Data nașterii</th><th>De la</th><th>Până la</th>
+          </tr></thead>
+          <tbody>
+            ${rows.map((r, i) => `
+              <tr>
+                <td>${i + 1}</td>
+                <td>${escapeHtml([r.prenume, r.nume].filter(Boolean).join(' ') || '—')}</td>
+                <td>${escapeHtml(r.cnp || '—')}</td>
+                <td>${escapeHtml((r.act_tip === 'pasaport' ? 'Pașaport' : 'CI') + ' ' + (r.act_serie_numar || '—'))}</td>
+                <td>${escapeHtml(r.cetatenie || '—')}</td>
+                <td>${r.data_nasterii ? fmtData(r.data_nasterii) : '—'}</td>
+                <td>${r.check_in ? fmtData(r.check_in) : '—'}</td>
+                <td>${r.check_out ? fmtData(r.check_out) : '—'}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+        <p class="pmeta" style="margin-top:8px; font-size:11px;">${GDPR_FISA_FOOTER}</p>`}
+        <div class="fisa-no-print" style="display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;">
+          <button type="button" class="pbtn primary" id="fisa-print">🖨️ Printează</button>
+          <button type="button" class="pbtn" id="fisa-csv" ${rows.length === 0 ? 'disabled' : ''}>⬇ Exportă CSV</button>
+          <button type="button" class="pbtn" id="fisa-pdf" ${rows.length === 0 ? 'disabled' : ''}>⬇ Descarcă PDF</button>
+          <button type="button" class="pbtn" id="fisa-email" ${rows.length === 0 ? 'disabled' : ''}>✉️ Trimite pe email</button>
+        </div>
+      </div>`;
+
+    overlay.classList.add('open');
+    document.getElementById('fisa-close').addEventListener('click', () => overlay.classList.remove('open'));
+    document.getElementById('fisa-print').addEventListener('click', () => window.print());
+    const yearSel = document.getElementById('fisa-year');
+    if (yearSel) yearSel.addEventListener('change', () => { selectedYear = yearSel.value; render(); });
+    const csvBtn = document.getElementById('fisa-csv');
+    if (csvBtn && !csvBtn.disabled) csvBtn.addEventListener('click', () => downloadFisaCsvAdmin(numeCazare, rows));
+    const pdfBtn = document.getElementById('fisa-pdf');
+    if (pdfBtn && !pdfBtn.disabled) pdfBtn.addEventListener('click', () => downloadFisaPdfAdmin(op, numeCazare, rows, selectedYear));
+    const emailBtn = document.getElementById('fisa-email');
+    if (emailBtn && !emailBtn.disabled) emailBtn.addEventListener('click', () => sendFisaEmailAdmin(op, numeCazare, rows, selectedYear, emailBtn));
+  }
+
+  render();
+}
+
+function downloadFisaCsvAdmin(numeCazare, rows) {
+  const header = ['Nr.', 'Nume complet', 'CNP', 'Tip act', 'Serie și număr', 'Cetățenie', 'Data nașterii', 'Sosire', 'Plecare'];
+  const csvEscape = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+  const lines = [header.map(csvEscape).join(',')];
+  rows.forEach((r, i) => {
+    lines.push([
+      i + 1,
+      [r.prenume, r.nume].filter(Boolean).join(' '),
+      r.cnp || '',
+      r.act_tip === 'pasaport' ? 'Pașaport' : 'CI',
+      r.act_serie_numar || '',
+      r.cetatenie || '',
+      r.data_nasterii || '',
+      r.check_in || '',
+      r.check_out || '',
+    ].map(csvEscape).join(','));
+  });
+  const csv = '﻿' + lines.join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `fisa-ocupare-${(numeCazare || 'cazare').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function buildFisaPdfDocAdmin(op, numeCazare, rows, year) {
+  if (typeof jspdf === 'undefined') { alert('Biblioteca de export PDF nu s-a încărcat — verifică conexiunea la internet și reîncearcă.'); return null; }
+  const { jsPDF } = jspdf;
+  const doc = new jsPDF();
+  doc.setFontSize(13);
+  doc.text('Fisa de ocupare a capacitatii de cazare', 14, 16);
+  doc.setFontSize(8);
+  doc.text('Temei legal: OPANAF nr. 381/2026', 14, 22);
+  doc.setFontSize(10);
+  doc.text(`Unitatea de cazare: ${numeCazare || '-'}`, 14, 30);
+  doc.text(`Adresa: ${(op && op.adresa) || '-'}`, 14, 36);
+  doc.text(`Anul: ${year || '-'}`, 14, 42);
+  doc.autoTable({
+    startY: 48,
+    head: [['Nr.', 'Nume si prenume', 'CNP', 'Act identitate', 'Cetatenie', 'Data nasterii', 'De la', 'Pana la']],
+    body: rows.map((r, i) => [
+      i + 1,
+      [r.prenume, r.nume].filter(Boolean).join(' ') || '-',
+      r.cnp || '-',
+      (r.act_tip === 'pasaport' ? 'Pasaport' : 'CI') + ' ' + (r.act_serie_numar || '-'),
+      r.cetatenie || '-',
+      r.data_nasterii ? fmtData(r.data_nasterii) : '-',
+      r.check_in ? fmtData(r.check_in) : '-',
+      r.check_out ? fmtData(r.check_out) : '-',
+    ]),
+    styles: { fontSize: 7 },
+    headStyles: { fillColor: [16, 48, 43] },
+  });
+  const finalY = (doc.lastAutoTable && doc.lastAutoTable.finalY) || 60;
+  doc.setFontSize(7);
+  doc.text(GDPR_FISA_FOOTER, 14, finalY + 10, { maxWidth: 180 });
+  return doc;
+}
+
+function downloadFisaPdfAdmin(op, numeCazare, rows, year) {
+  const doc = buildFisaPdfDocAdmin(op, numeCazare, rows, year);
+  if (!doc) return;
+  doc.save(`fisa-ocupare-${(numeCazare || 'cazare').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${year || ''}.pdf`);
+}
+
+async function sendFisaEmailAdmin(op, numeCazare, rows, year, btn) {
+  if (!rows.length) { alert('Nu există înregistrări de trimis pentru anul selectat.'); return; }
+  const defaultEmail = (op && op.email) || '';
+  const to = prompt('Trimite fișa de ocupare la ce adresă de email?', defaultEmail);
+  if (!to) return;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) { alert('Adresă de email invalidă.'); return; }
+  const doc = buildFisaPdfDocAdmin(op, numeCazare, rows, year);
+  if (!doc) return;
+  const origText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Se trimite...';
+  try {
+    const dataUri = doc.output('datauristring');
+    const pdfBase64 = dataUri.split(',')[1];
+    const filename = `fisa-ocupare-${(numeCazare || 'cazare').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${year || ''}.pdf`;
+    const { error } = await supabaseClient.functions.invoke('send-fisa-ocupare', {
+      body: { to, subject: `Fișă de ocupare ${year || ''} — ${numeCazare}`, filename, pdfBase64, numeCazare },
+    });
+    if (error) throw error;
+    alert('Fișa a fost trimisă pe email.');
+  } catch (err) {
+    console.error(err);
+    alert('Nu am putut trimite fișa pe email — încearcă din nou.');
+  }
+  btn.disabled = false;
+  btn.textContent = origText;
+}
+
+// Fișe de ocupare grupate pe client — pentru gazdele cu mai multe apartamente/hotel legate de
+// același client din "Status clienți": un singur PDF cu câte o secțiune per locație, descărcabil
+// sau trimis pe email dintr-o dată, pentru cazul în care gazda ne cere ei documentele complete.
+function openFisaGrupClient(clientId) {
+  const c = CLIENTI.find(cc => cc.id === clientId);
+  const opRows = clientOperatori(clientId);
+  if (!c || !opRows.length) return;
+
+  const allYears = new Set();
+  opRows.forEach(op => fisaRowsForAdmin(op.id).forEach(r => {
+    const y = String(r.check_in || '').slice(0, 4); if (y) allYears.add(y);
+  }));
+  const years = Array.from(allYears).sort().reverse();
+  let selectedYear = years[0] || String(new Date().getFullYear());
+
+  let overlay = document.getElementById('fisa-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'fisa-overlay';
+    overlay.className = 'fisa-overlay';
+    document.body.appendChild(overlay);
+  }
+
+  function locRowsHtml(year) {
+    return opRows.map(op => {
+      const rows = fisaRowsForAdmin(op.id).filter(r => String(r.check_in || '').slice(0, 4) === String(year));
+      return `
+        <div class="client-loc-row">
+          <span class="name">${escapeHtml(op.nume_afisat || op.nume_afacere || '(fără nume)')} <span class="meta">· ${op.tip === 'hotel' ? 'Hotel' : 'Apartament'}</span></span>
+          <span class="meta">${rows.length} ${rows.length === 1 ? 'înregistrare' : 'înregistrări'} în ${year}</span>
+          <button type="button" class="bo-copy" data-fisa-loc-open="${escapeHtml(op.id)}">Deschide individual</button>
+        </div>`;
+    }).join('');
+  }
+
+  function render() {
+    const yearOptionsHtml = (years.length ? years : [selectedYear])
+      .map(y => `<option value="${y}" ${y === selectedYear ? 'selected' : ''}>${y}</option>`).join('');
+    const totalRows = opRows.reduce((sum, op) => sum + fisaRowsForAdmin(op.id).filter(r => String(r.check_in || '').slice(0, 4) === String(selectedYear)).length, 0);
+    overlay.innerHTML = `
+      <div class="fisa-card">
+        <div class="fisa-no-print" style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:12px;">
+          <div class="reg-list-title" style="margin:0;">Fișe de ocupare — ${escapeHtml(c.nume_client)}</div>
+          <button type="button" class="pbtn" id="fisa-close">✕ Închide</button>
+        </div>
+        <div style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:flex-end; gap:10px; flex-wrap:wrap;">
+          <div class="pmeta">${opRows.length} ${opRows.length === 1 ? 'locație' : 'locații'} legate de acest client · ${totalRows} ${totalRows === 1 ? 'înregistrare' : 'înregistrări'} în ${selectedYear} · temei legal OPANAF nr. 381/2026</div>
+          <div class="fisa-no-print">
+            <label style="font-size:12px; font-weight:600; color:var(--teal-deep); display:block; margin-bottom:3px;">Anul</label>
+            <select id="fisa-grup-year">${yearOptionsHtml}</select>
+          </div>
+        </div>
+        <div style="margin-top:4px;">${locRowsHtml(selectedYear)}</div>
+        <div class="fisa-no-print" style="display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;">
+          <button type="button" class="pbtn primary" id="fisa-grup-pdf" ${totalRows === 0 ? 'disabled' : ''}>⬇ Descarcă toate (PDF, câte o secțiune per locație)</button>
+          <button type="button" class="pbtn" id="fisa-grup-email" ${totalRows === 0 ? 'disabled' : ''}>✉️ Trimite toate pe email</button>
+        </div>
+      </div>`;
+
+    overlay.classList.add('open');
+    document.getElementById('fisa-close').addEventListener('click', () => overlay.classList.remove('open'));
+    const yearSel = document.getElementById('fisa-grup-year');
+    if (yearSel) yearSel.addEventListener('change', () => { selectedYear = yearSel.value; render(); });
+    overlay.querySelectorAll('[data-fisa-loc-open]').forEach(btn => {
+      btn.addEventListener('click', () => openFisaOcupareAdmin(btn.getAttribute('data-fisa-loc-open')));
+    });
+    const pdfBtn = document.getElementById('fisa-grup-pdf');
+    if (pdfBtn && !pdfBtn.disabled) pdfBtn.addEventListener('click', () => downloadFisaGrupPdf(c, opRows, selectedYear));
+    const emailBtn = document.getElementById('fisa-grup-email');
+    if (emailBtn && !emailBtn.disabled) emailBtn.addEventListener('click', () => sendFisaGrupEmail(c, opRows, selectedYear, emailBtn));
+  }
+
+  render();
+}
+
+function buildFisaPdfMultiAdmin(opRows, year) {
+  if (typeof jspdf === 'undefined') { alert('Biblioteca de export PDF nu s-a încărcat — verifică conexiunea la internet și reîncearcă.'); return null; }
+  const { jsPDF } = jspdf;
+  const doc = new jsPDF();
+  let first = true;
+  opRows.forEach(op => {
+    const rows = fisaRowsForAdmin(op.id)
+      .filter(r => String(r.check_in || '').slice(0, 4) === String(year))
+      .slice().sort((a, b) => String(a.check_in || '').localeCompare(String(b.check_in || '')));
+    const numeCazare = op.nume_afisat || op.nume_afacere || '';
+    if (!first) doc.addPage();
+    first = false;
+    doc.setFontSize(13);
+    doc.text('Fisa de ocupare a capacitatii de cazare', 14, 16);
+    doc.setFontSize(8);
+    doc.text('Temei legal: OPANAF nr. 381/2026', 14, 22);
+    doc.setFontSize(10);
+    doc.text(`Unitatea de cazare: ${numeCazare || '-'}`, 14, 30);
+    doc.text(`Adresa: ${op.adresa || '-'}`, 14, 36);
+    doc.text(`Anul: ${year || '-'}`, 14, 42);
+    doc.autoTable({
+      startY: 48,
+      head: [['Nr.', 'Nume si prenume', 'CNP', 'Act identitate', 'Cetatenie', 'Data nasterii', 'De la', 'Pana la']],
+      body: rows.length ? rows.map((r, i) => [
+        i + 1,
+        [r.prenume, r.nume].filter(Boolean).join(' ') || '-',
+        r.cnp || '-',
+        (r.act_tip === 'pasaport' ? 'Pasaport' : 'CI') + ' ' + (r.act_serie_numar || '-'),
+        r.cetatenie || '-',
+        r.data_nasterii ? fmtData(r.data_nasterii) : '-',
+        r.check_in ? fmtData(r.check_in) : '-',
+        r.check_out ? fmtData(r.check_out) : '-',
+      ]) : [['-', 'Nicio înregistrare în ' + (year || 'anul selectat'), '', '', '', '', '', '']],
+      styles: { fontSize: 7 },
+      headStyles: { fillColor: [16, 48, 43] },
+    });
+    const finalY = (doc.lastAutoTable && doc.lastAutoTable.finalY) || 60;
+    doc.setFontSize(7);
+    doc.text(GDPR_FISA_FOOTER, 14, finalY + 10, { maxWidth: 180 });
+  });
+  return doc;
+}
+
+function downloadFisaGrupPdf(client, opRows, year) {
+  const doc = buildFisaPdfMultiAdmin(opRows, year);
+  if (!doc) return;
+  doc.save(`fise-ocupare-${(client.nume_client || 'client').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${year || ''}.pdf`);
+}
+
+async function sendFisaGrupEmail(client, opRows, year, btn) {
+  const defaultEmail = client.email || '';
+  const to = prompt('Trimite toate fișele de ocupare la ce adresă de email?', defaultEmail);
+  if (!to) return;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) { alert('Adresă de email invalidă.'); return; }
+  const doc = buildFisaPdfMultiAdmin(opRows, year);
+  if (!doc) return;
+  const origText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Se trimite...';
+  try {
+    const dataUri = doc.output('datauristring');
+    const pdfBase64 = dataUri.split(',')[1];
+    const filename = `fise-ocupare-${(client.nume_client || 'client').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${year || ''}.pdf`;
+    const { error } = await supabaseClient.functions.invoke('send-fisa-ocupare', {
+      body: { to, subject: `Fișe de ocupare ${year || ''} — ${client.nume_client}`, filename, pdfBase64, numeCazare: client.nume_client },
+    });
+    if (error) throw error;
+    alert('Fișele au fost trimise pe email.');
+  } catch (err) {
+    console.error(err);
+    alert('Nu am putut trimite fișele pe email — încearcă din nou.');
+  }
+  btn.disabled = false;
+  btn.textContent = origText;
+}
+
 function renderRegChips() {
   const wrap = document.getElementById('reg-status-filter');
   if (!wrap) return;
@@ -3590,6 +3974,7 @@ function renderRegList() {
         ${r.status === 'asteptare_validare' ? `
           <button class="pbtn primary" data-reg-approve="${r.id}">✓ Validează</button>
           <button class="pbtn" data-reg-reject="${r.id}" style="border-color:var(--brick); color:var(--brick);">Respinge</button>` : ''}
+        <button class="pbtn" data-reg-fisa="${escapeHtml(r.operator_id)}" style="border-color:var(--teal); color:var(--teal);" title="Deschide fișa de ocupare oficială a acestei cazări">📋 Fișă de ocupare</button>
         ${r.arhivat
           ? `<button class="pbtn primary" data-reg-restore="${r.id}" title="Scoate din arhivă și pune-o înapoi în listă">↩ Restaurează</button>`
           : `<button class="pbtn" data-reg-archive="${r.id}" style="border-color:var(--ink-soft); color:var(--ink-soft);" title="Mută în arhivă — iese din listă dar rămâne salvată, o poți restaura oricând">🗄 Arhivează</button>`}
@@ -3604,6 +3989,7 @@ function renderRegList() {
         <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--line); font-size:12.5px; color:var(--ink-soft); display:grid; grid-template-columns:1fr 1fr; gap:4px 16px;">
           <div><b>Telefon:</b> ${escapeHtml(r.telefon || '—')}</div>
           <div><b>${r.act_tip === 'pasaport' ? 'Pașaport' : 'CI'}:</b> ${escapeHtml(r.act_serie_numar || '—')}</div>
+          <div><b>CNP:</b> ${escapeHtml(r.cnp || '—')}</div>
           <div><b>Oaspeți:</b> ${r.nr_oaspeti || '—'}</div>
           <div><b>Completat:</b> ${fmtData(r.completat_la)}</div>
         </div>` : ''}
@@ -3699,6 +4085,10 @@ function renderRegList() {
       if (error) { console.error(error); alert('Nu am putut respinge — încearcă din nou.'); return; }
       loadRegistrations();
     });
+  });
+
+  listEl.querySelectorAll('[data-reg-fisa]').forEach(btn => {
+    btn.addEventListener('click', () => openFisaOcupareAdmin(btn.getAttribute('data-reg-fisa')));
   });
 
   listEl.querySelectorAll('[data-reg-archive]').forEach(btn => {
