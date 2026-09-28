@@ -327,9 +327,13 @@
           <span id="locatie-directii-text"></span>
         </a>
         <div id="locatie-directii-hint" style="display:none;"></div>
-        <div id="locatie-parcare" class="fac-row">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5B6459" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:2px;"><rect x="3" y="7" width="15" height="12" rx="2"/><path d="M18 10l4-2v9l-4-2"/></svg>
-          <span><b id="locatie-parcare-label" style="color:var(--ink);"></b>&nbsp;<span id="locatie-parcare-text"></span></span>
+        <div id="locatie-parcare" class="fac-item" style="display:none; border-top:1px solid var(--line); border-bottom:none; margin-top:14px;">
+          <div class="fac-head">
+            <div class="fac-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#26382C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h-2v-6l2 -5h9l4 5h1a2 2 0 0 1 2 2v4h-2"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/></svg></div>
+            <div class="fac-title-wrap"><div class="fac-title" id="locatie-parcare-label"></div></div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B6459" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="fac-chevron"><path d="M6 9l6 6l6 -6"/></svg>
+          </div>
+          <div class="fac-body" id="locatie-parcare-body"></div>
         </div>
       </div>
     </div>
@@ -1846,7 +1850,7 @@ async function renderFacilitati() {
   const preinregActiva = currentOperator.preinregistrare_activa === true;
 
   // are cazarea macar o informatie de afisat? altfel nu aratam sectiunea deloc
-  const hasAny = currentOperator.adresa || currentOperator.foto_url || loc.gps || loc.parcare ||
+  const hasAny = currentOperator.adresa || currentOperator.foto_url || loc.gps || loc.parcare || loc.parcare_poza_url ||
     codAccesEfectiv || checkin.instructiuni || checkin.ora || checkin.unitate || checkout.ora || checkout.instructiuni ||
     dataSosireLabel || dataPlecareLabel ||
     wifi.ssid || currentOperator.telefon || urgente.spital ||
@@ -2188,7 +2192,7 @@ async function renderFacilitati() {
 // ---------- Cadranul dedicat "Locație & acces" (poză, adresă, buton de direcții) ----------
 function renderLocatieCard(op, loc, t) {
   const card = document.getElementById('facilitati-locatie-card');
-  const hasLocatie = !!(op.adresa || op.foto_url || loc.gps || loc.parcare);
+  const hasLocatie = !!(op.adresa || op.foto_url || loc.gps || loc.parcare || loc.parcare_poza_url);
   if (!hasLocatie) { card.style.display = 'none'; return; }
   card.style.display = '';
 
@@ -2237,11 +2241,25 @@ function renderLocatieCard(op, loc, t) {
     dirHint.style.display = 'none';
   }
 
+  // Parcare — evantai propriu, plasat sub butonul "Du-mă acolo": rămâne grupat cu restul
+  // informațiilor de locație/acces, dar pliat implicit, ca restul secțiunilor din ghid.
   const parcareEl = document.getElementById('locatie-parcare');
-  if (loc.parcare) {
-    document.getElementById('locatie-parcare-label').textContent = t.parcare + ':';
-    document.getElementById('locatie-parcare-text').textContent = tr(loc.parcare);
-    parcareEl.style.display = 'flex';
+  const parcareAreContinut = !!(loc.parcare || loc.parcare_poza_url);
+  if (parcareAreContinut) {
+    document.getElementById('locatie-parcare-label').textContent = t.parcare;
+    let body = '';
+    if (loc.parcare) body += `<div class="fac-row note-bullet">${tr(loc.parcare)}</div>`;
+    if (loc.parcare_poza_url) {
+      body += `<a href="${loc.parcare_poza_url}" target="_blank" rel="noopener" style="display:block; width:140px; border-radius:10px; overflow:hidden; border:1px solid var(--line); margin-top:${loc.parcare ? '8px' : '0'};">
+        <img src="${loc.parcare_poza_url}" alt="" style="width:100%; display:block;">
+      </a>`;
+    }
+    document.getElementById('locatie-parcare-body').innerHTML = body;
+    parcareEl.style.display = 'block';
+    if (!parcareEl.dataset.bound) {
+      parcareEl.querySelector('.fac-head').addEventListener('click', () => parcareEl.classList.toggle('open'));
+      parcareEl.dataset.bound = '1';
+    }
   } else {
     parcareEl.style.display = 'none';
   }
