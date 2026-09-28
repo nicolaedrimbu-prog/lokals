@@ -963,6 +963,7 @@ function renderGateForm() {
         <div class="rg-field"><label for="rg-act-nr">${g.actNr}</label><input id="rg-act-nr" required value="${escapeHtmlGuide(s.act_serie_numar || '')}"></div>
       </div>
       <div class="rg-field"><label for="rg-cetatenie">${g.cetatenie}</label><input id="rg-cetatenie" required value="${escapeHtmlGuide(s.cetatenie || defaultCetatenie)}"></div>
+      <div class="rg-field"><label for="rg-cnp">${g.cnp}</label><input id="rg-cnp" inputmode="numeric" maxlength="13" pattern="[0-9]{13}" placeholder="${g.cnpPlaceholder}" value="${escapeHtmlGuide(s.cnp || '')}"></div>
       <div class="rg-row2">
         <div class="rg-field"><label for="rg-data-nasterii">${g.dataNasterii}</label><input id="rg-data-nasterii" type="date" required value="${s.data_nasterii || ''}"></div>
         <div class="rg-field"><label for="rg-scop-sedere">${g.scopSedere}</label>
@@ -1010,7 +1011,7 @@ function captureGateFormDraft() {
   currentStay = {
     ...(currentStay || {}),
     prenume: val('rg-prenume'), nume: val('rg-nume'), email: val('rg-email'), telefon: val('rg-telefon'),
-    act_tip: val('rg-act-tip'), act_serie_numar: val('rg-act-nr'), cetatenie: val('rg-cetatenie'),
+    act_tip: val('rg-act-tip'), act_serie_numar: val('rg-act-nr'), cetatenie: val('rg-cetatenie'), cnp: val('rg-cnp'),
     data_nasterii: val('rg-data-nasterii'), adresa_domiciliu: val('rg-adresa-domiciliu'), scop_sedere: val('rg-scop-sedere'),
     check_in: val('rg-checkin'), check_out: val('rg-checkout'), nr_oaspeti: val('rg-nr-oaspeti'),
   };
@@ -1054,6 +1055,7 @@ async function submitRegistration(e) {
     p_act_tip: document.getElementById('rg-act-tip').value,
     p_act_serie_numar: document.getElementById('rg-act-nr').value.trim(),
     p_cetatenie: document.getElementById('rg-cetatenie').value.trim(),
+    p_cnp: document.getElementById('rg-cnp').value.trim(),
     p_data_nasterii: document.getElementById('rg-data-nasterii').value,
     p_adresa_domiciliu: document.getElementById('rg-adresa-domiciliu').value.trim(),
     p_scop_sedere: document.getElementById('rg-scop-sedere').value,
@@ -1150,6 +1152,7 @@ async function submitPreinregistrare(e) {
     tip_act: document.getElementById('prb-tip-act').value,
     act_serie_numar: document.getElementById('prb-act-nr').value.trim() || null,
     cetatenie: document.getElementById('prb-cetatenie').value.trim() || null,
+    cnp: document.getElementById('prb-cnp').value.trim() || null,
     data_nasterii: document.getElementById('prb-data-nasterii').value || null,
     adresa_domiciliu: document.getElementById('prb-adresa-domiciliu').value.trim() || null,
     scop_sedere: document.getElementById('prb-scop-sedere').value,
@@ -1208,6 +1211,7 @@ async function submitPreinregistrare(e) {
         p_tip_act: payload.tip_act,
         p_act_serie_numar: payload.act_serie_numar,
         p_cetatenie: payload.cetatenie,
+        p_cnp: payload.cnp,
         p_data_nasterii: payload.data_nasterii,
         p_adresa_domiciliu: payload.adresa_domiciliu,
         p_scop_sedere: payload.scop_sedere,
@@ -1504,6 +1508,7 @@ const I18N = {
       prenume: "Prenume", nume: "Nume", email: "Email", telefon: "Telefon",
       actTip: "Act identitate", actCI: "Carte de identitate", actPasaport: "Pașaport",
       actNr: "Serie și număr", cetatenie: "Cetățenie",
+      cnp: "CNP", cnpPlaceholder: "13 cifre (opțional pentru cetățeni străini)",
       dataNasterii: "Data nașterii", adresaDomiciliu: "Adresă de domiciliu",
       scopSedere: "Scopul șederii", scopTurism: "Turism", scopAfaceri: "Afaceri", scopAltul: "Altul",
       checkin: "Check-in", checkout: "Check-out", nrOaspeti: "Număr oaspeți",
@@ -1559,6 +1564,7 @@ const I18N = {
       preinregPrenume: "Prenume", preinregNume: "Nume", preinregTipActLabel: "Act identitate",
       preinregTipActCI: "Carte de identitate", preinregTipActPasaport: "Pașaport", preinregSerie: "Serie și număr act",
       preinregCetatenie: "Cetățenie",
+      cnp: "CNP", cnpPlaceholder: "13 cifre (opțional pentru cetățeni străini)",
       dataNasterii: "Data nașterii", adresaDomiciliu: "Adresă de domiciliu",
       scopSedere: "Scopul șederii", scopTurism: "Turism", scopAfaceri: "Afaceri", scopAltul: "Altul",
       preinregCheckin: "Check-in", preinregCheckout: "Check-out", preinregNr: "Număr oaspeți",
@@ -1633,6 +1639,7 @@ const I18N = {
       prenume: "First name", nume: "Last name", email: "Email", telefon: "Phone",
       actTip: "ID type", actCI: "ID card", actPasaport: "Passport",
       actNr: "ID / passport number", cetatenie: "Nationality",
+      cnp: "Personal ID number (CNP)", cnpPlaceholder: "13 digits (optional for foreign citizens)",
       dataNasterii: "Date of birth", adresaDomiciliu: "Home address",
       scopSedere: "Purpose of stay", scopTurism: "Tourism", scopAfaceri: "Business", scopAltul: "Other",
       checkin: "Check-in", checkout: "Check-out", nrOaspeti: "Number of guests",
@@ -1688,6 +1695,7 @@ const I18N = {
       preinregPrenume: "First name", preinregNume: "Last name", preinregTipActLabel: "ID type",
       preinregTipActCI: "ID card", preinregTipActPasaport: "Passport", preinregSerie: "ID / passport number",
       preinregCetatenie: "Nationality",
+      cnp: "Personal ID number (CNP)", cnpPlaceholder: "13 digits (optional for foreign citizens)",
       dataNasterii: "Date of birth", adresaDomiciliu: "Home address",
       scopSedere: "Purpose of stay", scopTurism: "Tourism", scopAfaceri: "Business", scopAltul: "Other",
       preinregCheckin: "Check-in", preinregCheckout: "Check-out", preinregNr: "Number of guests",
@@ -1935,6 +1943,7 @@ async function renderFacilitati() {
             <div class="prb-field"><label>${t.preinregSerie}</label><input id="prb-act-nr"></div>
           </div>
           <div class="prb-field"><label>${t.preinregCetatenie}</label><input id="prb-cetatenie" value="România"></div>
+          <div class="prb-field"><label>${t.cnp}</label><input id="prb-cnp" inputmode="numeric" maxlength="13" pattern="[0-9]{13}" placeholder="${t.cnpPlaceholder}"></div>
           <div class="prb-row2">
             <div class="prb-field"><label>${t.dataNasterii}</label><input id="prb-data-nasterii" type="date"></div>
             <div class="prb-field">
