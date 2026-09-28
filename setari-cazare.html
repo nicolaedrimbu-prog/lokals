@@ -184,24 +184,9 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M17.657 16.657L13.414 20.9a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/></svg>
         <div class="card-title">Locație &amp; acces</div>
       </div>
-      <div class="field-group">
-        <label for="f-adresa">Adresă completă</label>
-        <textarea id="f-adresa" class="field" style="min-height:56px; resize:vertical;"></textarea>
-        <div class="hint">Poți lipi aici și un link Google Maps.</div>
-      </div>
-      <div class="two-col" style="margin-bottom:0;">
-        <div>
-          <label for="f-gps">Coordonate GPS</label>
-          <input id="f-gps" class="field" type="text" placeholder="45.5975, 25.4614">
-        </div>
-        <div>
-          <label for="f-parcare">Parcare</label>
-          <input id="f-parcare" class="field" type="text" placeholder="ex. Curte interioară, 6 locuri">
-        </div>
-      </div>
-      <div class="field-group" style="margin-top:16px; padding-top:14px; border-top:1px solid var(--line);">
-        <label style="font-weight:700;">Date imobil — pentru Fișa de ocupare</label>
-        <div class="hint" style="margin-top:2px; margin-bottom:10px;">Aceste câmpuri completează automat secțiunea „I. Datele privind imobilul" din formularul oficial (Fișa de ocupare a capacității de cazare), la fel cum apar în modelul cerut de autorități.</div>
+      <div class="field-group" style="margin-bottom:10px;">
+        <label style="font-weight:700;">Date imobil</label>
+        <div class="hint" style="margin-top:2px;">Aceste câmpuri completează automat atât adresa afișată oaspeților și harta, cât și secțiunea „I. Datele privind imobilul" din formularul oficial (Fișa de ocupare a capacității de cazare).</div>
       </div>
       <div class="two-col">
         <div>
@@ -243,12 +228,32 @@
           <input id="f-fisa-localitate" class="field" type="text" placeholder="ex. Râșnov">
         </div>
       </div>
-      <div class="field-group" style="margin-bottom:0;">
-        <label for="f-fisa-cod-postal">Cod poștal</label>
-        <input id="f-fisa-cod-postal" class="field" type="text" style="max-width:200px;">
+      <div class="two-col" style="margin-bottom:0;">
+        <div>
+          <label for="f-fisa-cod-postal">Cod poștal</label>
+          <input id="f-fisa-cod-postal" class="field" type="text">
+        </div>
+        <div>
+          <label for="f-gps">Coordonate GPS <span style="font-weight:400; color:var(--ink-soft);">(opțional)</span></label>
+          <input id="f-gps" class="field" type="text" placeholder="45.5975, 25.4614">
+        </div>
       </div>
+      <div class="hint" style="margin-top:4px; margin-bottom:14px;">Harta de mai jos se actualizează automat din adresă — completează coordonatele GPS doar dacă adresa nu duce chiar la locul exact.</div>
       <div class="map-preview" id="locatie-map-wrap"><iframe id="locatie-map-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>
       <div class="hint" id="locatie-map-hint" style="display:none;">Așa arată harta pe care o va vedea oaspetele — verifică dacă pinul e la locul corect.</div>
+
+      <div class="field-group" style="margin-top:16px; padding-top:14px; border-top:1px solid var(--line);">
+        <label for="f-parcare">Parcare</label>
+        <input id="f-parcare" class="field" type="text" placeholder="ex. Curte interioară, 6 locuri">
+      </div>
+      <div class="field-group" style="display:flex; gap:12px; align-items:center; margin-bottom:0;">
+        <div id="parcare-poza-preview" class="minibar-preview"></div>
+        <div style="flex:1;">
+          <label for="f-parcare-poza" class="upload-label"><span id="f-parcare-poza-label">Schiță amplasament parcare</span></label>
+          <input id="f-parcare-poza" type="file" accept="image/*" style="display:none;">
+          <div class="hint">Opțional — o poză sau o schiță care arată exact unde sunt locurile de parcare.</div>
+        </div>
+      </div>
     </div>
 
     <!-- Check-in -->
@@ -633,11 +638,31 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2200);
 }
 
+// Adresa afișată (oaspeți, hartă, fișa oficială) e compusă automat din câmpurile structurate
+// de mai sus — nu mai există un câmp separat de "adresă completă" liber, ca să nu poată apărea
+// inconsecvențe între ce vede oaspetele și ce apare pe formularul oficial la control.
+function composedAdresaFromFields() {
+  const strada = document.getElementById('f-fisa-strada').value.trim();
+  const numar = document.getElementById('f-fisa-numar').value.trim();
+  const bloc = document.getElementById('f-fisa-bloc').value.trim();
+  const scara = document.getElementById('f-fisa-scara').value.trim();
+  const etaj = document.getElementById('f-fisa-etaj').value.trim();
+  const ap = document.getElementById('f-fisa-ap').value.trim();
+  const judet = document.getElementById('f-fisa-judet').value.trim();
+  const localitate = document.getElementById('f-fisa-localitate').value.trim();
+  const codPostal = document.getElementById('f-fisa-cod-postal').value.trim();
+
+  const stradaLine = [strada, numar ? `nr. ${numar}` : ''].filter(Boolean).join(' ');
+  const blocLine = [bloc ? `bl. ${bloc}` : '', scara ? `sc. ${scara}` : '', etaj ? `et. ${etaj}` : '', ap ? `ap. ${ap}` : ''].filter(Boolean).join(', ');
+  return [stradaLine, blocLine, localitate, judet, codPostal].filter(Boolean).join(', ');
+}
+
 // Hartă live pentru "Locație & acces": preferă coordonatele GPS dacă sunt completate,
-// altfel folosește adresa text — exact ce va vedea și oaspetele pe butonul "Du-mă acolo".
+// altfel folosește adresa compusă din câmpurile de mai sus — exact ce va vedea și oaspetele
+// pe butonul "Du-mă acolo". Se actualizează automat pe măsură ce scrii în oricare câmp.
 function updateLocatieMapPreview() {
   const gps = document.getElementById('f-gps').value.trim();
-  const adresa = document.getElementById('f-adresa').value.trim();
+  const adresa = composedAdresaFromFields();
   const query = gps || adresa;
   const wrap = document.getElementById('locatie-map-wrap');
   const hint = document.getElementById('locatie-map-hint');
@@ -655,8 +680,10 @@ function scheduleLocatieMapPreview() {
   clearTimeout(locatieMapTimer);
   locatieMapTimer = setTimeout(updateLocatieMapPreview, 700);
 }
-document.getElementById('f-adresa').addEventListener('input', scheduleLocatieMapPreview);
-document.getElementById('f-gps').addEventListener('input', scheduleLocatieMapPreview);
+['f-fisa-strada', 'f-fisa-numar', 'f-fisa-bloc', 'f-fisa-scara', 'f-fisa-etaj', 'f-fisa-ap',
+ 'f-fisa-judet', 'f-fisa-localitate', 'f-fisa-cod-postal', 'f-gps'].forEach(id => {
+  document.getElementById(id).addEventListener('input', scheduleLocatieMapPreview);
+});
 
 // ---------- Regulile casei & Contact/urgențe: liste dinamice de câmpuri libere ----------
 const REGULI_MAX = 10;
@@ -891,13 +918,16 @@ function fillForm(row) {
   document.getElementById('f-bunvenit-mesaj').value = bunVenit.mesaj || '';
   document.getElementById('f-bunvenit-semnatura').value = bunVenit.semnatura || '';
 
-  document.getElementById('f-adresa').value = row.adresa || '';
   document.getElementById('f-gps').value = loc.gps || '';
   document.getElementById('f-parcare').value = loc.parcare || '';
-  updateLocatieMapPreview();
+  document.getElementById('parcare-poza-preview').style.backgroundImage = loc.parcare_poza_url ? `url('${loc.parcare_poza_url}')` : '';
+  document.getElementById('f-parcare-poza-label').textContent = loc.parcare_poza_url ? 'Schimbă schița' : 'Schiță amplasament parcare';
 
   const adresaFisa = f.adresa_fisa || {};
-  document.getElementById('f-fisa-strada').value = adresaFisa.strada || '';
+  // Fallback pe vechiul câmp liber "adresă completă" (row.adresa), pentru cazările configurate
+  // înainte să existe aceste câmpuri structurate — altfel gazda ar vedea totul gol la prima
+  // deschidere, deși avea deja o adresă salvată.
+  document.getElementById('f-fisa-strada').value = adresaFisa.strada || row.adresa || '';
   document.getElementById('f-fisa-numar').value = adresaFisa.numar || '';
   document.getElementById('f-fisa-bloc').value = adresaFisa.bloc || '';
   document.getElementById('f-fisa-scara').value = adresaFisa.scara || '';
@@ -906,6 +936,7 @@ function fillForm(row) {
   document.getElementById('f-fisa-judet').value = adresaFisa.judet || '';
   document.getElementById('f-fisa-localitate').value = adresaFisa.localitate || '';
   document.getElementById('f-fisa-cod-postal').value = adresaFisa.cod_postal || '';
+  updateLocatieMapPreview();
 
   document.getElementById('f-checkin-ora').value = checkin.ora || '';
   document.getElementById('f-cod-locker').value = checkin.cod_acces || '';
@@ -1178,6 +1209,7 @@ let pendingUsaPozaFile = null;
 let pendingServiciiFile1 = null;
 let pendingServiciiFile2 = null;
 let pendingServiciiFile3 = null;
+let pendingParcarePozaFile = null;
 function wireMinibarUpload(inputId, previewId, labelId, setPending) {
   document.getElementById(inputId).addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -1196,6 +1228,7 @@ wireMinibarUpload('f-minibar-foto2', 'minibar-preview-2', 'f-minibar-foto2-label
 wireMinibarUpload('f-reguli-poza', 'reguli-poza-preview', 'f-reguli-poza-label', (f) => pendingReguliPozaFile = f);
 wireMinibarUpload('f-locker-poza', 'locker-poza-preview', 'f-locker-poza-label', (f) => pendingLockerPozaFile = f);
 wireMinibarUpload('f-usa-poza', 'usa-poza-preview', 'f-usa-poza-label', (f) => pendingUsaPozaFile = f);
+wireMinibarUpload('f-parcare-poza', 'parcare-poza-preview', 'f-parcare-poza-label', (f) => pendingParcarePozaFile = f);
 wireMinibarUpload('f-servicii-foto1', 'servicii-preview-1', 'f-servicii-foto1-label', (f) => pendingServiciiFile1 = f);
 wireMinibarUpload('f-servicii-foto2', 'servicii-preview-2', 'f-servicii-foto2-label', (f) => pendingServiciiFile2 = f);
 wireMinibarUpload('f-servicii-foto3', 'servicii-preview-3', 'f-servicii-foto3-label', (f) => pendingServiciiFile3 = f);
@@ -1244,6 +1277,13 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     if (pendingServiciiFile3) {
       serviciiFoto3Url = await uploadPhoto(pendingServiciiFile3, currentRow.slug, 'servicii-hotel');
     }
+    const locPrev = (currentRow.facilitati_cazare && currentRow.facilitati_cazare.locatie) || {};
+    let parcarePozaUrl = locPrev.parcare_poza_url || null;
+    if (pendingParcarePozaFile) {
+      parcarePozaUrl = await uploadPhoto(pendingParcarePozaFile, currentRow.slug, 'parcare');
+    }
+
+    const adresaCompusa = composedAdresaFromFields();
 
     const facilitati_cazare = {
       bun_venit: {
@@ -1253,6 +1293,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
       locatie: {
         gps: document.getElementById('f-gps').value.trim(),
         parcare: document.getElementById('f-parcare').value.trim(),
+        parcare_poza_url: parcarePozaUrl,
       },
       adresa_fisa: {
         strada: document.getElementById('f-fisa-strada').value.trim(),
@@ -1327,7 +1368,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     };
 
     const payload = {
-      adresa: document.getElementById('f-adresa').value.trim(),
+      adresa: adresaCompusa,
       telefon: document.getElementById('f-telefon').value.trim(),
       foto_url: fotoUrl,
       facilitati_cazare,
