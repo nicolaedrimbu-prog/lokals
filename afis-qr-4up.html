@@ -86,7 +86,7 @@
      micșorăm proporțional cu JS (vezi fitWideBoxToScreen) ca să încapă pe ecran fără scroll
      orizontal și fără ca browserul să facă zoom-out pe toată pagina, ceea ce împingea bara de
      sus în afara zonei ușor accesibile. La print revenim la mărimea reală. */
-  .sheet{transform-origin:top center;}
+  .sheet{transform-origin:top left;}
 
   @media print{
     *{ -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; color-adjust:exact !important; }
@@ -146,6 +146,7 @@ function fitWideBoxToScreen(box) {
   if (!box) return;
   function apply() {
     box.style.transform = 'none';
+    box.style.marginLeft = '';
     box.style.marginBottom = '';
     const naturalWidth = box.offsetWidth;
     const naturalHeight = box.offsetHeight;
@@ -153,11 +154,16 @@ function fitWideBoxToScreen(box) {
     if (naturalWidth > avail && avail > 0) {
       const scale = avail / naturalWidth;
       box.style.transform = `scale(${scale})`;
+      // originea transformării e top-left (vezi CSS) — cutia scalată își păstrează poziția
+      // de layout nescalată (mai lată decât ecranul), așa că trebuie centrată explicit cu
+      // marginLeft; altfel rămânea parțial în afara ecranului, „tăiată" vizual la jumătate.
+      box.style.marginLeft = `${(window.innerWidth - avail) / 2}px`;
       box.style.marginBottom = `${-(naturalHeight - naturalHeight * scale)}px`;
     }
   }
   function reset() {
     box.style.transform = 'none';
+    box.style.marginLeft = '';
     box.style.marginBottom = '';
   }
   apply();
@@ -220,7 +226,7 @@ function qrDataUrlFromHolder(holder) {
   return img ? img.src : null;
 }
 
-function buildPosterPdf(nume, zona, qrDataUrls) {
+function buildPosterPdf(nume, zona, qrDataUrls, wifi, wifiQrDataUrl) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const pageW = 210, pageH = 297, margin = 10, gap = 6;
@@ -275,7 +281,32 @@ function buildPosterPdf(nume, zona, qrDataUrls) {
     doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...white);
     doc.text('lokals.ro', cx, cy, { align: 'center' });
 
-    cy += 3.5;
+    // QR secundar de Wi-Fi, compact — desenat doar dacă gazda a completat rețeaua
+    if (wifi && wifi.ssid && wifiQrDataUrl) {
+      cy += 4;
+      const wifiBoxW = innerW, wifiBoxH = 11, wifiQrSize = 9;
+      const wifiBoxX = cx - wifiBoxW / 2;
+      doc.setDrawColor(...gold);
+      doc.setLineWidth(0.35);
+      doc.roundedRect(wifiBoxX, cy, wifiBoxW, wifiBoxH, 2, 2, 'S');
+      doc.addImage(wifiQrDataUrl, 'PNG', wifiBoxX + 1.6, cy + 1, wifiQrSize, wifiQrSize);
+      const textX = wifiBoxX + wifiQrSize + 4.2;
+      const textMaxW = wifiBoxW - wifiQrSize - 6.5;
+      let ty = cy + 3.8;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(5); doc.setTextColor(...gold);
+      doc.text('WI-FI', textX, ty);
+      ty += 2.9;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(5.3); doc.setTextColor(...white);
+      doc.text(String(wifi.ssid), textX, ty, { maxWidth: textMaxW });
+      if (wifi.parola) {
+        ty += 2.9;
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(5); doc.setTextColor(...sage);
+        doc.text(String(wifi.parola), textX, ty, { maxWidth: textMaxW });
+      }
+      cy += wifiBoxH + 2.5;
+    } else {
+      cy += 3.5;
+    }
     doc.setDrawColor(...goldSoft);
     doc.line(x + cellW * 0.2, cy, x + cellW * 0.8, cy);
 
@@ -437,8 +468,10 @@ async function init() {
 
   try {
     const qrDataUrls = Array.from(sheet.querySelectorAll('.tile-qr-holder')).map(qrDataUrlFromHolder);
+    const wifiTileHolder = sheet.querySelector('.tile-wifi-qr-holder');
+    const wifiQrDataUrl = wifiTileHolder ? qrDataUrlFromHolder(wifiTileHolder) : null;
     posterNume = nume;
-    pdfDoc = buildPosterPdf(nume, zona, qrDataUrls);
+    pdfDoc = buildPosterPdf(nume, zona, qrDataUrls, wifi, wifiQrDataUrl);
     await initSaveShareButton();
   } catch (e) {
     // dacă generarea PDF eșuează dintr-un motiv oarecare, rămâne oricum printarea din browser
